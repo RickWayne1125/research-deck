@@ -1,0 +1,44 @@
+# The outline template for a systems paper (OSDI / SOSP / NSDI style). Built in; copy it to
+# ~/.research-deck/templates/ under another id to make your own.
+id: systems
+name: {zh: 系统论文, en: Systems paper}
+description: {zh: "OSDI / SOSP / NSDI 风格", en: "OSDI / SOSP / NSDI style"}
+phases:
+  idea: {zh: 想法, en: Idea}
+  insight: {zh: 动机与洞察, en: Motivation & insight}
+  design: {zh: 系统设计, en: System design}
+  evaluation: {zh: 评估, en: Evaluation}
+sections:
+  - key: intro
+    title: {zh: 引言, en: Introduction}
+    role: {zh: 问题、思路和主要结果（摘要节：引用正文的条目）, en: "The problem, the idea and the main results (a summary: it cites items of the body)"}
+    phase: summary
+  - key: motivation
+    title: {zh: 背景与动机, en: Background and Motivation}
+    role: {zh: 瓶颈真实存在，现有方法不够好，还有可利用的机会, en: "The bottleneck is real, existing methods fall short, and there is an opportunity"}
+    phase: insight
+    tasks: [exp, fig, lit]
+  - key: design
+    title: {zh: 设计, en: Design}
+    role: {zh: 怎么做：每个关键决定和它的理由, en: "How it works: each key decision and why"}
+    phase: design
+    tasks: [code, fig]
+  - key: implementation
+    title: {zh: 实现, en: Implementation}
+    role: {zh: 实现细节和工程量, en: Implementation details and effort}
+    phase: design
+    tasks: [code]
+  - key: evaluation
+    title: {zh: 评估, en: Evaluation}
+    role: {zh: 快多少、为什么快、开销多大, en: "How much better, why, and at what cost"}
+    phase: evaluation
+    tasks: [exp, fig]
+  - key: related
+    title: {zh: 相关工作, en: Related Work}
+    role: {zh: 和几类已有工作的区别, en: How this differs from each line of existing work}
+    phase: idea
+    tasks: [lit]
+  - key: conclusion
+    title: {zh: 结论, en: Conclusion}
+    role: {zh: 总结和展望（摘要节）, en: Summary and outlook (a summary)}
+    phase: summary

@@ -1,0 +1,37 @@
+# The outline template for a machine-learning paper (NeurIPS / ICML / ICLR style). Built in.
+id: ml
+name: {zh: ML 论文, en: ML paper}
+description: {zh: "NeurIPS / ICML 风格：方法、实验、消融", en: "NeurIPS / ICML style: method, experiments, ablations"}
+phases:
+  idea: {zh: 想法, en: Idea}
+  insight: {zh: 动机, en: Motivation}
+  design: {zh: 方法, en: Method}
+  evaluation: {zh: 实验, en: Experiments}
+sections:
+  - key: intro
+    title: {zh: 引言, en: Introduction}
+    role: {zh: 问题、方法和主要结果（摘要节）, en: "The problem, the method and the main results (a summary)"}
+    phase: summary
+  - key: related
+    title: {zh: 相关工作, en: Related Work}
+    role: {zh: 和已有方法的区别, en: How this differs from existing methods}
+    phase: idea
+    tasks: [lit]
+  - key: preliminaries
+    title: {zh: 预备知识, en: Preliminaries}
+    role: {zh: 问题的形式化和记号, en: The formal problem and notation}
+    phase: insight
+  - key: method
+    title: {zh: 方法, en: Method}
+    role: {zh: 方法是什么、为什么这样设计, en: "What the method is and why it is built this way"}
+    phase: design
+    tasks: [code, fig]
+  - key: experiments
+    title: {zh: 实验, en: Experiments}
+    role: {zh: 主要结果、消融和分析, en: "Main results, ablations and analysis"}
+    phase: evaluation
+    tasks: [exp, fig]
+  - key: conclusion
+    title: {zh: 结论, en: Conclusion}
+    role: {zh: 总结、局限和展望（摘要节）, en: "Summary, limitations and outlook (a summary)"}
+    phase: summary

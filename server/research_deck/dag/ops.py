@@ -130,8 +130,9 @@ class Txn:
         return stages.mode(self.state.cfg)
 
     def check_stage(self, n: dict) -> None:
-        """A node may be written in its step only once the project has reached that step (strict)."""
-        if self.stage_mode() != "strict":
+        """A node may be written in its step only once the project has reached that step (strict). The outline's
+        sections and items are the story, written from the start: the stage rules govern their evidence."""
+        if self.stage_mode() != "strict" or n.get("kind") in stages.OUTLINE_KINDS:
             return
         step, now = stages.node_step(n), stages.project_step(self.store)
         if step > now:
@@ -150,7 +151,8 @@ class Txn:
         if t.get("status") in DEAD:
             raise OpError(409, f"{t['id']} is {t.get('status')}: a failed node grows no new branch",
                           reason="dead_parent", node=t["id"])
-        if confirmed and stages.node_step(t) < stages.node_step(n) and t.get("status") not in ("confirmed", "locked"):
+        if confirmed and n.get("kind") not in stages.OUTLINE_KINDS and stages.node_step(t) < stages.node_step(n) \
+                and t.get("status") not in ("confirmed", "locked"):
             raise OpError(409, f"{t['id']} is not confirmed: a node of {stages.label(stages.node_step(n))} rests only on "
                                f"confirmed nodes of the steps before", reason="unconfirmed_parent", node=t["id"])
 
@@ -319,7 +321,7 @@ class Txn:
         if to in ("active", "confirmed") and self.stage_mode() != "free":
             # A node takes effect only in a step that has started, on confirmed parents from the steps before.
             step, now = stages.node_step(n), stages.project_step(self.store)
-            if step > now:
+            if step > now and n.get("kind") not in stages.OUTLINE_KINDS:
                 raise OpError(409, f"{n['id']} waits for {stages.label(step)} to start", reason="stage_locked",
                               step=stages.STEP_IDS[step])
             for e in edges(n):

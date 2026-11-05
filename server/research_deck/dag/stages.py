@@ -19,6 +19,8 @@ from typing import Any
 from ..util import read_yaml
 
 MODES = ("strict", "ahead", "free")
+# The outline (sections and their items) is written from the start; only its evidence follows the steps.
+OUTLINE_KINDS = frozenset({"section", "claim"})
 STEP_IDS = ("idea", "insight", "design", "evaluation")
 STEP_OF_DAG = {"S0": 0, "S1": 0, "S2": 1, "S3": 1, "S4": 1, "S5": 2, "S6": 3, "W": 3}
 STEP_OF_PROJECT = {"idea": 0, "motivation": 1, "insight": 1, "design": 2, "evaluation": 3, "writing": 3}

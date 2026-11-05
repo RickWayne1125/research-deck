@@ -1,0 +1,29 @@
+# The outline template for a short workshop paper (about 4 pages). Built in.
+id: workshop
+name: {zh: Workshop 短文, en: Workshop paper}
+description: {zh: "4 页：问题、想法、初步结果", en: "4 pages: problem, idea, early results"}
+phases:
+  idea: {zh: 想法, en: Idea}
+  insight: {zh: 动机, en: Motivation}
+  design: {zh: 想法细节, en: Approach}
+  evaluation: {zh: 初步结果, en: Early results}
+sections:
+  - key: intro
+    title: {zh: 引言, en: Introduction}
+    role: {zh: 问题和想法（摘要节）, en: The problem and the idea (a summary)}
+    phase: summary
+  - key: motivation
+    title: {zh: 动机, en: Motivation}
+    role: {zh: 为什么值得做, en: Why it is worth doing}
+    phase: insight
+    tasks: [exp, lit]
+  - key: approach
+    title: {zh: 方法, en: Approach}
+    role: {zh: 想法的关键部分, en: The key parts of the idea}
+    phase: design
+    tasks: [code]
+  - key: results
+    title: {zh: 初步结果, en: Early Results}
+    role: {zh: 初步证据和下一步, en: Early evidence and next steps}
+    phase: evaluation
+    tasks: [exp, fig]

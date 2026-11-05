@@ -18,6 +18,9 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["server"]
 
+[tool.setuptools.package-data]
+research_deck = ["outline/templates/*.yaml"]
+
 [tool.pytest.ini_options]
 pythonpath = ["server"]
 testpaths = ["tests"]
