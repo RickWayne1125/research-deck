@@ -1,0 +1,19 @@
+{
+  "id": "baseline-lfu",
+  "node_id": null,
+  "cell": null,
+  "title": "Attempt A: LFU at 64 blocks",
+  "status": "succeeded",
+  "target": {"platform": "workstation", "node": "workstation", "gpus": 1, "gpu_type": "GPU-24GB"},
+  "config": {"policy": "lfu", "cache": {"capacity_blocks": 64}},
+  "command": "python -m toycache.sim --config configs/base.yaml --set policy=lfu",
+  "code": {"commit": null, "footprint": []},
+  "dataset": "synthetic trace (seed 7)",
+  "env": "python 3.12",
+  "metrics": {"hit_rate": 0.37, "verdict": "refutes attempt A (kill if < 0.45)"},
+  "started_at": "2026-10-12T14:30:00Z",
+  "finished_at": "2026-10-12T14:36:00Z",
+  "run_id": null,
+  "logs": "experiments/logs/baseline.log",
+  "artifacts": ["experiments/results/baseline.csv"]
+}

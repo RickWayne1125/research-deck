@@ -1,0 +1,86 @@
+/* Research Deck design tokens. A quiet, print-like house style shared with the figures (server/research_deck/viz/style.py):
+   - neutral-white substrate #FAFAF7, Charcoal #30343A ink and one accent, Signal Red #C83232
+   - auxiliary Slate #787B7F and Light Gray #CBCCCE
+   - pastel semantic roles (process / data / emphasis / neutral), flat fills, thin lines, 8 px grid
+   - Helvetica, borderless mildly rounded cards, no shadows on content
+   Colors are tokens; components never hard-code hex values. */
+:root {
+  color-scheme: light;
+  /* substrate and ink */
+  --paper: #fafaf7;
+  --surface: #ffffff;
+  --plate: #f4f5f6;
+  --wash: #efefeb;
+  --ink: #30343a;
+  --ink-strong: #1f2226;
+  --muted: #5d6167;
+  --slate: #787b7f;
+  --faint: #a3a8ae;
+  --rule: #e1e2df;
+  --rule-strong: #cbccce;
+
+  /* the one accent: Signal Red, for the focal path, the primary action and what needs attention */
+  --accent: #c83232;
+  --accent-ink: #ffffff;
+  --accent-wash: #f8e6e6;
+  --accent-line: #e3a9a9;
+
+  /* semantic roles (the same as the figures' diagram roles) */
+  --process: #e6eef7;  --process-line: #6d8fac;  --process-ink: #2f4c66;
+  --data: #e7f1ed;     --data-line: #7fa591;     --data-ink: #2d5a43;
+  --emphasis: #f6e6e2; --emphasis-line: #b67c73; --emphasis-ink: #7a3e35;
+  --neutral: #f4f5f6;  --neutral-line: #a3a8ae;  --neutral-ink: #4a4f55;
+
+  /* states */
+  --ok: #2f7d5b;       --ok-wash: #e3f0e9;
+  --warn: #a8661b;     --warn-wash: #f7ecd9;
+  --info: #3f6f9a;     --info-wash: #e6eef7;
+  --stale: #b7791f;    --stale-wash: #fbf1de;
+
+  /* type: Helvetica first (the figures' face), PingFang SC for Chinese, JetBrains Mono for code */
+  --sans: "Helvetica Neue", Helvetica, "PingFang SC", "Noto Sans CJK SC", Arial, sans-serif;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Songti SC", "Noto Serif CJK SC", Georgia, serif;
+  --mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, "PingFang SC", monospace;
+  --fs-xs: 11px; --fs-sm: 12px; --fs-md: 13px; --fs-lg: 15px; --fs-xl: 18px; --fs-2xl: 24px;
+
+  /* geometry: 4/8 px rhythm, mildly rounded flat cards */
+  --r-xs: 3px; --r-sm: 5px; --r-md: 6px; --r-lg: 10px;
+  --gap-1: 4px; --gap-2: 8px; --gap-3: 12px; --gap-4: 16px; --gap-5: 24px; --gap-6: 32px;
+  --line: 1px; --line-strong: 1.5px;
+  --bar-h: 48px; --nav-w: 200px; --dock-w: 380px;
+
+  --shadow-pop: 0 1px 2px rgb(20 22 26 / .06), 0 8px 24px rgb(20 22 26 / .12);
+  --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  --ease: cubic-bezier(.2, .7, .2, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #151719; --surface: #1c1f22; --plate: #22262a; --wash: #262a2e;
+    --ink: #e4e5e2; --ink-strong: #f4f4f1; --muted: #a9adb2; --slate: #8f9399; --faint: #6f747a;
+    --rule: #2d3135; --rule-strong: #3b4045;
+    --accent: #e0524f; --accent-ink: #151719; --accent-wash: #3a2324; --accent-line: #7d3a39;
+    --process: #1f2a35; --process-line: #6d8fac; --process-ink: #b7cde2;
+    --data: #1e2b25; --data-line: #7fa591; --data-ink: #b5d6c4;
+    --emphasis: #33241f; --emphasis-line: #b67c73; --emphasis-ink: #e6c0b8;
+    --neutral: #25292d; --neutral-line: #6f747a; --neutral-ink: #c9ccd0;
+    --ok: #5cbf8f; --ok-wash: #1d3329; --warn: #e0a556; --warn-wash: #3a2d1a;
+    --info: #7fa9d1; --info-wash: #1f2a35; --stale: #e0a556; --stale-wash: #3a2d1a;
+    --shadow-pop: 0 1px 2px rgb(0 0 0 / .3), 0 10px 28px rgb(0 0 0 / .45);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #151719; --surface: #1c1f22; --plate: #22262a; --wash: #262a2e;
+  --ink: #e4e5e2; --ink-strong: #f4f4f1; --muted: #a9adb2; --slate: #8f9399; --faint: #6f747a;
+  --rule: #2d3135; --rule-strong: #3b4045;
+  --accent: #e0524f; --accent-ink: #151719; --accent-wash: #3a2324; --accent-line: #7d3a39;
+  --process: #1f2a35; --process-line: #6d8fac; --process-ink: #b7cde2;
+  --data: #1e2b25; --data-line: #7fa591; --data-ink: #b5d6c4;
+  --emphasis: #33241f; --emphasis-line: #b67c73; --emphasis-ink: #e6c0b8;
+  --neutral: #25292d; --neutral-line: #6f747a; --neutral-ink: #c9ccd0;
+  --ok: #5cbf8f; --ok-wash: #1d3329; --warn: #e0a556; --warn-wash: #3a2d1a;
+  --info: #7fa9d1; --info-wash: #1f2a35; --stale: #e0a556; --stale-wash: #3a2d1a;
+  --shadow-pop: 0 1px 2px rgb(0 0 0 / .3), 0 10px 28px rgb(0 0 0 / .45);
+}

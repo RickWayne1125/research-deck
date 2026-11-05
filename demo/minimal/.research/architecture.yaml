@@ -1,0 +1,12 @@
+# Components of toycache for the Coding panel. node_id links a component to its module node in the research DAG.
+components:
+  - id: simulator
+    label: Simulator
+    node_id: null
+    paths: [toycache/sim.py, toycache/trace.py, toycache/__init__.py]
+    description: Generates the synthetic trace and replays it through one policy.
+  - id: policies
+    label: Eviction policies
+    node_id: mod.policies
+    paths: [toycache/lru.py, toycache/lfu.py, toycache/lookahead.py]
+    description: LRU (baseline), LFU (attempt A, refuted) and lookahead eviction (attempt B, chosen).

@@ -1,0 +1,57 @@
+/* Settings. Layout only; colors come from the tokens. */
+.st-body { display: flex; align-items: flex-start; gap: 0; }
+.st-main { flex: 1 1 auto; min-width: 0; max-width: 860px; padding: 6px 24px 48px 24px; }
+.st-sec { padding: 18px 0 26px; border-bottom: var(--line) solid var(--rule); scroll-margin-top: 8px; display: flex; flex-direction: column; gap: 12px; }
+.st-sec:last-child { border-bottom: 0; }
+.st-sec-title { margin-bottom: 2px; }
+.st-lead { margin: 0; color: var(--muted); max-width: 760px; line-height: 1.55; }
+.st-hint { margin: 0; color: var(--faint); font-size: var(--fs-xs); line-height: 1.5; max-width: 760px; }
+.st-flush { margin: 0; }
+.st-small { font-size: var(--fs-xs); }
+.st-nowrap { white-space: nowrap; }
+.st-sub { display: block; font-size: var(--fs-xs); }
+.st-path { font-size: 11.5px; color: var(--muted); min-width: 0; max-width: 100%; }
+.st-subhead { margin-top: 6px; }
+
+/* sessions table */
+.st-table-wrap { overflow-x: auto; border: var(--line) solid var(--rule); border-radius: var(--r-lg); background: var(--surface); }
+.st-sessions { min-width: 840px; }
+.st-sessions .seg > button { padding: 0 8px; font-size: 11.5px; }
+.st-sessions td { padding: 6px 10px; white-space: nowrap; }
+.st-sessions tr:last-child td { border-bottom: 0; }
+.st-panel-cell { font-weight: 500; color: var(--ink-strong); white-space: nowrap; }
+.st-panel-cell .spinner { margin-left: 6px; vertical-align: middle; }
+.st-shared-row td:not(.st-panel-cell) { opacity: .6; }
+.st-seg-label { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.seg > button[aria-pressed="true"] .ag-mark { color: currentColor; }
+.st-select { min-height: 26px; padding: 2px 6px; font-size: var(--fs-sm); max-width: 160px; }
+.st-fast { width: 26px; height: 26px; border: var(--line) solid var(--rule-strong); background: var(--surface); }
+.st-fast[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.st-fast:disabled { opacity: .4; cursor: default; }
+.st-sid { gap: 2px; font-size: 11.5px; }
+
+/* context sharing */
+.st-explain { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: var(--gap-3) var(--gap-4); }
+.st-explain-item { border-left: 2px solid var(--rule-strong); padding: 2px 0 2px 12px; }
+.st-explain-item p { margin: 4px 0 0; color: var(--muted); font-size: var(--fs-sm); line-height: 1.55; }
+.st-brief-body { max-height: 440px; overflow: auto; font-size: var(--fs-sm); }
+.st-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--gap-3); }
+.st-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-sm); }
+.st-list li { display: flex; align-items: center; gap: 8px; min-width: 0; }
+
+/* MCP */
+.st-caution { max-width: 760px; }
+.st-caution svg { flex: none; margin-top: 1px; }
+.st-code-row { display: flex; flex-direction: column; gap: 4px; }
+.st-code-head .label { display: inline-flex; align-items: center; gap: 5px; }
+.st-code { margin: 0; padding: 10px 12px; background: var(--plate); border: var(--line) solid var(--rule); border-radius: var(--r-md); font: 400 11.5px/1.55 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); }
+.st-details > summary { cursor: pointer; color: var(--muted); font-size: var(--fs-sm); margin-bottom: 8px; }
+.st-details[open] { display: flex; flex-direction: column; gap: 10px; }
+
+/* integrations, appearance, about */
+.st-kv { grid-template-columns: minmax(150px, max-content) minmax(0, 1fr); align-items: center; }
+.st-kv dt { display: flex; align-items: center; gap: 6px; }
+.st-int-val { gap: 6px; min-width: 0; }
+.st-appearance { align-items: start; }
+
+/* the table of contents gives way when the agent dock takes the width */

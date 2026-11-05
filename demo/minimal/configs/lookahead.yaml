@@ -1,0 +1,4 @@
+# Layered over base.yaml: lookahead eviction over the next `window` queued requests.
+policy: lookahead
+lookahead:
+  window: 8

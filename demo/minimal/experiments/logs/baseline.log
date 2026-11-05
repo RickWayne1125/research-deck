@@ -1,0 +1,13 @@
+[2026-10-05 15:00:02] python -m toycache.sim --config configs/base.yaml --set policy=lru
+[2026-10-05 15:00:03] trace: 20000 requests over 1024 blocks (skew 0.9, drift every 2000, seed 7)
+[2m[2026-10-05 15:00:03][0m [36mINFO[0m cache: 64 blocks, policy [1mlru[0m
+replay lru:   0%|          | 0/20000 [00:00<?, ?req/s]replay lru:  10%|█         | 2000/20000 [00:36<05:20, 56.3req/s]replay lru:  20%|██        | 4000/20000 [01:11<04:44, 56.3req/s]replay lru:  30%|███       | 6000/20000 [01:46<04:08, 56.3req/s]replay lru:  40%|████      | 8000/20000 [02:22<03:33, 56.3req/s]replay lru:  50%|█████     | 10000/20000 [02:58<02:58, 56.3req/s]replay lru:  60%|██████    | 12000/20000 [03:33<02:22, 56.3req/s]replay lru:  70%|███████   | 14000/20000 [04:08<01:46, 56.3req/s]replay lru:  80%|████████  | 16000/20000 [04:44<01:11, 56.3req/s]replay lru:  90%|█████████ | 18000/20000 [05:20<00:36, 56.3req/s]replay lru: 100%|██████████| 20000/20000 [05:55<00:00, 56.3req/s]
+[2026-10-05 15:05:58] {'policy': 'lru', 'capacity_blocks': 64, 'hit_rate': 0.41}
+[2m[2026-10-05 15:05:58][0m [32mdone[0m hit_rate 0.41 · results in experiments/results/baseline.csv
+[2026-10-12 14:30:01] python -m toycache.sim --config configs/base.yaml --set policy=lfu
+[2026-10-12 14:30:02] trace: 20000 requests over 1024 blocks (skew 0.9, drift every 2000, seed 7)
+[2m[2026-10-12 14:30:02][0m [36mINFO[0m cache: 64 blocks, policy [1mlfu[0m
+replay lfu:   0%|          | 0/20000 [00:00<?, ?req/s]replay lfu:  10%|█         | 2000/20000 [00:36<05:20, 56.3req/s]replay lfu:  20%|██        | 4000/20000 [01:11<04:44, 56.3req/s]replay lfu:  30%|███       | 6000/20000 [01:46<04:08, 56.3req/s]replay lfu:  40%|████      | 8000/20000 [02:22<03:33, 56.3req/s]replay lfu:  50%|█████     | 10000/20000 [02:58<02:58, 56.3req/s]replay lfu:  60%|██████    | 12000/20000 [03:33<02:22, 56.3req/s]replay lfu:  70%|███████   | 14000/20000 [04:08<01:46, 56.3req/s]replay lfu:  80%|████████  | 16000/20000 [04:44<01:11, 56.3req/s]replay lfu:  90%|█████████ | 18000/20000 [05:20<00:36, 56.3req/s]replay lfu: 100%|██████████| 20000/20000 [05:55<00:00, 56.3req/s]
+[2m[2026-10-12 14:35:57][0m [33mWARNING[0m the hot set moved 9 times; LFU counts still favor blocks that were popular before it moved
+[2026-10-12 14:35:57] {'policy': 'lfu', 'capacity_blocks': 64, 'hit_rate': 0.37}
+[2m[2026-10-12 14:35:57][0m [32mdone[0m hit_rate 0.37 · results in experiments/results/baseline.csv

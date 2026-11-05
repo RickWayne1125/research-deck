@@ -1,0 +1,104 @@
+/* The project conversation. Layout only; colors come from the tokens. The two backends are told apart by
+   a glyph and a muted role color (Claude: emphasis-line, Codex: process-line); signal red stays for Send and alerts. */
+.ag-mark { flex: none; }
+.ag-mark.claude { color: var(--emphasis-line); }
+.ag-mark.codex { color: var(--process-line); }
+.ag-mark.fake { color: var(--faint); }
+
+/* ---------------------------------------------------------------- dock frame */
+.ag-dock { display: flex; flex-direction: column; height: 100%; min-height: 0; min-width: 0; }
+.ag-pad { padding: 12px; }
+.ag-head { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-bottom: var(--line) solid var(--rule); background: var(--surface); flex: none; }
+.ag-head-note { font-weight: 400; font-size: var(--fs-sm); }
+.ag-running { display: inline-flex; padding: 0 4px; }
+.ag-running .dot { animation: ag-pulse 1.4s ease-in-out infinite; }
+@keyframes ag-pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .ag-running .dot { animation: none; } }
+.ag-head-row { gap: 6px; }
+
+/* the model pill and its popover; the session menu */
+.ag-pill {
+  display: inline-flex; align-items: center; gap: 5px; max-width: 190px; height: 28px; padding: 0 8px;
+  border: var(--line) solid var(--rule-strong); border-radius: var(--r-md); background: var(--surface); color: var(--ink);
+  font: 500 var(--fs-sm)/1 var(--sans); cursor: pointer; min-width: 0; flex: 0 1 auto;
+}
+.ag-pill:hover { border-color: var(--slate); }
+.ag-pill-model { min-width: 0; }
+.ag-pill-effort { font: 500 10.5px/1 var(--mono); color: var(--slate); flex: none; }
+.ag-pill-pop { width: 270px; padding: 10px; gap: 10px; }
+.ag-pill-pop .seg { align-self: flex-start; }
+.ag-pill-hint { margin: 0; font-size: var(--fs-xs); line-height: 1.4; }
+.ag-check { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: var(--fs-sm); cursor: pointer; }
+.ag-check .ag-pill-hint { flex-basis: 100%; }
+.ag-menu { min-width: 270px; }
+.ag-menu-meta { padding: 6px 9px 8px; font-size: var(--fs-xs); }
+.ag-menu-check { cursor: pointer; }
+.ag-menu-rule { border: 0; border-top: var(--line) solid var(--rule); margin: 6px 4px; }
+.ag-menu-label { padding: 4px 9px; }
+.ag-menu-hint { font-size: var(--fs-xs); }
+.ag-perm-note { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; color: var(--faint); min-width: 0; }
+.ag-perm-note.write { color: var(--stale); }
+
+.ag-seg-label { display: inline-flex; align-items: center; gap: 5px; }
+.seg > button:disabled { opacity: .45; cursor: default; }
+.seg > button[aria-pressed="true"] .ag-mark { color: currentColor; }
+
+
+.ag-fake { font-size: var(--fs-xs); color: var(--muted); background: var(--plate); border-radius: var(--r-sm); padding: 4px 8px; }
+
+/* ---------------------------------------------------------------- conversation */
+.ag-log { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 8px 12px 14px; display: flex; flex-direction: column; gap: 12px; background: var(--paper); }
+.ag-empty { text-align: center; padding: 24px 8px; font-size: var(--fs-sm); }
+.ag-notice { font-size: var(--fs-xs); color: var(--muted); text-align: center; }
+
+.ag-msg { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ag-msg.user { align-items: flex-end; }
+.ag-bubble {
+  max-width: 88%; padding: 7px 11px; border-radius: var(--r-lg) var(--r-lg) var(--r-xs) var(--r-lg); background: var(--surface);
+  border: var(--line) solid var(--rule); white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-md); line-height: 1.5;
+}
+.ag-msg.assistant { padding-left: 2px; }
+.ag-answer { font-size: var(--fs-md); }
+.ag-msg.imported { opacity: .78; }
+.ag-msg.imported .ag-bubble { border-style: dashed; background: transparent; }
+.ag-msg.assistant.imported { border-left: 2px dashed var(--rule-strong); padding-left: 9px; }
+.ag-imported { font: 500 10px/1 var(--mono); letter-spacing: .04em; text-transform: uppercase; }
+.ag-meta { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: 10.5px; color: var(--faint); }
+.ag-meta.right { justify-content: flex-end; }
+.ag-tool { font-size: 11px; line-height: 1.5; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ag-tool-name { color: var(--ink); }
+.ag-tool-detail { color: var(--faint); }
+.ag-tools > summary { font-size: 11px; color: var(--faint); cursor: pointer; list-style: none; }
+.ag-tools > summary::-webkit-details-marker { display: none; }
+.ag-tools > summary::before { content: "▸ "; }
+.ag-tools[open] > summary::before { content: "▾ "; }
+.ag-usage { font-size: 10.5px; color: var(--faint); }
+.ag-thinking { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: var(--fs-sm); }
+.ag-error { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+.ag-error .notice { align-self: stretch; }
+
+/* system lines: backend switches and agents' notes */
+.ag-sys { border-top: var(--line) solid var(--rule); border-bottom: var(--line) solid var(--rule); padding: 4px 0; }
+.ag-sys > summary { display: flex; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--muted); cursor: pointer; list-style: none; padding: 2px 0; }
+.ag-sys > summary::-webkit-details-marker { display: none; }
+.ag-sys > summary:hover { color: var(--ink); }
+.ag-sys-body { padding: 8px 2px 4px; font-size: var(--fs-sm); }
+.ag-sys-file { font-size: 10.5px; margin-top: 6px; overflow-wrap: anywhere; }
+
+/* ---------------------------------------------------------------- composer */
+.ag-compose { display: flex; flex-direction: column; gap: 6px; padding: 8px 12px 12px; border-top: var(--line) solid var(--rule); background: var(--surface); flex: none; }
+.ag-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.ag-ctx { max-width: 100%; gap: 5px; padding-right: 3px; }
+.ag-ctx.route { border-style: dashed; }
+.ag-ctx-kind { font: 500 9.5px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--slate); flex: none; }
+.ag-ctx .mono { max-width: 190px; color: var(--ink); }
+.ag-ctx-x { display: inline-grid; place-items: center; width: 15px; height: 15px; border: 0; border-radius: 50%; background: none; color: var(--faint); cursor: pointer; padding: 0; flex: none; }
+.ag-ctx-x:hover { background: var(--wash); color: var(--ink); }
+.ag-input { width: 100%; min-height: 64px; max-height: 40vh; }
+.ag-compose-foot { gap: 6px; }
+
+/* ---------------------------------------------------------------- bind dialog */
+.ag-bind-list { border: var(--line) solid var(--rule); border-radius: var(--r-md); max-height: 52vh; overflow: auto; }
+.ag-bind-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-bottom: var(--line) solid var(--rule); min-width: 0; }
+.ag-bind-row:last-child { border-bottom: 0; }
+.ag-bind-meta { font-size: var(--fs-xs); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }

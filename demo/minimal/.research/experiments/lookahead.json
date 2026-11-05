@@ -1,0 +1,19 @@
+{
+  "id": "lookahead",
+  "node_id": null,
+  "cell": null,
+  "title": "Attempt B: lookahead eviction, window 8",
+  "status": "succeeded",
+  "target": {"platform": "workstation", "node": "workstation", "gpus": 1, "gpu_type": "GPU-24GB"},
+  "config": {"policy": "lookahead", "cache": {"capacity_blocks": 64}, "lookahead": {"window": 8}},
+  "command": "python -m toycache.sim --config configs/base.yaml --config configs/lookahead.yaml",
+  "code": {"commit": null, "footprint": []},
+  "dataset": "synthetic trace (seed 7)",
+  "env": "python 3.12",
+  "metrics": {"hit_rate": 0.58},
+  "started_at": "2026-10-19T14:30:00Z",
+  "finished_at": "2026-10-19T14:37:00Z",
+  "run_id": null,
+  "logs": "experiments/logs/lookahead.log",
+  "artifacts": ["experiments/results/lookahead.csv"]
+}

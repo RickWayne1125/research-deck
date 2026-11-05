@@ -1,0 +1,19 @@
+{
+  "id": "window-sweep",
+  "node_id": null,
+  "cell": null,
+  "title": "Sensitivity to the lookahead window (planned)",
+  "status": "planned",
+  "target": {"platform": "cloud-a100", "node": "", "gpus": 1, "gpu_type": "A100 40GB"},
+  "config": {"policy": "lookahead", "lookahead": {"window": [4, 16, 32]}},
+  "command": "python -m toycache.sim --config configs/base.yaml --config configs/lookahead.yaml --set lookahead.window=<4|16|32>",
+  "code": {"commit": null, "footprint": []},
+  "dataset": "synthetic trace (seed 7)",
+  "env": null,
+  "metrics": {},
+  "started_at": null,
+  "finished_at": null,
+  "run_id": null,
+  "logs": null,
+  "artifacts": []
+}

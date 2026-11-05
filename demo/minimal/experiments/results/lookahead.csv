@@ -1,0 +1,2 @@
+policy,window,capacity_blocks,hit_rate
+lookahead,8,64,0.58

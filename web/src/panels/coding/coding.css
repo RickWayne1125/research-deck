@@ -1,0 +1,128 @@
+/* Coding view. Colors only through tokens (styles/tokens.css); the shared classes come from styles/base.css. */
+.cd-body { overflow: hidden; display: flex; flex-direction: column; }
+.cd-body > * { flex: 1 1 auto; min-height: 0; }
+.cd-body > .empty { flex: 0 0 auto; }
+.cd-tab-badge { margin-left: 6px; vertical-align: 1px; }
+.cd-pad { padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; }
+.cd-notes { display: flex; flex-direction: column; gap: 6px; padding: 8px 14px 0; }
+.cd-stat { font-size: var(--fs-sm); white-space: nowrap; }
+.cd-hint { font-size: var(--fs-xs); }
+
+.cd-search { position: relative; display: flex; align-items: center; min-width: 0; }
+.cd-search > svg { position: absolute; left: 8px; color: var(--faint); pointer-events: none; }
+.cd-search .input { padding-left: 27px; width: 230px; max-width: 100%; min-height: 28px; font-size: var(--fs-sm); }
+
+.cd-counts { font: 500 var(--fs-xs)/1 var(--mono); white-space: nowrap; }
+.cd-add { color: var(--ok); }
+.cd-del { color: var(--accent); }
+
+/* ---------------------------------------------------------------- agent answers and run status */
+.cd-runline { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: var(--fs-sm); color: var(--muted); }
+.cd-runline-state { color: var(--ink); white-space: nowrap; }
+.cd-runmeta { font-size: var(--fs-xs); color: var(--slate); background: var(--plate); border-radius: var(--r-xs); padding: 2px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.cd-runtool { max-width: 220px; font-size: var(--fs-xs); }
+.cd-answer { display: flex; flex-direction: column; gap: 10px; border: var(--line) solid var(--rule); border-radius: var(--r-lg); background: var(--surface); padding: 10px 12px 12px; min-width: 0; }
+.cd-answer-head { display: flex; align-items: center; gap: 6px; color: var(--slate); min-width: 0; margin: -2px -4px 0 0; }
+.cd-answer-title { font-size: var(--fs-sm); color: var(--muted); }
+.cd-answer-md { font-size: var(--fs-md); }
+.cd-answer-wait { font-size: var(--fs-sm); }
+
+/* ---------------------------------------------------------------- changes: commits */
+.cd-commits { display: flex; flex-direction: column; min-height: 100%; }
+.cd-commits-head { position: sticky; top: 0; z-index: 1; padding: 8px 10px; background: var(--paper); border-bottom: var(--line) solid var(--rule); }
+.cd-commits-head .cd-search .input { width: 100%; }
+.cd-commits-head .cd-search { width: 100%; }
+.cd-commit { align-items: flex-start; outline-offset: -2px; }
+.cd-commit-subject { font: 500 var(--fs-md)/1.3 var(--sans); color: var(--ink-strong); }
+.cd-commit-meta { font-size: 11.5px; color: var(--muted); }
+.cd-commit-tags { gap: 4px; }
+.cd-node { border: 0; cursor: pointer; }
+.cd-node:hover { background: var(--process-line); color: var(--surface); }
+.cd-clean { display: flex; align-items: center; gap: 6px; padding: 9px 12px; font-size: var(--fs-sm); border-bottom: var(--line) solid var(--rule); }
+
+/* ---------------------------------------------------------------- changes: diff */
+.cd-diff { position: relative; display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.cd-diff-head { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: var(--line) solid var(--rule); background: var(--paper); flex-wrap: wrap; }
+.cd-diff-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 12px 14px 84px; }
+.cd-diff-scroll > .cd-notes { padding: 0 0 10px; }
+
+.cd-filelist { border: var(--line) solid var(--rule); border-radius: var(--r-md); background: var(--surface); margin-bottom: 12px; overflow: hidden; }
+.cd-filelist-toggle { display: flex; align-items: center; gap: 6px; width: 100%; border: 0; background: none; padding: 8px 10px; cursor: pointer; color: var(--slate); text-align: left; }
+.cd-filelist .list { border-top: var(--line) solid var(--rule); max-height: 240px; overflow: auto; }
+.cd-filerow { border: 0; background: none; width: 100%; text-align: left; padding: 5px 10px; border-bottom: var(--line) solid var(--rule); }
+.cd-path { font-size: 12px; min-width: 0; }
+
+.cd-file { border: var(--line) solid var(--rule); border-radius: var(--r-md); background: var(--surface); margin-bottom: 12px; overflow: clip; }
+.cd-file-head { position: sticky; top: -12px; z-index: 2; display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 3px 6px 3px 2px; background: var(--surface); border-bottom: var(--line) solid var(--rule); }
+.cd-file-note { padding: 12px 14px; font-size: var(--fs-sm); }
+
+.cd-rows { --cd-gut: 46px; white-space: normal; }
+.cd-hunk { padding: 3px 10px; background: var(--plate); color: var(--slate); font-size: 11.5px; border-top: var(--line) solid var(--rule); border-bottom: var(--line) solid var(--rule); white-space: pre-wrap; overflow-wrap: anywhere; }
+.cd-hunk:first-child { border-top: 0; }
+.cd-line { display: grid; grid-template-columns: var(--cd-gut) var(--cd-gut) 16px minmax(0, 1fr); }
+.cd-sline { display: grid; grid-template-columns: var(--cd-gut) minmax(0, 1fr) var(--cd-gut) minmax(0, 1fr); }
+.cd-gut {
+  text-align: right; padding: 0 8px 0 4px; color: var(--faint); cursor: pointer; user-select: none;
+  border-right: var(--line) solid var(--rule); font-variant-numeric: tabular-nums;
+}
+.cd-gut:hover { color: var(--ink); background: var(--wash); }
+.cd-mark { text-align: center; color: var(--slate); user-select: none; }
+.cd-code { padding: 0 10px 0 6px; white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; }
+.cd-sline .cd-code + .cd-gut { border-left: var(--line) solid var(--rule); }
+.cd-blank { background: var(--plate); }
+.cd-line.diff-add .cd-mark { color: var(--ok); }
+.cd-line.diff-del .cd-mark { color: var(--accent); }
+/* the selected range: a cool tint, so it never reads as a deletion */
+.cd-line.cd-sel, .cd-sline .cd-sel { background: color-mix(in srgb, var(--info) 15%, transparent); }
+.cd-line.cd-sel .cd-gut, .cd-sline .cd-gut.cd-sel { color: var(--info); font-weight: 600; }
+.cd-flash { animation: cd-flash 1.6s var(--ease); }
+@keyframes cd-flash { 0%, 40% { background: var(--stale-wash); } 100% { background: transparent; } }
+@media (prefers-reduced-motion: reduce) { .cd-flash { animation: none; outline: 1px solid var(--stale); } }
+
+.cd-seltool {
+  position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 5; display: flex; align-items: center; gap: 6px;
+  max-width: calc(100% - 28px); padding: 6px 6px 6px 12px; background: var(--surface); border: var(--line) solid var(--rule);
+  border-radius: var(--r-lg); box-shadow: var(--shadow-pop);
+}
+.cd-seltool-where { font-size: var(--fs-xs); color: var(--muted); min-width: 0; margin-right: 4px; }
+.cd-diff.has-drawer .cd-seltool { left: calc((100% - min(var(--cd-drawer-w, 440px), 92%)) / 2); max-width: calc(100% - min(var(--cd-drawer-w, 440px), 92%) - 28px); }
+.cd-drawer {
+  position: absolute; top: 0; right: 0; bottom: 0; z-index: 6; width: min(var(--cd-drawer-w, 440px), 92%); display: flex; flex-direction: column;
+  background: var(--paper); border-left: var(--line) solid var(--rule); box-shadow: var(--shadow-pop);
+}
+.cd-drawer-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 12px; }
+
+/* ---------------------------------------------------------------- review */
+.cd-review { overflow: auto; }
+.cd-review-inner { max-width: 920px; margin: 0 auto; padding: 16px 18px 48px; display: flex; flex-direction: column; gap: 14px; }
+.cd-commit-select { max-width: 380px; min-width: 0; font-size: var(--fs-sm); }
+.cd-review-hint { margin: 0; font-size: var(--fs-sm); }
+.cd-results { display: flex; flex-direction: column; gap: 12px; }
+.cd-results-head { display: flex; align-items: center; gap: 10px; padding-bottom: 8px; border-bottom: var(--line) solid var(--rule); }
+.cd-results-meta { font-size: var(--fs-xs); }
+.cd-waiting { display: flex; align-items: center; gap: 10px; padding: 18px 4px; }
+.cd-sev-group { display: flex; flex-direction: column; gap: 8px; }
+.cd-sev-head { display: flex; align-items: center; gap: 8px; padding-top: 4px; }
+.cd-finding {
+  display: flex; flex-direction: column; gap: 8px; padding: 12px 14px 10px 16px; background: var(--surface);
+  border: var(--line) solid var(--rule); border-radius: var(--r-lg); box-shadow: inset 3px 0 0 var(--neutral-line);
+}
+.cd-finding.sev-high { box-shadow: inset 3px 0 0 var(--accent); }
+.cd-finding.sev-medium { box-shadow: inset 3px 0 0 var(--warn); }
+.cd-finding.sev-low { box-shadow: inset 3px 0 0 var(--process-line); }
+.cd-finding.is-closed { opacity: .6; }
+.cd-finding-head { display: flex; align-items: flex-start; gap: 8px; }
+.cd-loc {
+  display: inline-flex; align-items: center; gap: 5px; width: fit-content; max-width: 100%; border: 0; cursor: pointer;
+  padding: 2px 7px; border-radius: var(--r-xs); background: var(--plate); color: var(--info); font-size: 11.5px; overflow-wrap: anywhere; text-align: left;
+}
+.cd-loc:hover { background: var(--info-wash); }
+.cd-finding-body { font-size: var(--fs-md); }
+.cd-suggest { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border-radius: var(--r-md); background: var(--plate); border: var(--line) solid var(--rule); }
+.cd-finding-actions { gap: 6px; padding-top: 2px; }
+.cd-raw summary { cursor: pointer; padding: 4px 0; }
+.cd-raw pre { margin: 6px 0 0; max-height: 320px; overflow: auto; padding: 10px 12px; background: var(--plate); border: var(--line) solid var(--rule); border-radius: var(--r-md); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+@media (max-width: 900px) {
+  .cd-search .input { width: 160px; }
+}

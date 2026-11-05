@@ -1,0 +1,4 @@
+policy,hit_rate
+lru,0.41
+lfu,0.37
+lookahead,0.58

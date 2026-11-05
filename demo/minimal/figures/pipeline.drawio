@@ -1,0 +1,46 @@
+<mxfile compressed="false">
+  <diagram id="pipeline" name="toycache pipeline">
+    <mxGraphModel dx="900" dy="400" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="320" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="trace" value="Synthetic trace&lt;br&gt;(trace.py)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="20" y="120" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="queue" value="Request queue" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="200" y="120" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="window" value="Lookahead window&lt;br&gt;(next W requests)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fbe9e7;strokeColor=#c0392b;" vertex="1" parent="1">
+          <mxGeometry x="200" y="30" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="policy" value="Eviction policy&lt;br&gt;(LRU / LFU / lookahead)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fbe9e7;strokeColor=#c0392b;" vertex="1" parent="1">
+          <mxGeometry x="400" y="30" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="cache" value="GPU block cache&lt;br&gt;(64 blocks)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="400" y="120" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="host" value="Host memory" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="620" y="120" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="endArrow=block;html=1;" edge="1" parent="1" source="trace" target="queue">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" style="endArrow=block;html=1;" edge="1" parent="1" source="queue" target="cache">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="peek" style="endArrow=block;html=1;dashed=1;" edge="1" parent="1" source="queue" target="window">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" style="endArrow=block;html=1;" edge="1" parent="1" source="window" target="policy">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="evict" style="endArrow=block;html=1;" edge="1" parent="1" source="policy" target="cache">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" value="miss" style="endArrow=block;html=1;" edge="1" parent="1" source="cache" target="host">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

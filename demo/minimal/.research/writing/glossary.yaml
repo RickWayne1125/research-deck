@@ -1,0 +1,10 @@
+# Preferred terms for the toycache paper. The Writing panel's terminology pass flags the `avoid` spellings.
+terms:
+  - term: lookahead
+    preferred: lookahead
+    avoid: [look-ahead, look ahead]
+    note: One word, also as a modifier ("lookahead window", "lookahead eviction").
+  - term: hit rate
+    preferred: hit rate
+    avoid: [hit ratio, hitrate]
+    note: The fraction of requests served from the cache, written as a decimal (0.41).

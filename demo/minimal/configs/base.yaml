@@ -1,0 +1,10 @@
+# Shared by every experiment: the policy, the cache size and the synthetic trace.
+policy: lru
+cache:
+  capacity_blocks: 64
+trace:
+  length: 20000
+  blocks: 1024
+  skew: 0.9
+  drift_every: 2000
+  seed: 7

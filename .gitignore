@@ -1,0 +1,10 @@
+.venv/
+# machine-local state lives in ~/.research-deck, never here
+.local/
+web/node_modules/
+web/dist/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.DS_Store

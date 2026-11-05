@@ -1,0 +1,15 @@
+name: toycache (demo)
+summary: "Synthetic demo, all numbers are made up: lookahead eviction for a small GPU-side block cache, against LRU and LFU."
+venue: ""
+deadline: null
+stage: evaluation
+language: en
+paper:
+  main: paper/main.md
+  dir: paper
+code:
+  roots: [toycache]
+figures:
+  dir: figures
+experiments:
+  dir: experiments

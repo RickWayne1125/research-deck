@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "figures": [
+    {
+      "id": "hit-rate",
+      "title": "Hit rate by eviction policy",
+      "kind": "matplotlib",
+      "source": "figures/fig_hit_rate.py",
+      "data": ["figures/data/hit_rate.csv"],
+      "node_id": null,
+      "caption": "Figure 1: hit rate at 64 blocks. Lookahead eviction (accent) against the LRU and LFU baselines.",
+      "updated_at": "2026-10-19T15:41:00Z"
+    },
+    {
+      "id": "pipeline",
+      "title": "toycache pipeline",
+      "kind": "drawio",
+      "source": "figures/pipeline.drawio",
+      "data": [],
+      "node_id": null,
+      "caption": "The request queue feeds the cache; the lookahead window lets the eviction policy see the next requests.",
+      "updated_at": "2026-10-19T15:45:00Z"
+    }
+  ]
+}

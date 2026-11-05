@@ -1,0 +1,108 @@
+/* The shell grid: (navigation | view | conversation). --nav-w and --dock-w are set on .shell by App.tsx (resizable,
+   components/resize.tsx); the navigation's handle sits in the nav grid area, the conversation's inside it. A closed
+   conversation folds to a 44 px rail. */
+.shell {
+  position: relative; display: grid; height: 100vh; min-height: 0;
+  grid-template-columns: var(--nav-w) minmax(0, 1fr) 44px;
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: "nav main dock";
+}
+.shell.dock-open { grid-template-columns: var(--nav-w) minmax(0, 1fr) var(--dock-w); }
+
+/* the navigation is a size container: at the icon rail (also while a drag passes through it) the labels go */
+.sidenav {
+  grid-area: nav; display: flex; flex-direction: column; gap: 2px; padding: 12px 8px 8px; border-right: var(--line) solid var(--rule);
+  background: var(--plate); min-height: 0; overflow: auto; container: sidenav / inline-size;
+}
+.brand { display: flex; align-items: center; gap: 8px; padding: 2px 8px 10px; font-size: var(--fs-lg); color: var(--ink-strong); }
+.brand b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brand-mark { display: inline-grid; width: 22px; height: 22px; color: var(--ink); flex: none; }
+.brand-mark svg { width: 22px; height: 22px; }
+
+.project-btn {
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; margin-bottom: 6px; text-align: left;
+  border: var(--line) solid var(--rule-strong); border-radius: var(--r-md); background: var(--surface); cursor: pointer;
+}
+.project-btn:hover { border-color: var(--slate); }
+.project-initial {
+  display: none; width: 24px; height: 24px; flex: none; border-radius: var(--r-sm); background: var(--ink); color: var(--paper);
+  font: 600 12px/24px var(--sans); text-align: center;
+}
+.project-text { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+.project-name { font-weight: 600; color: var(--ink-strong); }
+.project-sub { font-size: var(--fs-xs); }
+
+.nav-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 32px; padding: 6px 10px; border: 0; border-radius: var(--r-md);
+  background: none; color: var(--muted); cursor: pointer; font: 500 var(--fs-md)/1.2 var(--sans); text-align: left;
+}
+.nav-item svg { flex: none; }
+.nav-item > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nav-item:hover { background: var(--wash); color: var(--ink); }
+.nav-item.active { background: var(--surface); color: var(--ink-strong); font-weight: 600; box-shadow: inset 0 0 0 1px var(--rule); }
+.nav-item:disabled { opacity: .4; cursor: default; }
+.nav-item kbd { font-size: 10px; color: var(--faint); }
+.nav-jump { margin-bottom: 8px; color: var(--faint); border: var(--line) dashed var(--rule-strong); }
+.nav-jump:hover { border-style: solid; }
+.nav-group { display: flex; flex-direction: column; gap: 2px; }
+.nav-badge {
+  flex: none; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--accent); color: var(--accent-ink);
+  font: 600 11px/18px var(--sans); text-align: center;
+}
+.nav-foot { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; padding: 8px 10px 4px; border-top: var(--line) solid var(--rule); font-size: var(--fs-sm); color: var(--muted); }
+.nav-status { gap: 6px; min-width: 0; }
+.nav-prefs { justify-content: space-between; }
+.nav-toggle { flex: none; margin-top: 2px; color: var(--faint); font-size: var(--fs-sm); }
+.nav-handle { grid-area: nav; }
+.rs-handle.nav-handle[data-edge="right"] { right: -3px; }     /* placed by the grid area (border box), not by the nav's padding box */
+@container sidenav (max-width: 120px) {
+  .nav-item { justify-content: center; padding-left: 0; padding-right: 0; position: relative; }
+  .nav-item > span, .nav-item kbd, .brand b, .project-text, .project-btn > svg, .nav-foot { display: none; }
+  .brand { justify-content: center; padding-left: 0; padding-right: 0; }
+  .project-btn { justify-content: center; padding: 4px; }
+  .project-initial { display: block; }
+  .nav-jump { border-color: transparent; }
+  .nav-badge { position: absolute; top: 1px; right: 4px; min-width: 15px; height: 15px; font-size: 9.5px; line-height: 15px; padding: 0 3px; }
+}
+
+.main { grid-area: main; min-width: 0; min-height: 0; overflow: hidden; background: var(--paper); }
+.dock { grid-area: dock; position: relative; min-width: 0; min-height: 0; border-left: var(--line) solid var(--rule); background: var(--surface); display: flex; flex-direction: column; }
+.dock-rail { grid-area: dock; border-left: var(--line) solid var(--rule); background: var(--plate); display: flex; flex-direction: column; align-items: center; padding-top: 12px; }
+.dock-rail-btn {
+  position: relative; display: grid; place-items: center; width: 32px; height: 32px; border: var(--line) solid var(--rule-strong);
+  border-radius: var(--r-md); background: var(--surface); color: var(--ink); cursor: pointer;
+}
+.dock-rail-btn:hover { border-color: var(--slate); }
+.dock-rail-dot { position: absolute; top: -3px; right: -3px; }
+
+/* ⌘K */
+.palette-scrim { place-items: start center; padding-top: 12vh; }
+.palette {
+  width: min(640px, 100%); max-height: 70vh; display: flex; flex-direction: column; background: var(--surface);
+  border: var(--line) solid var(--rule-strong); border-radius: var(--r-lg); box-shadow: var(--shadow-pop); overflow: hidden;
+}
+.palette-input { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: var(--line) solid var(--rule); color: var(--muted); }
+.palette-input input { flex: 1; border: 0; outline: none; background: none; font-size: var(--fs-lg); color: var(--ink); }
+.palette-list { overflow: auto; padding: 6px; min-height: 0; }
+.palette-head { padding: 8px 8px 4px; }
+.palette-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 8px; border: 0; border-radius: var(--r-md);
+  background: none; text-align: left; cursor: pointer; color: var(--ink);
+}
+.palette-item.active { background: var(--wash); }
+.palette-hint { max-width: 45%; font-size: var(--fs-xs); }
+.palette-empty { padding: 16px; text-align: center; }
+.palette-foot { padding: 7px 14px; border-top: var(--line) solid var(--rule); font-size: var(--fs-xs); }
+
+/* narrow windows: the navigation is the icon rail and the conversation floats over the view (its left edge still
+   resizes) */
+@media (max-width: 1100px) {
+  .shell, .shell.dock-open { grid-template-columns: 56px minmax(0, 1fr) 44px; }
+  .sidenav .nav-item > span, .sidenav .nav-item kbd, .nav-foot, .nav-handle, .nav-toggle, .brand b, .project-text, .project-btn > svg { display: none; }
+  .project-initial { display: block; }
+  .project-btn { justify-content: center; padding: 4px; }
+  .brand { justify-content: center; padding-left: 0; padding-right: 0; }
+  .sidenav .nav-item { justify-content: center; padding-left: 0; padding-right: 0; position: relative; }
+  .nav-badge { position: absolute; top: 1px; right: 4px; min-width: 15px; height: 15px; font-size: 9.5px; line-height: 15px; padding: 0 3px; }
+  .dock { position: fixed; right: 0; top: 0; bottom: 0; width: min(var(--dock-w), 92vw); z-index: 40; box-shadow: var(--shadow-pop); }
+}

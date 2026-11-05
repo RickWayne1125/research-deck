@@ -1,0 +1,3 @@
+policy,capacity_blocks,hit_rate
+lru,64,0.41
+lfu,64,0.37

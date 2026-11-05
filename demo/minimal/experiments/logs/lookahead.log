@@ -1,0 +1,6 @@
+[2026-10-19 14:30:02] python -m toycache.sim --config configs/base.yaml --config configs/lookahead.yaml
+[2026-10-19 14:30:03] trace: 20000 requests over 1024 blocks (skew 0.9, drift every 2000, seed 7)
+[2m[2026-10-19 14:30:03][0m [36mINFO[0m cache: 64 blocks, policy [1mlookahead[0m, window 8
+replay lookahead:   0%|          | 0/20000 [00:00<?, ?req/s]replay lookahead:  10%|█         | 2000/20000 [00:41<06:11, 48.5req/s]replay lookahead:  20%|██        | 4000/20000 [01:22<05:30, 48.5req/s]replay lookahead:  30%|███       | 6000/20000 [02:04<04:48, 48.5req/s]replay lookahead:  40%|████      | 8000/20000 [02:45<04:07, 48.5req/s]replay lookahead:  50%|█████     | 10000/20000 [03:26<03:26, 48.5req/s]replay lookahead:  60%|██████    | 12000/20000 [04:07<02:45, 48.5req/s]replay lookahead:  70%|███████   | 14000/20000 [04:48<02:04, 48.5req/s]replay lookahead:  80%|████████  | 16000/20000 [05:30<01:22, 48.5req/s]replay lookahead:  90%|█████████ | 18000/20000 [06:11<00:41, 48.5req/s]replay lookahead: 100%|██████████| 20000/20000 [06:52<00:00, 48.5req/s]
+[2026-10-19 14:36:55] {'policy': 'lookahead', 'capacity_blocks': 64, 'hit_rate': 0.58}
+[2m[2026-10-19 14:36:55][0m [32mdone[0m hit_rate 0.58 (LRU 0.41) · results in experiments/results/lookahead.csv
