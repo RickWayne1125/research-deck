@@ -211,6 +211,7 @@ def build(src: Path, dst: Path) -> dict:
             shas[label] = _commit(dst, paths, when, message)
             getattr(story, label)(shas[label])
     _link_records(dst, records, story.run_ids, shas)
+    _outline(dst)
     _write_dag_config(dst, "strict")               # the history is in; from here on the demo follows the stage rules
     write_text_atomic(dst / ".research" / ".gitignore", RESEARCH_GITIGNORE)
     label, when, message = RESEARCH_COMMIT
@@ -226,6 +227,79 @@ def build(src: Path, dst: Path) -> dict:
     write_json(dst / ".git" / COMPLETE, {"version": VERSION, "commits": shas})
     (dst / ".git" / BUILDING).unlink()
     return shas
+
+
+OUTLINE_AT = "2026-10-26T14:30:00Z"
+
+
+def _outline(dst: Path) -> None:
+    """The paper's outline over the story's nodes (systems template): each section's items, what backs them, the
+    branch the eviction policy took, and the tasks behind them. Ids and times are fixed, so the files are too."""
+    from .dag import seed
+    from .dag.evaluate import current
+    from .dag.ops import apply_ops
+    from .outline import model as outline_model, templates
+    from .outline.ops import Plan
+
+    def item(key: str) -> str:
+        return f"claim.o-{key}"
+
+    s = seed.store(dst)
+    with seed.clock(OUTLINE_AT):
+        t = templates.get("systems")
+        plan = Plan(current(s).nodes, True, "en")
+        for sec in t["sections"]:
+            plan.op_add_section({"key": sec["key"], "title": sec["title"], "role": sec["role"]["en"], "phase": sec["phase"]})
+        add = [
+            ("sec.motivation", "motiv-lru", "LRU hits only 0.41 of the requests at 64 blocks.", {}),
+            ("sec.motivation", "motiv-queue", "The serving queue knows the next requests, but LRU ignores them.", {}),
+            ("sec.motivation", "motiv-so", "So a cache that reads the queue can evict the block used farthest ahead.", {"derived": True}),
+            ("sec.design", "design-policy", "Lookahead eviction over the queued requests.", {}),
+            ("sec.design", "design-ties", "Ties are broken in LRU order.", {}),
+            ("sec.implementation", "impl-modules", "Each policy is a small module the simulator loads by name.", {}),
+            ("sec.evaluation", "eval-window", "The gain holds for lookahead windows from 4 to 32.", {}),
+            ("sec.related", "related-lru", "LRU is the usual replacement policy for block caches.", {}),
+            ("sec.related", "related-opt", "With the future known, evicting the block used farthest ahead is optimal.", {}),
+            ("sec.intro", "intro-miss", "A small GPU block cache misses most requests when the hot set moves.", {}),
+            ("sec.intro", "intro-queue", "The serving queue already knows which blocks come next.", {}),
+            ("sec.intro", "intro-result", "Lookahead eviction reads the queue and beats LRU at 64 blocks.", {}),
+        ]
+        for parent, key, text, extra in add:
+            plan.op_add_item({"parent": parent, "id": item(key), "text": text, **extra})
+        plan.op_attach_item({"parent": "sec.evaluation", "item": "claim.hit-rate", "at": {"first": True}})
+        for key, of in (("intro-miss", ["motiv-lru"]), ("intro-queue", ["motiv-queue"]), ("intro-result", [])):
+            plan.op_edit_item({"item": item(key), "summary_of": [item(k) for k in of] or ["claim.hit-rate"]})
+        plan.op_fork({"item": item("design-policy"), "question": "Which eviction policy makes use of the queue?",
+                      "directions": ["Lookahead: evict the block whose next queued use is farthest away.",
+                                     "Least-frequently-used eviction."],
+                      "ids": [item("design-lookahead"), item("design-lfu")]})
+        for key, to, kind in (("motiv-lru", "find.lru-low", "basis"), ("motiv-queue", "gap.queue-hint", "basis"),
+                              ("design-lookahead", "dec.policy", "basis"), ("design-ties", "design.cache", "basis"),
+                              ("related-lru", "ref.lru", "cites"), ("related-opt", "ref.offline-opt", "cites")):
+            plan.op_link({"item": item(key), "to": to, "type": kind})
+        apply_ops(s, plan.dag_ops(), seed.HUMAN)
+        # the attempt that lost: abandoned with what it showed, then the choice
+        plan = Plan(current(s).nodes, True, "en")
+        plan.op_abandon_direction({"item": item("design-policy"), "direction": item("design-lfu"),
+                                   "reason": "LFU hits 0.37 at 64 blocks, below LRU: it keeps blocks that were hot "
+                                             "before the hot set moved"})
+        plan.op_choose_direction({"item": item("design-policy"), "direction": item("design-lookahead")})
+        apply_ops(s, plan.dag_ops(), seed.HUMAN)
+    outline_model.save_meta_at(dst, "systems", t["phases"])
+    tasks = [
+        ("t-0d0001", "lit", "Replacement policies: LRU and the offline optimum", ["related-lru", "related-opt"], "done", {}),
+        ("t-0d0002", "exp", "Baseline eviction policies at 64 blocks", ["motiv-lru"], "done", {"node": "exp.baseline"}),
+        ("t-0d0003", "exp", "Attempt A: LFU at 64 blocks", ["design-lfu"], "done", {"node": "exp.baseline"}),
+        ("t-0d0004", "exp", "Attempt B: lookahead eviction, window 8", ["design-lookahead"], "done", {"node": "exp.lookahead"}),
+        ("t-0d0005", "code", "Eviction policies", ["design-ties", "impl-modules"], "done", {"node": "mod.policies"}),
+        ("t-0d0006", "fig", "Figure 1: hit rate by eviction policy", ["claim.hit-rate"], "done", {"node": "fig.hit-rate"}),
+        ("t-0d0007", "exp", "Sensitivity to the lookahead window", ["eval-window"], "todo", {"node": "exp.window-sweep"}),
+    ]
+    write_json(dst / ".research" / "outline" / "tasks.json", {"version": 1, "tasks": [
+        {"id": tid, "type": kind, "title": title, "items": [i if i.startswith("claim.") else item(i) for i in items],
+         "status": status, "note": "", "assignee": "", "links": links, "by": seed.HUMAN,
+         "created_at": OUTLINE_AT, "updated_at": OUTLINE_AT}
+        for tid, kind, title, items, status, links in tasks]})
 
 
 def _write_dag_config(dst: Path, stage_mode: str = "free") -> None:

@@ -109,11 +109,43 @@ def test_shas_are_stable(built, tmp_path):
     assert tree_digest(again) == tree_digest(built["root"])
 
 
+def test_demo_outline(deck):
+    """The demo's outline: the systems template over the story, the eviction-policy fork with LFU given up, the tasks."""
+    client, pid, root = deck
+    o = client.get(f"/api/projects/{pid}/outline?lang=en").json()
+    assert o["has_outline"] and o["template"] == "systems" and o["project_phase"] == "evaluation"
+    assert [s["id"] for s in o["sections"]] == ["sec.intro", "sec.motivation", "sec.design", "sec.implementation",
+                                                "sec.evaluation", "sec.related", "sec.conclusion"]
+    items = {}
+    def walk(steps):
+        for st in steps:
+            for it in st["items"]:
+                items[it["id"]] = it
+                walk(it["children"])
+                for d in (it.get("fork") or {}).get("directions") or []:
+                    items[d["id"]] = d
+    for s in o["sections"]:
+        walk(s["items"])
+    policy = items["claim.o-design-policy"]
+    assert policy["fork"]["chosen"] == "claim.o-design-lookahead"
+    lfu = items["claim.o-design-lfu"]
+    assert lfu["state"] == "abandoned" and lfu["why"].startswith("LFU hits 0.37")
+    # the measured claim shows its bound values; the stale lookahead run keeps its design item in progress
+    assert "0.41" in items["claim.hit-rate"]["text"] and "{{" not in items["claim.hit-rate"]["text"]
+    assert items["claim.o-design-lookahead"]["state"] == "doing"
+    assert items["claim.o-intro-result"]["summary_of"] == ["claim.hit-rate"]
+    tasks = {t["id"]: t for t in o["tasks"]}
+    assert tasks["t-0d0004"]["status"] == "doing" and tasks["t-0d0004"]["reason"] == "stale"
+    assert tasks["t-0d0003"]["abandoned"] and tasks["t-0d0007"]["status"] == "todo"
+    assert [g["phase"] for g in o["groups"]] == ["idea", "insight", "design", "evaluation", "summary"]
+    assert next(g for g in o["groups"] if g["phase"] == "evaluation")["state"] == "current"
+
+
 def test_dag_lenses(deck):
     client, pid, root = deck
     lenses = client.get(f"/api/projects/{pid}/dag/lenses").json()
     tried = {i["id"]: i["note"] for i in lenses["tried"]["items"]}
-    assert len(tried) == 15 and lenses["tried"]["dead"] == 1
+    assert len(tried) == 14 and lenses["tried"]["dead"] == 1          # the outline (sections, claims) is not an attempt
     assert "LFU hits 0.37" in tried["sol.lfu"]
     assert {i["id"]: i["cells"] for i in lenses["rerun"]["items"]} == {
         "exp.lookahead": ["_"],

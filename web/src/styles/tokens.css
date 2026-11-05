@@ -37,6 +37,9 @@
   --info: #3f6f9a;     --info-wash: #e6eef7;
   --stale: #b7791f;    --stale-wash: #fbf1de;
 
+  /* the four kinds of task on the outline: literature, code, figure, experiment */
+  --type-lit: #3f6f9a;  --type-code: #6b4fa0;  --type-fig: #2f7d7d;  --type-exp: #8a5410;
+
   /* type: Helvetica first (the figures' face), PingFang SC for Chinese, JetBrains Mono for code */
   --sans: "Helvetica Neue", Helvetica, "PingFang SC", "Noto Sans CJK SC", Arial, sans-serif;
   --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Songti SC", "Noto Serif CJK SC", Georgia, serif;
@@ -67,6 +70,7 @@
     --neutral: #25292d; --neutral-line: #6f747a; --neutral-ink: #c9ccd0;
     --ok: #5cbf8f; --ok-wash: #1d3329; --warn: #e0a556; --warn-wash: #3a2d1a;
     --info: #7fa9d1; --info-wash: #1f2a35; --stale: #e0a556; --stale-wash: #3a2d1a;
+    --type-lit: #7fa9d1; --type-code: #b39ddb; --type-fig: #6cc4c4; --type-exp: #e0a556;
     --shadow-pop: 0 1px 2px rgb(0 0 0 / .3), 0 10px 28px rgb(0 0 0 / .45);
   }
 }
@@ -82,5 +86,6 @@
   --neutral: #25292d; --neutral-line: #6f747a; --neutral-ink: #c9ccd0;
   --ok: #5cbf8f; --ok-wash: #1d3329; --warn: #e0a556; --warn-wash: #3a2d1a;
   --info: #7fa9d1; --info-wash: #1f2a35; --stale: #e0a556; --stale-wash: #3a2d1a;
+    --type-lit: #7fa9d1; --type-code: #b39ddb; --type-fig: #6cc4c4; --type-exp: #e0a556;
   --shadow-pop: 0 1px 2px rgb(0 0 0 / .3), 0 10px 28px rgb(0 0 0 / .45);
 }

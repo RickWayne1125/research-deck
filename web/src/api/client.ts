@@ -41,9 +41,9 @@ export const del = <T>(path: string, query?: Query) => api<T>(path, { method: 'D
 /** Project-scoped path helper: p('demo', '/writing/docs') -> /api/projects/demo/writing/docs */
 export const p = (projectId: string, rest: string) => `/api/projects/${encodeURIComponent(projectId)}${rest}`;
 
-/** Live project events (topics: dag, file, sessions, agent, experiments, figures, writing, project, survey). Returns unsubscribe. */
+/** Live project events (topics: dag, outline, file, sessions, agent, experiments, figures, writing, project, survey). Returns unsubscribe. */
 export function subscribeEvents(projectId: string, onEvent: (e: ProjectEvent) => void): () => void {
-  const topics = ['dag', 'file', 'sessions', 'agent', 'experiments', 'figures', 'writing', 'project', 'survey'];
+  const topics = ['dag', 'outline', 'file', 'sessions', 'agent', 'experiments', 'figures', 'writing', 'project', 'survey'];
   const handler = (ev: MessageEvent) => { try { onEvent(JSON.parse(ev.data)); } catch { /* ignore */ } };
   let es: EventSource | null = null;
   let timer = 0;

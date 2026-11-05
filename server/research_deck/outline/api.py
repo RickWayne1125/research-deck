@@ -5,6 +5,7 @@ POST   /api/projects/{pid}/outline/ops             {ops: [outline op…], lang?}
 POST   /api/projects/{pid}/outline/init            {template, lang?, structure?}: a new outline from a template
 POST   /api/projects/{pid}/outline/structure       {text, template, lang?, agent?}: a structured draft (nothing written)
 POST   /api/projects/{pid}/outline/save-template   {id, name}: the project's sections as a user template
+POST   /api/projects/{pid}/outline/extract         {name, content_base64}: the text of an uploaded PDF outline
 GET    /api/projects/{pid}/tasks                   the tasks as stored
 POST   /api/projects/{pid}/tasks                   {type, title, items, status?, note?, assignee?, links?}
 PATCH  /api/projects/{pid}/tasks/{tid}             any of those fields
@@ -85,6 +86,34 @@ class SaveTemplateBody(BaseModel):
 def post_save_template(pid: str, body: SaveTemplateBody, request: Request):
     _human(request)
     return service.save_as_template(pid, body.id, body.name)
+
+
+class ExtractBody(BaseModel):
+    name: str
+    content_base64: str
+
+
+@router.post("/api/projects/{pid}/outline/extract")
+def post_extract(pid: str, body: ExtractBody, request: Request):
+    """A PDF's text, for the outline box (the page reads .md, .tex and .txt itself)."""
+    import base64
+    import binascii
+    from ..start.create import MAX_UPLOAD, pdf_text
+    _human(request)
+    if not body.name.lower().endswith(".pdf"):
+        raise HTTPException(400, "only a .pdf needs extracting")
+    try:
+        data = base64.b64decode(body.content_base64, validate=True)
+    except (binascii.Error, ValueError):
+        raise HTTPException(400, "the file is not valid base64")
+    if len(data) > MAX_UPLOAD:
+        raise HTTPException(413, f"files up to {MAX_UPLOAD // (1024 * 1024)} MB")
+    if not data.startswith(b"%PDF"):
+        raise HTTPException(400, "this .pdf is not a PDF")
+    text = pdf_text(data)
+    if not text:
+        raise HTTPException(422, "this PDF has no text layer")
+    return {"text": text}
 
 
 # ---------------------------------------------------------------- tasks

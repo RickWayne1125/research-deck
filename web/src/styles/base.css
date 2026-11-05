@@ -176,3 +176,6 @@ html.rd-resizing iframe { pointer-events: none !important; }
 .md th, .md td { border: var(--line) solid var(--rule); padding: 4px 8px; text-align: left; }
 .md a { color: var(--info); }
 .md .katex-display { margin: .6em 0; overflow-x: auto; overflow-y: hidden; }
+
+/* visually hidden, still read by screen readers */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

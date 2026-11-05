@@ -4,6 +4,7 @@ import type { SVGProps } from 'react';
 const P: Record<string, string> = {
   overview: 'M2.5 2.5h4.5v4.5H2.5zM9 2.5h4.5v4.5H9zM2.5 9h4.5v4.5H2.5zM9 9h4.5v4.5H9z',
   dag: 'M4 3.5a1.5 1.5 0 1 1 0 .01M12 3.5a1.5 1.5 0 1 1 0 .01M8 12.5a1.5 1.5 0 1 1 0 .01M4 5l3.3 6M12 5l-3.3 6',
+  outline: 'M3 3.5h10M3 3.5v9M3 8h2.5M3 12.5h2.5M7.5 8h5.5M7.5 12.5h5.5',
   writing: 'M3 13l1-3.5L11 2.5l2.5 2.5-7 7L3 13zM9.5 4l2.5 2.5',
   coding: 'M5.5 4.5L2 8l3.5 3.5M10.5 4.5L14 8l-3.5 3.5M9 3l-2 10',
   experiments: 'M6 2.5h4M6.5 2.5v4L3 12.5a1 1 0 0 0 .9 1.5h8.2a1 1 0 0 0 .9-1.5L9.5 6.5v-4M4.6 10h6.8',

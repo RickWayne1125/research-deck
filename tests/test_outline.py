@@ -153,6 +153,17 @@ def test_forks_directions_and_the_choice(client, made):
     ops(client, pid, {"op": "choose_direction", "item": item, "direction": d2}, status=409)   # abandoned
 
 
+def test_an_abandoned_direction_keeps_its_reason_and_note(client, made):
+    pid, _ = made
+    item = flat(outline(client, pid))["3.1"]["id"]
+    d1, d2 = ops(client, pid, {"op": "fork", "item": item, "directions": ["Router scores", "A learned model"]})["created"]
+    # abandoning one direction and choosing another in one batch abandons it once
+    ops(client, pid, {"op": "abandon_direction", "item": item, "direction": d2, "reason": "infeasible", "note": "74% accurate, needs 90%"},
+        {"op": "choose_direction", "item": item, "direction": d1})
+    d = flat(outline(client, pid))["3.1/d2"]
+    assert d["state"] == "abandoned" and d["why"] == "74% accurate, needs 90%" and d["why_kind"] == "infeasible" and d["ended_at"]
+
+
 def test_task_states_roll_up(client, made):
     pid, _ = made
     f = flat(outline(client, pid))
@@ -214,7 +225,19 @@ def test_experiment_tasks_follow_their_runs(client, made):
     assert next(x for x in outline(client, pid)["tasks"] if x["id"] == t["id"])["status"] == "todo"
     seed.record(s, "exp.base", {}, reads=[], cfg_keys=[], outputs={"wait": 0.58}, gpu_hours=0.1)
     o = outline(client, pid)
-    assert next(x for x in o["tasks"] if x["id"] == t["id"])["status"] == "done" and flat(o)["2.1"]["state"] == "holds"
+    task = next(x for x in o["tasks"] if x["id"] == t["id"])
+    assert task["status"] == "done" and task["reason"] is None and flat(o)["2.1"]["state"] == "holds"
+
+
+def test_a_pdf_outline_is_read_for_the_box(client, project):
+    import base64
+    pid, _ = project
+    human(client)
+    url = f"{base(pid)}/outline/extract"
+    assert client.post(url, json={"name": "outline.md", "content_base64": ""}).status_code == 400      # the page reads text itself
+    bad = base64.b64encode(b"not a pdf").decode()
+    assert client.post(url, json={"name": "outline.pdf", "content_base64": bad}).status_code == 400
+    assert client.post(url, json={"name": "outline.pdf", "content_base64": "%%%"}).status_code == 400
 
 
 def test_summary_items_follow_the_body(client, made):

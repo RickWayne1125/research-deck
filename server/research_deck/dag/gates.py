@@ -12,6 +12,7 @@ from ..actors import is_human
 from .evaluate import State, current
 from .model import DEAD, edges, facet_value, is_action, rank, ref_id, spec_of, title_of
 from .ops import OpError, make_snapshot
+from .stages import OUTLINE_KINDS
 
 GATES = [
     ("G1", "S1", "Worth pursuing", "值得做"), ("G2", "S2", "The issue is real", "问题真实存在"),
@@ -210,10 +211,12 @@ def lenses(st: State) -> dict:
     for nid, n in sorted(st.nodes.items()):
         ev = st.E[nid]
         nruns = len(st.runs.by_node.get(nid, []))
-        if ev.archived:
+        attempt = n.get("kind") not in OUTLINE_KINDS   # the paper's sections and items are not attempts
+        if ev.archived and attempt:
             dead += 1
-        v = n.get("verdict") or {}                 # every node, dead ones included, with its verdict or run count
-        tried.append({"id": nid, "note": v.get("reason") or (f"{nruns} runs" if is_action(n) else n.get("status"))})
+        v = n.get("verdict") or {}                 # every attempt, dead ones included, with its verdict or run count
+        if attempt:
+            tried.append({"id": nid, "note": v.get("reason") or (f"{nruns} runs" if is_action(n) else n.get("status"))})
         if ev.archived:
             continue
         if n.get("status") in CONFIRMED and ev.level == "fresh":

@@ -3,8 +3,9 @@
 // ------------------------------------------------------------------ projects, files, events
 /** Where an agent request comes from. Every origin talks to the project's one conversation (agents/sessions.py). */
 export type PanelId = 'project' | 'writing' | 'coding' | 'experiments' | 'visualization';
-/** The views: Today (overview), Map (dag), Experiments, Paper (writing, with the figures), Code (coding), Settings. */
-export type ViewId = 'overview' | 'dag' | 'experiments' | 'writing' | 'coding' | 'settings';
+/** The views: Outline (a research project's home), Today (overview; an engineering project's home), Map (dag),
+ *  Experiments, Paper (writing, with the figures), Code (coding), Settings. */
+export type ViewId = 'outline' | 'overview' | 'dag' | 'experiments' | 'writing' | 'coding' | 'settings';
 export type StageId = 'idea' | 'motivation' | 'insight' | 'design' | 'evaluation' | 'writing';
 export const STAGES: StageId[] = ['idea', 'motivation', 'insight', 'design', 'evaluation', 'writing'];
 

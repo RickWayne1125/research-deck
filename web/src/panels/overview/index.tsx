@@ -1,9 +1,10 @@
-// Today: the project's home. It answers one question, "what do you need from me?": the stage the project is in and
-// what stands before the next one, then the things that need a decision (agent proposals, drafted nodes to review,
-// open decisions, nodes to revise, runs to start, failed runs), what is waiting for evidence, and the latest events.
+// What waits for the researcher: the things that need a decision (agent proposals, drafted nodes to review, open
+// decisions, nodes to revise, runs to start, failed runs, the finished early survey) and what is waiting for evidence.
 // Every item can be settled in place or opens the place that settles it. J/K move between items, Y takes an item's
-// first action, N its second. An engineering project gets EngineeringOverview (repositories, documents, runs, figures).
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+// first action, N its second. A research project shows the list at the top of its outline page (TodayList, with the
+// outline's own items first); an engineering project's home is EngineeringOverview (repositories, documents, runs,
+// figures).
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { ApiError } from '../../api/client';
 import { Button, Dialog, Spinner } from '../../components/ui';
 import { Icon } from '../../components/icons';
@@ -17,54 +18,42 @@ import { ImpactView } from '../../dag/ImpactView';
 import { errText } from '../dag/preview';
 import type { DagNode, Impact, Proposal } from '../../dag-types';
 import { Activity } from './Activity';
-import { StartCard } from './StartCard';
 import { EngineeringOverview } from './EngineeringOverview';
 import { ActorAvatar, errorMessage, usePlural, type NodeIndex } from './parts';
 import { facetText } from './today';
-import { Steps } from './NextStep';
-import { FolderCard, SurveyCard, dismiss, duration, isDismissed, paperCounts } from '../../start/Survey';
+import { paperCounts } from '../../start/Survey';
 import type { Survey } from '../../start/api';
 import { stepOfStage, waitsForStep } from '../../state/stages';
 import './overview.css';
 import './i18n';
 
 export default function OverviewPanel() {
-  const { project } = useApp();
-  if (!project) return null;
-  return project.kind === 'engineering' ? <EngineeringOverview project={project} /> : <ResearchToday />;
+  const { project, navigate } = useApp();
+  const research = !!project && project.kind !== 'engineering';
+  // A research project's Today is the top of its outline page.
+  useEffect(() => { if (project && research) navigate('outline', null, project.id, { replace: true }); }, [project, research, navigate]);
+  if (!project || research) return null;
+  return <EngineeringOverview project={project} />;
 }
 
 /** An item's keyboard actions: Y runs the first, N the second. */
-interface ItemKeys { yes?: () => void; no?: () => void }
-type Register = (id: string, k: ItemKeys | null) => void;
+export interface ItemKeys { yes?: () => void; no?: () => void }
+export type Register = (id: string, k: ItemKeys | null) => void;
 
-function ResearchToday() {
-  const { project, projectId } = useApp();
-  const t = useT();
-  const today = useToday();
-  const pid = projectId!;
-  const { needs, waiting } = today;
-  const graph = today.graph;
-
-  const index = useMemo<NodeIndex>(() => {
-    const byId = new Map((graph?.nodes ?? []).map(n => [n.id, n]));
-    return { node: id => byId.get(id), ev: id => graph?.eval[id] };
-  }, [graph]);
-
-  // J/K move the focus between items; Y and N run the focused item's actions.
+/** J/K move the focus between the items under `root`; Y and N run the focused item's actions. */
+export function useItemKeys(root: RefObject<HTMLElement | null>): Register {
   const keys = useRef(new Map<string, ItemKeys>());
-  const listRef = useRef<HTMLDivElement>(null);
   const register = useCallback<Register>((id, k) => { if (k) keys.current.set(id, k); else keys.current.delete(id); }, []);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;
       if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
       if (e.metaKey || e.ctrlKey || e.altKey || document.querySelector('.scrim')) return;
-      const items = [...(listRef.current?.querySelectorAll<HTMLElement>('[data-item]') ?? [])];
+      const items = [...(root.current?.querySelectorAll<HTMLElement>('[data-item]') ?? [])];
       if (!items.length) return;
       const at = items.findIndex(x => x === document.activeElement || x.contains(document.activeElement));
       const k = e.key.toLowerCase();
-      if (k === 'j' || k === 'k') {
+      if ((k === 'j' || k === 'k') && (at >= 0 || !document.activeElement?.closest('[data-keys-own]'))) {
         e.preventDefault();
         const next = at < 0 ? 0 : Math.max(0, Math.min(items.length - 1, at + (k === 'j' ? 1 : -1)));
         items[next].focus();
@@ -76,89 +65,73 @@ function ResearchToday() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [root]);
+  return register;
+}
 
-  const [, setDismissedN] = useState(0);
-  if (!project) return null;
-  const empty = today.loaded && !!graph && graph.nodes.length === 0 && !needs.proposals.length;
-  // The early survey: its card while it runs (or after it stopped or failed, until closed); once done, while the
-  // project is still at the idea, an item that points at the survey and the card of what it left in the folder.
-  const survey = today.survey;
-  const atIdea = stepOfStage(project.stage) === 'idea';
-  const surveyCard = !!survey && (survey.status === 'running' || (survey.status !== 'done' && !isDismissed(pid, survey.id)));
-  const surveyDone = !!survey && survey.status === 'done' && atIdea;
+/** How many cards TodayList shows that ask for a decision, and how many wait (the finished survey counts while the
+ *  project is at the idea). */
+export function useTodayCounts(): { decide: number; wait: number; surveyDone: boolean } {
+  const { project } = useApp();
+  const { needs, waiting, survey } = useToday();
+  const surveyDone = !!survey && survey.status === 'done' && stepOfStage(project?.stage) === 'idea';
   const decide = needs.proposals.length + (needs.review.length ? 1 : 0) + needs.decisions.length + (needs.fix.length ? 1 : 0)
     + (needs.rerun.ids.length ? 1 : 0) + (needs.failed.length ? 1 : 0) + (surveyDone ? 1 : 0);
   const wait = (waiting.evidence.length ? 1 : 0) + (waiting.blocked.length ? 1 : 0);
+  return { decide, wait, surveyDone };
+}
 
+/** The list of what waits for the researcher. `extra` renders more items first (the outline's own), counted in
+ *  `extraCount`; `recent` adds the latest events below. */
+export function TodayList({ extra, extraCount = 0, recent = false }: { extra?: (register: Register) => ReactNode; extraCount?: number; recent?: boolean }) {
+  const { projectId } = useApp();
+  const t = useT();
+  const today = useToday();
+  const pid = projectId!;
+  const { needs, waiting, graph } = today;
+  const index = useMemo<NodeIndex>(() => {
+    const byId = new Map((graph?.nodes ?? []).map(n => [n.id, n]));
+    return { node: id => byId.get(id), ev: id => graph?.eval[id] };
+  }, [graph]);
+  const listRef = useRef<HTMLDivElement>(null);
+  const register = useItemKeys(listRef);
+  const counts = useTodayCounts();
+  const decide = counts.decide + extraCount;
+  const survey = today.survey;
   return (
-    <div className="panel td">
-      <div className="panel-body td-body" ref={listRef}>
-        <div className="td-page">
-          <header className="td-head">
-            <div className="td-title">
-              <div className="row" style={{ gap: 10 }}>
-                <h1 className="td-h1">{project.name}</h1>
-                {project.demo && <span className="chip">{t('nav.demo')}</span>}
-              </div>
-              {project.summary && <p className="muted td-summary">{project.summary}</p>}
-            </div>
-            <Steps pid={pid} />
-          </header>
-
-          {today.error && (
-            <div className="notice warn" role="status">
-              <Icon name="warn" />
-              <span className="grow"><b>{t('ov.dag.unavailable')}</b> · {t('ov.dag.unavailableBody', { msg: today.error })}</span>
-              <button type="button" className="btn sm" onClick={today.reload}>{t('common.retry')}</button>
-            </div>
-          )}
-
-          {today.loaded && surveyCard && survey && (
-            <SurveyCard pid={pid} survey={survey} onDismiss={() => { dismiss(pid, survey.id); setDismissedN(n => n + 1); }} />
-          )}
-          {!today.loaded ? <div className="td-loading"><Spinner /></div> : empty ? (survey?.status !== 'running' && <StartCard pid={pid} onCreated={today.reload} />) : (
-            <>
-              <section className="td-sec" aria-labelledby="td-decide">
-                <div className="td-sec-head">
-                  <h2 id="td-decide" className="td-h2">{t('td.decide')} <span className="muted td-count">{decide}</span></h2>
-                  {surveyDone && survey && <span className="faint td-keys">{t('sv.hint.done', { t: duration(t, survey.created_at, survey.finished_at) })}</span>}
-                  {decide > 0 && <span className="faint td-keys">{t('td.keys')}</span>}
-                </div>
-                {decide === 0 ? <div className="card td-none muted">{t('td.nothing')}</div> : (
-                  <div className="card td-list">
-                    {needs.proposals.map(x => <ProposalItem key={x.id} pid={pid} proposal={x} register={register} onChanged={today.reload} />)}
-                    {needs.review.length > 0 && <ReviewItem pid={pid} nodes={needs.review} register={register} onChanged={today.reload} />}
-                    {surveyDone && survey && <SurveyItem survey={survey} register={register} />}
-                    {needs.decisions.map(d => <DecisionItem key={d.node.id} node={d.node} options={d.options} register={register} />)}
-                    {needs.fix.length > 0 && <FixItem ids={needs.fix} index={index} register={register} />}
-                    {needs.rerun.ids.length > 0 && <RerunItem ids={needs.rerun.ids} gpuH={needs.rerun.gpuH} index={index} register={register} />}
-                    {needs.failed.length > 0 && <FailedItem runs={needs.failed} register={register} />}
-                  </div>
-                )}
-              </section>
-
-              {wait > 0 && (
-                <section className="td-sec" aria-labelledby="td-wait">
-                  <div className="td-sec-head"><h2 id="td-wait" className="td-h2">{t('td.waiting')} <span className="muted td-count">{wait}</span></h2></div>
-                  <div className="card td-list">
-                    {waiting.evidence.length > 0 && <EvidenceItem nodes={waiting.evidence} register={register} />}
-                    {waiting.blocked.length > 0 && <BlockedItem ids={waiting.blocked} index={index} register={register} />}
-                  </div>
-                </section>
-              )}
-
-              {surveyDone && survey && <section className="td-sec"><FolderCard survey={survey} /></section>}
-
-              {!!today.events?.length && (
-                <section className="td-sec td-recent">
-                  <Activity events={today.events.slice(0, 8)} index={index} />
-                </section>
-              )}
-            </>
-          )}
+    <div ref={listRef} className="td-lists">
+      <section className="td-sec" aria-labelledby="td-decide">
+        <div className="td-sec-head">
+          <h2 id="td-decide" className="td-h2">{t('td.decide')} <span className="muted td-count">{decide}</span></h2>
+          {decide > 0 && <span className="faint td-keys">{t('td.keys')}</span>}
         </div>
-      </div>
+        {decide === 0 ? <div className="card td-none muted">{t('td.nothing')}</div> : (
+          <div className="card td-list">
+            {extra?.(register)}
+            {needs.proposals.map(x => <ProposalItem key={x.id} pid={pid} proposal={x} register={register} onChanged={() => { today.reload(); today.reloadOutline(); }} />)}
+            {needs.review.length > 0 && <ReviewItem pid={pid} nodes={needs.review} register={register} onChanged={today.reload} />}
+            {counts.surveyDone && survey && <SurveyItem survey={survey} register={register} />}
+            {needs.decisions.map(d => <DecisionItem key={d.node.id} node={d.node} options={d.options} register={register} />)}
+            {needs.fix.length > 0 && <FixItem ids={needs.fix} index={index} register={register} />}
+            {needs.rerun.ids.length > 0 && <RerunItem ids={needs.rerun.ids} gpuH={needs.rerun.gpuH} index={index} register={register} />}
+            {needs.failed.length > 0 && <FailedItem runs={needs.failed} register={register} />}
+          </div>
+        )}
+      </section>
+      {counts.wait > 0 && (
+        <section className="td-sec" aria-labelledby="td-wait">
+          <div className="td-sec-head"><h2 id="td-wait" className="td-h2">{t('td.waiting')} <span className="muted td-count">{counts.wait}</span></h2></div>
+          <div className="card td-list">
+            {waiting.evidence.length > 0 && <EvidenceItem nodes={waiting.evidence} register={register} />}
+            {waiting.blocked.length > 0 && <BlockedItem ids={waiting.blocked} index={index} register={register} />}
+          </div>
+        </section>
+      )}
+      {recent && !!today.events?.length && (
+        <section className="td-sec td-recent">
+          <Activity events={today.events.slice(0, 8)} index={index} />
+        </section>
+      )}
     </div>
   );
 }
@@ -166,7 +139,7 @@ function ResearchToday() {
 // ------------------------------------------------------------------ items
 
 /** One row of a list: a small tag, the text, and the actions on the right. Focusable for J/K. */
-function Item({ id, tag, tone, title, children, actions, register, keys }: {
+export function Item({ id, tag, tone, title, children, actions, register, keys }: {
   id: string; tag: string; tone?: 'prop' | 'warn' | 'accent'; title: ReactNode; children?: ReactNode; actions?: ReactNode;
   register: Register; keys?: ItemKeys;
 }) {

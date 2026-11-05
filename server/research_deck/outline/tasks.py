@@ -128,25 +128,27 @@ def drop_items(pid: str, item_ids: set[str]) -> None:
             _save(pid, tasks)
 
 
-def effective(t: dict, st: Any, surveys: dict[str, dict] | None = None) -> tuple[str, str]:
-    """(status, note) as the outline shows it, before the phase lock: derived from what the task is linked to."""
-    status, note = t.get("status") or "todo", t.get("note") or ""
+def effective(t: dict, st: Any, surveys: dict[str, dict] | None = None) -> tuple[str, str | None]:
+    """(status, reason) as the outline shows it, before the phase lock: derived from what the task is linked to.
+    reason says why the derived status differs from the set one: run_failed, stale (results exist but are not fresh),
+    survey_failed / survey_cancelled …; None when it does not."""
+    status = t.get("status") or "todo"
     if status == "sugg":
-        return status, note
+        return status, None
     node = (t.get("links") or {}).get("node")
     n = st.nodes.get(node) if st is not None and node else None
     if n is not None and n.get("kind") == "experiment":
         runs = st.runs.by_node.get(node) or []
         if runs and runs[0].get("state") == "failed":
-            return "blocked", note or "the latest run failed"
+            return "blocked", "run_failed"
         ev = st.E.get(node)
         ok = [r for r in runs if r.get("state", "succeeded") == "succeeded" and not r.get("excluded")]
         if ok and ev is not None and ev.level == "fresh":
-            return "done", note
+            return "done", None
         if ok:
-            return "doing", note or "results are not fresh: rerun"
+            return "doing", "stale"
     survey = (t.get("links") or {}).get("survey")
     if survey and surveys and survey in surveys:
         s = surveys[survey].get("status")
-        return {"running": ("doing", note), "done": ("done", note)}.get(s, ("blocked", note or f"survey {s}"))
-    return status, note
+        return {"running": ("doing", None), "done": ("done", None)}.get(s, ("blocked", f"survey_{s}"))
+    return status, None

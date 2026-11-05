@@ -23,11 +23,12 @@ rules a task of a phase the project has not reached waits ("locked").
 """
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from typing import Any
 
 from ..dag import stages
-from ..dag.model import DEAD, edges, facet_value, ref_id, title_of
+from ..dag.model import ABANDON_REASONS, DEAD, edges, facet_value, ref_id, title_of
 from ..projects import research_dir
 from ..util import read_json, write_json
 from . import tasks as task_store
@@ -49,7 +50,16 @@ def meta(pid: str) -> dict:
 
 
 def save_meta(pid: str, template: str | None, phases: dict | None) -> None:
-    p = meta_path(pid)
+    _write_meta(meta_path(pid), template, phases)
+
+
+def save_meta_at(root, template: str | None, phases: dict | None, state: str = ".research") -> None:
+    """The same for a project folder that is not registered (the demo while it is built)."""
+    from pathlib import Path
+    _write_meta(Path(root) / state / "outline" / "meta.json", template, phases)
+
+
+def _write_meta(p, template: str | None, phases: dict | None) -> None:
     p.parent.mkdir(parents=True, exist_ok=True)
     write_json(p, {"template": template, "phases": phases or DEFAULT_PHASES})
 
@@ -114,9 +124,13 @@ class Builder:
                   direction: int | None = None) -> dict:
         node = self.nodes[nid]
         rec = {"id": nid, "num": num, "depth": depth, "section": section, "parent": parent, "direction": direction,
-               "text": facet_value(node, "text") or title_of(node), "status": node.get("status"),
+               "text": self.text_of(node), "status": node.get("status"),
                "derived": bool(facet_value(node, "derived")), "condition": facet_value(node, "condition") or "",
                "summary_of": [i for i in facet_value(node, "summary_of") or [] if isinstance(i, str)]}
+        if node.get("status") in DEAD:              # why it was given up, and when
+            v = node.get("verdict") or {}
+            note = v.get("note") or (v.get("reason") if v.get("reason") not in ABANDON_REASONS else None)
+            rec.update(why=note, why_kind=v.get("kind") or v.get("reason"), ended_at=v.get("at"))
         self.items[nid] = rec
         self.phase_of[nid] = phase
         rec["children"] = self.walk_chain(chain_of(node), num, phase, depth + 1, section, nid,
@@ -131,6 +145,26 @@ class Builder:
             rec["fork"] = None
         return rec
 
+    def text_of(self, node: dict) -> str:
+        """The item's text, with {{name}} bindings filled in from their current values (else what the text states)."""
+        text = facet_value(node, "text") or title_of(node)
+        b = facet_value(node, "bindings")
+        if not isinstance(text, str) or "{{" not in text or not isinstance(b, dict):
+            return text
+        ev = self.st.E.get(node["id"]) if self.st is not None else None
+        values = getattr(ev, "values", None) or {}
+
+        def sub(m: re.Match) -> str:
+            spec = b.get(m.group(1)) if isinstance(b.get(m.group(1)), dict) else {}
+            v = values.get(m.group(1), spec.get("stated"))
+            if v is None:
+                return m.group(0)
+            try:
+                return str(spec.get("fmt") or "{}").format(v)
+            except (ValueError, IndexError, KeyError):
+                return str(v)
+        return re.sub(r"\{\{(\w+)\}\}", sub, text)
+
     # ------------------------------------------------------------ tasks
     def task_phase(self, t: dict) -> int | None:
         ph = [self.phase_of[i] for i in t.get("items") or [] if i in self.phase_of and self.phase_of[i] is not None]
@@ -139,11 +173,11 @@ class Builder:
     def task_records(self) -> list[dict]:
         out = []
         for t in self.tasks:
-            status, note = task_store.effective(t, self.st, self.surveys)
+            status, reason = task_store.effective(t, self.st, self.surveys)
             phase = self.task_phase(t)
             live = [i for i in t.get("items") or [] if i in self.items and self.items[i]["status"] not in DEAD]
             locked = (self.mode != "free" and phase is not None and phase > self.project_step and status == "todo")
-            out.append({**t, "status": "locked" if locked else status, "set_status": t.get("status"), "note": note,
+            out.append({**t, "status": "locked" if locked else status, "set_status": t.get("status"), "reason": reason,
                         "phase": PHASES[phase] if phase is not None else None,
                         "nums": [self.items[i]["num"] for i in t.get("items") or [] if i in self.items],
                         "abandoned": bool(t.get("items")) and not live})
@@ -272,7 +306,8 @@ class Builder:
                 out.append({"kind": "proposed_item", "item": rec["id"], "num": rec["num"], "text": rec["text"]})
         for t in task_recs:
             if t["status"] == "blocked" and not t["abandoned"]:
-                out.append({"kind": "blocked_task", "task": t["id"], "title": t["title"], "note": t["note"], "nums": t["nums"]})
+                out.append({"kind": "blocked_task", "task": t["id"], "title": t["title"], "note": t.get("note") or "",
+                            "reason": t.get("reason"), "nums": t["nums"]})
             elif t["status"] == "sugg":
                 out.append({"kind": "suggested_task", "task": t["id"], "title": t["title"], "nums": t["nums"]})
         for p in self.open_props:

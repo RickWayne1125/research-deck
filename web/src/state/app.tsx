@@ -5,7 +5,7 @@ import { get, p, subscribeEvents } from '../api/client';
 import type { AgentCatalog, Health, ProjectDetail, ProjectEvent, ProjectSummary, ViewId } from '../types';
 
 export type Theme = 'auto' | 'light' | 'dark';
-const VIEWS: ViewId[] = ['overview', 'dag', 'experiments', 'writing', 'coding', 'settings'];
+const VIEWS: ViewId[] = ['outline', 'overview', 'dag', 'experiments', 'writing', 'coding', 'settings'];
 /** The paper view's sub-route for the figures: #/<p>/writing/@figures[/<figure id>]. */
 export const FIGURES = '@figures';
 

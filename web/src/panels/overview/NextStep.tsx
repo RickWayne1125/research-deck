@@ -1,66 +1,39 @@
-// The four steps (Idea → Motivation & insight → System design → Evaluation) with what stands before the next one, and
-// the dialog that lists the open checks and moves the project on: it passes the gates on the way (each pass saves a
-// snapshot) and sets the project's stage. Binding checks (project.yaml gates.blocking) must hold first. Then the
-// conversation opens with a request to draft the new step from the confirmed nodes (not sent: the researcher edits
-// and sends it).
-import { useState } from 'react';
+// The dialog that moves the project on to the next step (Idea → Motivation & insight → System design → Evaluation): it
+// lists the open checks (the outline's, then the gates'), passes the gates on the way (each pass saves a snapshot) and
+// sets the project's stage; the outline page opens it from the current phase. Binding checks (project.yaml
+// gates.blocking) must hold first. Then the conversation opens with a request to draft the new step from the confirmed
+// nodes (not sent: the researcher edits and sends it).
+import { useState, type ReactNode } from 'react';
 import { p, patch } from '../../api/client';
 import { Button, Dialog, Spinner } from '../../components/ui';
 import { Icon } from '../../components/icons';
 import { useApp } from '../../state/app';
 import { useToday } from '../../state/today';
-import { STEPS, leaving, nextStage, stepOfStage, type StepId } from '../../state/stages';
-import { useI18n, useT } from '../../i18n';
+import { STEPS, leaving, nextStage, type StepId } from '../../state/stages';
+import { useI18n } from '../../i18n';
 import { dagApi } from '../../dag/api';
 import { errorMessage } from './parts';
 import './i18n';
 
-// ------------------------------------------------------------------ the four steps and what the next one needs
-
-export function Steps({ pid }: { pid: string }) {
-  const { project } = useApp();
-  const t = useT();
-  const today = useToday();
-  const [open, setOpen] = useState(false);
-  if (!project) return null;
-  const step = stepOfStage(project.stage);
-  const at = STEPS.indexOf(step);
-  const { missing } = leaving(step, today.gates);
-  const last = at === STEPS.length - 1;
-  return (
-    <div className="td-steps">
-      <ol className="td-stepper" aria-label={t('td.steps')}>
-        {STEPS.map((s, i) => (
-          <li key={s} className={i < at ? 'done' : i === at ? 'current' : ''} aria-current={i === at ? 'step' : undefined}>
-            <span className="td-step-dot" aria-hidden="true">{i < at && <Icon name="check" size={10} />}</span>
-            <span>{t(`step.${s}`)}</span>
-          </li>
-        ))}
-      </ol>
-      {today.gates && (
-        <button type="button" className="td-next" onClick={() => setOpen(true)}>
-          {missing.length ? t(last ? 'td.next.missingLast' : 'td.next.missing', { n: missing.length }) : t(last ? 'td.next.readyLast' : 'td.next.ready')}
-        </button>
-      )}
-      {open && <NextStepDialog pid={pid} step={step} onClose={() => setOpen(false)} />}
-    </div>
-  );
-}
-
-export function NextStepDialog({ pid, step, onClose }: { pid: string; step: StepId; onClose: () => void }) {
+/** `extra` shows more checks above the gates (the outline's: every item of the phase holds) and `extraMissing` counts
+ *  the ones of them that fail; `passNote` is what the gate passes record. */
+export function NextStepDialog({ pid, step, onClose, extra, extraMissing = 0, passNote }: {
+  pid: string; step: StepId; onClose: () => void; extra?: ReactNode; extraMissing?: number; passNote?: string;
+}) {
   const { project, reloadProject, navigate, askAgent } = useApp();
   const { t, lang } = useI18n();
   const today = useToday();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { gates, missing } = leaving(step, today.gates);
+  const { gates, missing: gateMissing } = leaving(step, today.gates);
+  const missing = { length: gateMissing.length + extraMissing };
   const next = nextStage(step);
   const blocking = !!(project?.config?.gates as { blocking?: boolean } | undefined)?.blocking;
   const nextStep = STEPS[STEPS.indexOf(step) + 1] as StepId | undefined;
   const go = async () => {
     setBusy(true); setError(null);
     try {
-      for (const g of gates) await dagApi.passGate(pid, g.gate, t('td.next.note'));
+      for (const g of gates) await dagApi.passGate(pid, g.gate, passNote ?? t('td.next.note'));
       if (next) await patch(p(pid, '/config'), { stage: next });
       await reloadProject();
       today.reload();
@@ -81,6 +54,7 @@ export function NextStepDialog({ pid, step, onClose }: { pid: string; step: Step
       </>
     }>
       <div className="col" style={{ gap: 12 }}>
+        {extra}
         {missing.length === 0
           ? <p style={{ margin: 0 }}>{t('td.next.allOk')}</p>
           : <p style={{ margin: 0 }}>{t(blocking ? 'td.next.blocking' : 'td.next.advisory', { n: missing.length })}</p>}

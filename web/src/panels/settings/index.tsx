@@ -1,29 +1,35 @@
-// Settings: how new projects start (folder, survey, stage rules), the integrations Research Deck found (Claude Code and
+// Settings: how new projects start (folder, survey, stage rules), the outline templates, the integrations Research Deck found (Claude Code and
 // Codex CLIs, the figure apps), appearance, and where things live. Model, effort and permission belong to the
 // conversation (its header).
-import { type ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { useApp } from '../../state/app';
 import { useI18n, useT } from '../../i18n';
 import { ErrorNote, PanelHead, Segmented, Spinner, useLoad } from '../../components/ui';
 import { agentApi } from '../../agent/api';
 import { CopyButton, ProviderMark, providerLabel } from '../../agent/parts';
 import { NewProjectSettingsSection } from '../../start/NewProjectSettings';
+import { OutlineTemplatesSection } from '../outline/Templates';
 import './settings.css';
 import './i18n';
 
-const SECTIONS = ['newProjects', 'integrations', 'appearance', 'about'] as const;
+const SECTIONS = ['newProjects', 'templates', 'integrations', 'appearance', 'about'] as const;
 type Section = (typeof SECTIONS)[number];
 
 export default function SettingsPanel() {
-  const { projectId, project } = useApp();
+  const { projectId, project, sub } = useApp();
   const t = useT();
   const pid = projectId!;
+  // #/<p>/settings/<section>: open at that section
+  useEffect(() => {
+    if (sub && (SECTIONS as readonly string[]).includes(sub)) window.setTimeout(() => document.getElementById(`st-${sub}`)?.scrollIntoView({ block: 'start' }), 80);
+  }, [sub]);
   return (
     <div className="panel st">
       <PanelHead title={t('nav.settings')} subtitle={project ? `${project.name} · ${t('st.subtitle')}` : t('st.subtitle')} />
       <div className="panel-body st-body">
         <div className="st-main">
           <Section id="newProjects" title={t('np.st.title')}><NewProjectSettingsSection /></Section>
+          {project?.kind !== 'engineering' && <Section id="templates" title={t('ol.tpl.title')}><OutlineTemplatesSection /></Section>}
           <Section id="integrations" title={t('st.sec.integrations')}><IntegrationsSection /></Section>
           <Section id="appearance" title={t('st.sec.appearance')}><AppearanceSection /></Section>
           <Section id="about" title={t('st.sec.about')}><AboutSection pid={pid} /></Section>

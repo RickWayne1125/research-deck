@@ -27,7 +27,7 @@ def _fail(e: Exception) -> HTTPException:
 
 # What an agent may do to the outline at once: add items (they come in as proposed, dashed). Rewording, moving,
 # removing, forking and choosing become a proposal the researcher approves, so their words never change unseen.
-AGENT_DIRECT = {"add_item", "add_direction", "set_note"}
+AGENT_DIRECT = {"add_item", "add_direction", "set_note", "attach_item", "link"}
 
 
 def _commit(pid: str, plan: Plan, actor: str, title: str, kinds: set[str] | None = None) -> dict:

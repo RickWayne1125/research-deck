@@ -10,12 +10,15 @@ and applied in one batch, so a failed batch changes nothing.
     {"op": "edit_item", "item": "claim.…", "text"?, "derived"?, "condition"?, "summary_of"?}
     {"op": "move_item", "item": "claim.…", "how": "up|down|indent|outdent|join|split"}
     {"op": "remove_item", "item": "claim.…"}                                 abandons it and what is under it
+    {"op": "attach_item", "parent": id, "item": "claim.…", "at"?: …}       an existing claim of the map joins the outline
+    {"op": "link", "item": "claim.…", "to": "node:…", "type": "basis|cites|evidence"}   what backs the item
+    {"op": "unlink", "item": "claim.…", "to": "node:…", "type": "…"}
     {"op": "set_note", "parent": id, "step": 1, "text": "…"}                  what a parallel group is
-    {"op": "fork", "item": "claim.…", "question"?: "…", "directions": ["…", "…"]}
+    {"op": "fork", "item": "claim.…", "question"?: "…", "directions": ["…", "…"], "ids"?: ["claim.…", …]}
                          the item becomes a branch point; its sub-items move to direction 1
     {"op": "add_direction", "item": "claim.…", "text": "…"}
     {"op": "choose_direction", "item": "claim.…", "direction": "claim.…"}    the other live directions are abandoned
-    {"op": "abandon_direction", "item": "claim.…", "direction": "claim.…", "reason": "…"}
+    {"op": "abandon_direction", "item": "claim.…", "direction": "claim.…", "reason": "<category>|…", "note": "…"?}
 Items and sections are made "active" by people and "proposed" by agents (ops.submit turns an agent's edits of active
 nodes into proposals, as everywhere on the map). Nothing is deleted: a removed item is abandoned, so its history stays
 and the tasks that served only it drop out of the counts.
@@ -57,8 +60,10 @@ class Plan:
         self.created: dict[str, dict] = {}
         self.edits: dict[str, dict] = {}       # node -> {facet: value} or meta (title)
         self.statuses: list[dict] = []
+        self.links: list[dict] = []
         self.retarget: dict[str, str] = {}     # tasks of item -> item (a fork moves them to direction 1)
         self.removed: set[str] = set()
+        self.dead: set[str] = set()            # abandoned by this plan (not on the map yet)
         self.last_created: str | None = None
         self.last_section: str | None = None
 
@@ -165,16 +170,26 @@ class Plan:
             moved[str(i + delta if i >= at else i)] = v
         self.notes[parent] = moved
 
+    def is_dead(self, nid: str) -> bool:
+        """Abandoned on the map, or by an earlier op of this plan."""
+        return nid in self.dead or self.node(nid).get("status") in DEAD
+
+    def kill(self, nid: str, reason: str, note: str | None) -> None:
+        """Abandon a node that exists on the map (once, however many ops reach it)."""
+        if nid in self.created or self.is_dead(nid):
+            return
+        if self.node(nid).get("status") == "locked":
+            raise OutlineError(409, f"{nid} is locked: unlock it first")
+        self.statuses.append({"op": "set_status", "node": nid, "to": "abandoned", "reason": reason, "note": note})
+        self.dead.add(nid)
+
     def abandon(self, nid: str, reason: str, note: str) -> None:
-        n = self.node(nid)
         if nid in self.created:
             del self.created[nid]
             return
-        if n.get("status") in DEAD:
+        if self.is_dead(nid):
             return
-        if n.get("status") == "locked":
-            raise OutlineError(409, f"{nid} is locked: unlock it first")
-        self.statuses.append({"op": "set_status", "node": nid, "to": "abandoned", "reason": reason, "note": note})
+        self.kill(nid, reason, note)
         self.removed.add(nid)
 
     # ------------------------------------------------------------ the ops
@@ -269,7 +284,21 @@ class Plan:
         if p.get("kind") not in ("section", "claim"):
             raise OutlineError(400, "items go under a section or another item")
         nid = self.make_item(op.get("text"), op.get("id"), bool(op.get("derived")), str(op.get("condition") or ""))
-        at = op.get("at") or {}
+        self.place(parent, nid, op.get("at") or {})
+        self.last_created = nid
+
+    def op_attach_item(self, op: dict) -> None:
+        parent, nid = op.get("parent"), op.get("item")
+        if self.node(parent).get("kind") not in ("section", "claim"):
+            raise OutlineError(400, "items go under a section or another item")
+        n = self.node(nid)
+        if n.get("kind") != "claim" or n.get("status") in DEAD:
+            raise OutlineError(400, f"{nid} is not a live claim")
+        if nid in self.parents():
+            raise OutlineError(409, f"{nid} is already in the outline")
+        self.place(parent, nid, op.get("at") or {})
+
+    def place(self, parent: str, nid: str, at: dict) -> None:
         chain = self.chain(parent)
         if at.get("parallel") or at.get("after"):
             ref = at.get("parallel") or at.get("after")
@@ -286,7 +315,22 @@ class Plan:
             self.shift_notes(parent, 0, +1)
         else:
             chain.append([nid])
-        self.last_created = nid
+
+    def op_link(self, op: dict, unlink: bool = False) -> None:
+        item, kind, to = op.get("item"), op.get("type") or "basis", str(op.get("to") or "")
+        if self.node(item).get("kind") != "claim":
+            raise OutlineError(400, f"{item} is not an item")
+        if kind not in ("basis", "cites", "evidence"):
+            raise OutlineError(400, "type: basis, cites or evidence")
+        to = to if ":" in to else f"node:{to}"
+        if unlink:
+            self.links.append({"op": "unlink", "node": item, "edge": f"{kind}:{to}"})
+        else:
+            edge = {"type": kind, "to": to, **({"predicate": op["predicate"]} if op.get("predicate") else {})}
+            self.links.append({"op": "link", "node": item, "edge": edge})
+
+    def op_unlink(self, op: dict) -> None:
+        self.op_link(op, unlink=True)
 
     def op_edit_item(self, op: dict) -> None:
         nid = op.get("item")
@@ -386,7 +430,8 @@ class Plan:
         texts = [t for t in op.get("directions") or [] if str(t).strip()]
         if len(texts) < 2:
             raise OutlineError(400, "a fork needs at least two directions")
-        dirs = [self.make_item(t) for t in texts]
+        ids = list(op.get("ids") or [])
+        dirs = [self.make_item(t, ids[k] if k < len(ids) else None) for k, t in enumerate(texts)]
         # what the item held so far was the first direction: its sub-items and tasks move there
         kids = self.chain(item)
         if kids:
@@ -401,23 +446,21 @@ class Plan:
         f = self.fork(op.get("item"))
         if not f:
             raise OutlineError(409, f"{op.get('item')} does not branch; fork it first")
-        f["directions"].append(self.make_item(op.get("text")))
+        f["directions"].append(self.make_item(op.get("text"), op.get("id")))
 
     def op_choose_direction(self, op: dict) -> None:
         item, chosen = op.get("item"), op.get("direction")
         f = self.fork(item)
         if not f or chosen not in f["directions"]:
             raise OutlineError(400, f"{chosen} is not a direction of {item}")
-        if self.node(chosen).get("status") in DEAD:
+        if self.is_dead(chosen):
             raise OutlineError(409, f"{chosen} was abandoned")
         f["chosen"] = chosen
         for d in f["directions"]:
-            if d == chosen or self.node(d).get("status") in DEAD:
+            if d == chosen or self.is_dead(d):
                 continue
             for x in self.subtree(d):
-                if x not in self.created and self.node(x).get("status") not in DEAD:
-                    self.statuses.append({"op": "set_status", "node": x, "to": "abandoned", "reason": "dominated",
-                                          "note": f"another direction was chosen ({chosen})"})
+                self.kill(x, "dominated", f"another direction was chosen ({chosen})")
 
     def op_abandon_direction(self, op: dict) -> None:
         item, d = op.get("item"), op.get("direction")
@@ -426,12 +469,9 @@ class Plan:
             raise OutlineError(400, f"{d} is not a direction of {item}")
         reason = op.get("reason") or "other"
         cat = reason if reason in ABANDON_REASONS else "other"
+        note = str(op.get("note") or "").strip() or (None if cat == reason else str(reason))
         for x in self.subtree(d):
-            if x in self.created:
-                continue
-            if self.node(x).get("status") not in DEAD:
-                self.statuses.append({"op": "set_status", "node": x, "to": "abandoned", "reason": cat,
-                                      "note": None if cat == reason else str(reason)[:300]})
+            self.kill(x, cat, note[:300] if note else None)
         if f.get("chosen") == d:
             f["chosen"] = None
 
@@ -474,5 +514,6 @@ class Plan:
                 continue
             structural = set(sets) <= {"chain", "chain_notes", "fork", "order", "phase", "role", "summary_of", "derived", "condition"}
             ops.append({"op": "edit", "node": nid, "set": sets, **meta, **({"editorial": True} if structural and not meta else {})})
+        ops += self.links
         ops += self.statuses
         return ops

@@ -6,7 +6,7 @@ import { Component, lazy, Suspense, useCallback, useEffect, useRef, useState, ty
 import { useApp } from './state/app';
 import { useToday } from './state/today';
 import { stepOfStage } from './state/stages';
-import { fallbackView, isResearch, visibleViews } from './state/views';
+import { allowedViews, fallbackView, isResearch, visibleViews } from './state/views';
 import { useI18n, useT } from './i18n';
 import { Icon } from './components/icons';
 import { Button, Dialog, IconButton, Menu, Segmented, Spinner } from './components/ui';
@@ -21,7 +21,7 @@ import type { ProjectKind, ProjectSummary, ViewId } from './types';
 import './styles/shell.css';
 
 const VIEW_ICON: Record<ViewId, string> = {
-  overview: 'overview', dag: 'dag', experiments: 'experiments', writing: 'writing', coding: 'coding', settings: 'settings',
+  outline: 'outline', overview: 'overview', dag: 'dag', experiments: 'experiments', writing: 'writing', coding: 'coding', settings: 'settings',
 };
 
 // The navigation runs from the 56 px icon rail to 320 px; dragged below 132 px it snaps to the rail (labels hidden),
@@ -57,6 +57,7 @@ function lazyPanel(load: () => Promise<{ default: React.ComponentType }>) {
 }
 
 const PANEL_COMPONENTS: Record<ViewId, React.LazyExoticComponent<React.ComponentType>> = {
+  outline: lazyPanel(() => import('./panels/outline')),
   overview: lazyPanel(() => import('./panels/overview')),
   dag: lazyPanel(() => import('./panels/dag')),
   experiments: lazyPanel(() => import('./panels/experiments')),
@@ -94,7 +95,7 @@ export default function App() {
   const current = project && project.id === projectId ? project : null;
   const known = current ?? projects.find(p => p.id === projectId) ?? null;
   const views = visibleViews(known);
-  const hidden = !!known && !views.includes(view);
+  const hidden = !!known && !allowedViews(known).includes(view);
   useEffect(() => {
     if (known && hidden) navigate(fallbackView(known), null, known.id, { replace: true });
   }, [known, hidden, navigate]);
@@ -142,7 +143,7 @@ export default function App() {
         </button>
         <div className="nav-group">
           {main.map(id => <NavItem key={id} id={id} active={view === id} disabled={!projectId} onClick={() => navigate(id)}
-            badge={id === 'overview' ? today.count : 0} badgeTitle={t('nav.badge', { n: today.count })} />)}
+            badge={id === 'overview' || id === 'outline' ? today.count : 0} badgeTitle={t('nav.badge', { n: today.count })} />)}
         </div>
         <div className="grow" />
         {views.includes('settings') && <NavItem id="settings" active={view === 'settings'} disabled={!projectId} onClick={() => navigate('settings')} />}
