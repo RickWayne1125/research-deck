@@ -1,5 +1,6 @@
 // Shared building blocks. Panels compose these with the classes in styles/base.css instead of inventing their own.
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Icon, type IconName } from './icons';
 import { ResizeHandle, useResizableWidth } from './resize';
 import { useT } from '../i18n';
@@ -75,22 +76,48 @@ export function Dialog({ title, onClose, children, footer, width }: { title: Rea
   );
 }
 
-/** A button that opens a small menu below it. */
-export function Menu({ button, children, align = 'right' }: { button: (open: boolean, toggle: () => void) => ReactNode; children: (close: () => void) => ReactNode; align?: 'left' | 'right' }) {
+/** A button that opens a small menu below it. `portal`: the menu is drawn at the top of the page (fixed under the
+ *  button), for a button inside a box that clips or covers it, such as the scrolling navigation. */
+export function Menu({ button, children, align = 'right', portal = false }: {
+  button: (open: boolean, toggle: () => void) => ReactNode; children: (close: () => void) => ReactNode; align?: 'left' | 'right'; portal?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const pop = useRef<HTMLDivElement>(null);
+  const [place, setPlace] = useState<CSSProperties | null>(null);
   useEffect(() => {
     if (!open) return;
-    const onDown = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    const onDown = (e: MouseEvent) => {
+      const at = e.target as Node;
+      if (!ref.current?.contains(at) && !pop.current?.contains(at)) setOpen(false);
+    };
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
     document.addEventListener('mousedown', onDown);
     document.addEventListener('keydown', onKey);
     return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
   }, [open]);
+  // A portal menu follows its button while the window resizes or anything scrolls.
+  useLayoutEffect(() => {
+    if (!open || !portal) { setPlace(null); return; }
+    const follow = () => {
+      const r = ref.current?.getBoundingClientRect();
+      if (!r) return;
+      const top = r.bottom + 6;
+      setPlace({ position: 'fixed', top, maxHeight: Math.max(160, window.innerHeight - top - 8), overflow: 'auto',
+                 ...(align === 'left' ? { left: r.left, maxWidth: window.innerWidth - r.left - 8 }
+                   : { right: Math.max(8, window.innerWidth - r.right), maxWidth: r.right - 8 }) });
+    };
+    follow();
+    window.addEventListener('resize', follow);
+    window.addEventListener('scroll', follow, true);
+    return () => { window.removeEventListener('resize', follow); window.removeEventListener('scroll', follow, true); };
+  }, [open, portal, align]);
+  const close = () => setOpen(false);
   return (
     <div ref={ref} style={{ position: 'relative', display: 'inline-flex' }}>
       {button(open, () => setOpen(o => !o))}
-      {open && <div className="popover" style={{ top: 'calc(100% + 6px)', [align]: 0 }}>{children(() => setOpen(false))}</div>}
+      {open && !portal && <div ref={pop} className="popover" style={{ top: 'calc(100% + 6px)', [align]: 0 }}>{children(close)}</div>}
+      {open && portal && place && createPortal(<div ref={pop} className="popover" style={place}>{children(close)}</div>, document.body)}
     </div>
   );
 }

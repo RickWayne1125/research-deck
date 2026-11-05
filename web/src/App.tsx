@@ -242,7 +242,8 @@ function ProjectSwitcher({ current }: { current: ProjectSummary | null }) {
     ? `${t('nav.kind.research')} · ${t(`step.${stepOfStage(current.stage)}`)}` : t('nav.kind.engineering');
   return (
     <>
-      <Menu align="left" button={(open, toggle) => (
+      {/* the navigation scrolls and clips: the project list is drawn above the page */}
+      <Menu align="left" portal button={(open, toggle) => (
         <button type="button" className="project-btn" aria-expanded={open} onClick={toggle} title={current?.name ?? t('nav.projects')}>
           <span className="project-initial" aria-hidden="true">{(current?.name ?? '?').slice(0, 1).toUpperCase()}</span>
           <span className="project-text">
@@ -253,7 +254,7 @@ function ProjectSwitcher({ current }: { current: ProjectSummary | null }) {
         </button>
       )}>
         {(close) => (
-          <div style={{ minWidth: 280 }}>
+          <div style={{ minWidth: 280, maxWidth: 420 }}>
             <div className="label" style={{ padding: '6px 9px' }}>{t('nav.projects')}</div>
             {projects.map(p => (
               <button key={p.id} type="button" className="menu-item" onClick={() => { navigate(view, null, p.id); close(); }}>
