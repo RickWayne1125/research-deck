@@ -148,10 +148,23 @@ confirmed nodes.
 | design | S5 | one facet per design decision (prose, json or bound) | no | `design.sched`: policy, preemption, chunk (bound), budget_slack_ms (bound) |
 | module | S5 | globs (json), opaque (bool: compiled or JIT code the tracer cannot see), src (derived) | no | `mod.sched` → `src/lookahead/sched/**`; feeds the Coding panel's `ArchComponent.node_id` |
 | figure | S2–S6 | scripted: spec {script, inputs, style, format}, outputs (artifact). drawn: tool (drawio, omnigraffle), file (artifact) | **scripted only** | `fig.e2e-latency` (scripted), `fig.arch` (drawn) |
-| claim | S4 → S6 | text (prose with `{{name}}`), role (contribution, motivation, result, limitation), bindings | no | `claim.ttft-2x` |
-| section | W | file, text (derived from the region between `% rd:sec <id>` and `% rd:end`) | no | `sec.design` → `paper/sections/design.tex` |
+| claim | S4 → S6 | text (prose with `{{name}}`), role (contribution, motivation, result, limitation), bindings; as an outline item also chain, chain_notes, fork, derived, summary_of, condition | no | `claim.ttft-2x` |
+| section | W | file, text (derived from the region between `% rd:sec <id>` and `% rd:end`); in the outline also order, phase, role, chain, chain_notes | no | `sec.design` → `paper/sections/design.tex` |
 
 A `finding` in status proposed or active **is** a pre-registered hypothesis. Confirming it makes it a finding; refuting it records the negative result.
+
+**The paper outline** (server/research_deck/outline/, docs/API.md § Outline) is kept on the map, one copy: a `section`
+node with an `order` facet (int) belongs to the outline, with `phase` (idea, insight, design, evaluation or summary),
+`role` (what it makes the reader accept) and `chain`: `[[id], [id, id], …]`, steps in order, a step of several ids
+being a group of parallel items, `chain_notes` `{"<step>": "what the group is"}`. Its items are `claim` nodes with
+`text` and the same `chain` / `chain_notes` for their sub-items (any depth), `fork` `{directions: [ids], chosen}` for
+an item that branches (design directions, problems to validate; choosing one abandons the others, reason
+`dominated`), `derived` (argued, needs no task), `summary_of` (a summary section's item follows the items it cites) and
+`condition`. An item's `evidence`, `basis` and `cites` edges point at what backs it. Removing an item abandons it (reason
+`out_of_scope`): nothing is deleted. Paper sync adopts a section made from a `% rd:sec` anchor, and its describes edges
+(`% rd:describes <item>`) say which items the text covers. The stage rules (§1.1) do not apply to `section` and
+`claim` nodes (dag/stages.py `OUTLINE_KINDS`; the dead-parent rule does), so the whole outline can be written at once;
+its tasks follow the phases instead. The tried lens counts attempts only, so it leaves sections and claims out.
 
 ### 2.3 Edges (consumer → upstream; one edge per `(type, to)`)
 
@@ -1193,7 +1206,8 @@ def nodes_by_commit(pid) -> dict[str, list[str]]   # 7-char sha -> node ids whos
 def design_components(pid) -> list[dict]           # module nodes -> [{"id", "label", "node_id", "paths": globs, "description"}]
 def claims_for_doc(pid, path) -> list[dict]
     # claim/section nodes tied to that file -> [{"id", "label", "text", "line", "evidence": [node ids], "freshness": <Freshness>,
-    #  "values": {binding: value}}]  (line from the % rd:sec anchor or the first line containing the claim's macro/text)
+    #  "values": {binding: value}}]  (line from the % rd:sec anchor, the % rd:describes marker naming it, or the first
+    #  line containing the claim's macro/text)
 def brief_data(pid) -> dict
     # {"stage", "lenses": counts, "revise": [top 10 {id, title, level, reason}], "rerun": [top 10], "confirmed": [facts],
     #  "attempts": [{alt_group, tried, chosen, dead: [{id, status, reason}]}], "open_proposals": [...], "gates": [...]}

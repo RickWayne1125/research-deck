@@ -10,7 +10,7 @@ The research DAG's routes are in docs/DAG.md (§ HTTP API).
 | Method | Path | Body / query | Response |
 |---|---|---|---|
 | GET | /api/system/health | | `Health` |
-| GET | /api/events?project=pid | SSE; events named by topic (`dag`, `file`, `sessions`, `agent` (a conversation run finished), `experiments`, `figures`, `writing`, `project`, `survey` (the survey's state)) | `ProjectEvent` |
+| GET | /api/events?project=pid | SSE; events named by topic (`dag`, `outline` (the outline or its tasks changed), `file`, `sessions`, `agent` (a conversation run finished), `experiments`, `figures`, `writing`, `project`, `survey` (the survey's state)) | `ProjectEvent` |
 | GET | /api/projects | | `ProjectSummary[]` |
 | POST | /api/projects | `{root, name?, kind?: research\|engineering, state?: ".research-<slug>"}` | `ProjectSummary` (creates the state folder; `state` lets a second project share the folder) |
 | DELETE | /api/projects/{pid} | | `{ok}` (forgets it; files untouched) |
@@ -49,6 +49,35 @@ It writes `<papers_dir>/<bibkey>.pdf`, `<papers_dir>/references.bib` (new keys a
 `notes/survey.md` (never overwriting: `survey-2.md` …), drafts a `problem` node (unless a live one exists) and one
 `reference` node per new paper as proposals (actor `agent:<provider>:survey`), adds a message to the project
 conversation and a note for each backend's next turn. It runs no experiment.
+
+## Outline (outline/)
+
+The paper outline: sections in paper order, each a chain of numbered items (claims) with sub-chains, parallel groups
+and forks, on the map (docs/DAG.md § The paper outline); tasks hung on items; templates. Types: `web/src/panels/outline/api.ts`.
+
+| Method | Path | Body / query | Response |
+|---|---|---|---|
+| GET | /api/projects/{pid}/outline | `?lang=zh\|en` | `Outline`: `{has_outline, template, phases, project_phase, stage_mode, sections: [{id, num, title, role, phase, items: Step[], counts}], groups: [{phase, sections, state: done\|current\|later\|summary, items, holds, tasks, tasks_done, missing}], tasks, counts, pending, loose}`; a step is `{items: Item[], note}`, an item `{id, num, depth, section, parent, direction, text, status, state, derived, condition, summary_of, children, fork: {directions, chosen}, tasks, suggested, evidence, written, proposals, kids, why?, why_kind?, ended_at?}` |
+| POST | /api/projects/{pid}/outline/ops | `{ops: [outline op…], lang?}` (ops: outline/ops.py docstring) | `{applied, created, last, proposal?}`; an agent's batch applies directly only when it only adds (items come in `proposed`), else it is one proposal |
+| POST | /api/projects/{pid}/outline/init | `{template, lang?, structure?: {sections: [{key?, title, items, notes?}]}}` | as ops; 409 when the project has an outline |
+| POST | /api/projects/{pid}/outline/structure | `{text, template, lang?, agent?: true}` | a draft `{sections, changes, by: agent\|parse}` (nothing written) |
+| POST | /api/projects/{pid}/outline/extract | `{name (.pdf), content_base64}` | `{text}` of a PDF outline (422 without a text layer) |
+| POST | /api/projects/{pid}/outline/save-template | `{id, name}` | the new user template |
+| GET | /api/projects/{pid}/tasks | | the tasks as stored |
+| POST | /api/projects/{pid}/tasks | `{type: lit\|code\|fig\|exp, title, items: [item id], status?, note?, assignee?: me\|agent\|"", links?: {node, figure, survey, branch, path}}` | the task (`t-…`); an agent's is a suggestion (`status: sugg`) |
+| PATCH / DELETE | /api/projects/{pid}/tasks/{tid} | any of those fields | the task / `{ok}` |
+| GET | /api/outline/templates[/{id}] | | every template (built-ins first; `builtin`, `overrides`) / one |
+| PUT / DELETE | /api/outline/templates/{id} | `{name, description, phases, sections: [{key, title, role, phase, tasks}]}` | the user template / `{ok}` (a built-in cannot be removed; a user copy of one can) |
+
+In the outline JSON a task carries what the outline shows: `status` derived from what it is linked to (an experiment
+node's runs: done when one succeeded and the node is fresh, blocked when the latest failed; a survey's state) and
+`locked` while its phase (the earliest of its items') is ahead of the project under the stage rules; `reason`
+(run_failed, stale, survey_<state>) says why it differs from `set_status`; `nums` and `abandoned` (it serves only
+abandoned items). An item's state: holds (derived, or its tasks done, or without tasks its evidence confirmed, and its
+live sub-items hold), doing, todo, blocked, locked, needs_tasks, choose (a fork without a chosen direction), pending (a
+summary item whose items do not hold), proposed, abandoned. `evidence` lists the nodes its edges point at and, with
+`rel: "task"`, what its tasks produce. Changing the outline, tasks or templates is the researcher's (403 for agents),
+except outline ops and new tasks as above.
 
 ## Agents (agents/)
 
@@ -147,5 +176,7 @@ Every finding quotes the exact text to change (`quote` + `before` disambiguate t
 | `writing/snapshots/<path-slug>/<ts>.txt` + `index.json` | writing | snapshots of a document |
 | `architecture.yaml` | coding | `{"components": [{"id", "label", "node_id", "paths": [globs], "description"}]}` (optional; components also come from DAG design nodes) |
 | `style.json` | viz | optional overrides of `StyleTokens` (`active_palette`, `font`, `series`) |
+| `outline/tasks.json` | outline | `{"version": 1, "tasks": [{"id": "t-…", "type": "lit\|code\|fig\|exp", "title", "items": ["claim.…"], "status": "todo\|doing\|blocked\|done\|sugg", "note", "assignee", "links": {"node", "figure", "survey", "branch", "path"}, "by", "created_at", "updated_at"}]}` |
+| `outline/meta.json` | outline | `{"template": "<id>", "phases": {"idea": {"zh", "en"}, …}}` (the outline itself is on the map) |
 | `dag/…` | dag | docs/DAG.md |
 | `context/…` | agents | docs/ARCHITECTURE.md § Agents and context sharing |

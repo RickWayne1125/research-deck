@@ -12,7 +12,8 @@ from mcp.server.fastmcp.exceptions import ToolError
 from research_deck import actors, mcp_server
 
 EXPECTED_TOOLS = {"rd_brief", "rd_lenses", "rd_graph", "rd_node", "rd_explain", "rd_impact", "rd_apply", "rd_propose",
-                  "rd_attest", "rd_plan_runs", "rd_queue_runs", "rd_experiments", "rd_handoff_note"}
+                  "rd_attest", "rd_plan_runs", "rd_queue_runs", "rd_experiments", "rd_handoff_note",
+                  "rd_outline", "rd_outline_ops", "rd_suggest_task"}
 
 
 def call(server, name: str, args: dict | None = None) -> str:
@@ -82,3 +83,25 @@ def test_tools_through_the_dashboard_routes(client, project):
     assert out["from"] == "claude" and out["to"] == "codex"     # the token was accepted, so the actor counted
     note = (root / ".research/context/pending/project-codex.md").read_text()
     assert "The allocator refactor is half done" in note and "agent:claude:46e445" in note
+
+
+def test_the_outline_through_the_tools(client, project):
+    """An agent reads the outline, adds an item (proposed) and suggests a task (a suggestion); rewording is a proposal."""
+    pid, _ = project
+    assert client.get("/api/session").status_code == 200
+    assert client.post(f"/api/projects/{pid}/outline/init", json={"template": "systems", "lang": "en", "structure": {"sections": [
+        {"key": "motivation", "title": "Motivation", "items": [{"text": "Experts wait 58% of the time.", "children": []}]}]}}).status_code == 200
+    actors.agent_token()
+    import research_deck.config as config
+    server = mcp_server.build_server(pid, client, actor="agent:claude:46e445", local_dir=config.LOCAL_DIR)
+    text = call(server, "rd_outline")
+    assert "§2 Background and Motivation [insight] (sec.motivation)" in text and "2.1 [needs_tasks] Experts wait 58%" in text
+    item = text.split("2.1 [needs_tasks] Experts wait 58% of the time.  (", 1)[1].split(")", 1)[0]
+    out = json.loads(call(server, "rd_outline_ops", {"ops": [{"op": "add_item", "parent": "sec.motivation", "text": "Layer-wise prediction hits 61%."}]}))
+    assert out["applied"] and out["created"]
+    assert "[proposed] Layer-wise prediction" in call(server, "rd_outline")
+    out = json.loads(call(server, "rd_outline_ops", {"ops": [{"op": "edit_item", "item": item, "text": "Experts wait most of the time."}]}))
+    assert out["applied"] is False and out["proposal"]
+    t = json.loads(call(server, "rd_suggest_task", {"type": "exp", "title": "Measure the wait", "items": [item]}))
+    assert t["status"] == "sugg"
+    assert "Paper outline" in call(server, "rd_brief")

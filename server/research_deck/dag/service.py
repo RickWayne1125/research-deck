@@ -378,8 +378,9 @@ def check(st: State) -> dict:
     except Exception:  # noqa: BLE001
         found = {}
     anchor_issues = [f"% rd:sec {s}: no such node" for s in found if s not in nodes]
+    # a section of the outline (it has an order) need not be written yet: the outline shows how far the text has got
     anchor_issues += [f"{i}: no % rd:sec anchor" for i, n in nodes.items() if n.get("kind") == "section"
-                      and n.get("status") not in DEAD and i not in found]
+                      and n.get("status") not in DEAD and i not in found and facet_value(n, "order") is None]
     locks = [i for i, n in nodes.items() if n.get("status") == "locked" and (
         (n.get("lock") or {}).get("fp") != authored_fp(n)
         or (n.get("lock") or {}).get("edges_seen", {}) != {f"{e.get('type')}:{e.get('to')}": e.get("seen") for e in edges(n) if e.get("seen")})]

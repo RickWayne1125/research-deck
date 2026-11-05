@@ -358,3 +358,39 @@ def build(pid: str, lang: str = "zh") -> dict:
     except OSError:
         pass
     return Builder(pid, st, step, mode, surveys, lang).build(m["phases"], m["template"])
+
+
+def as_text(o: dict, lang: str = "en", limit: int = 120) -> list[str]:
+    """The outline as numbered lines for an agent: sections with their phase, items with their state and id (what
+    outline ops take), parallel groups, fork directions, and each item's tasks."""
+    tasks = {t["id"]: t for t in o.get("tasks") or []}
+    lines: list[str] = []
+
+    def title(t: Any) -> str:
+        return (t.get(lang) or t.get("en") or t.get("zh") or "") if isinstance(t, dict) else str(t or "")
+
+    def item(it: dict, indent: str, mark: str = "") -> None:
+        ts = [tasks[t] for t in it.get("tasks") or [] if t in tasks]
+        extra = "; ".join(f"{t['type']} “{t['title']}” {t['status']}" for t in ts)
+        lines.append(f"{indent}{it['num']} {mark}[{it['state']}] {it['text']}  ({it['id']}{'; ' + extra if extra else ''})")
+        steps(it.get("children") or [], indent + "  ")
+        for d in (it.get("fork") or {}).get("directions") or []:
+            chosen = " chosen" if (it.get("fork") or {}).get("chosen") == d["id"] else ""
+            why = f" — given up: {d.get('why')}" if d.get("state") == "abandoned" and d.get("why") else ""
+            lines.append(f"{indent}  ↳ direction {d.get('direction')}{chosen} [{d['state']}] {d['text']}  ({d['id']}){why}")
+            steps(d.get("children") or [], indent + "    ")
+
+    def steps(ss: list[dict], indent: str) -> None:
+        for st in ss:
+            par = len(st["items"]) > 1
+            for it in st["items"]:
+                item(it, indent, "‖ " if par else "")
+            if par and st.get("note"):
+                lines.append(f"{indent}  (parallel: {st['note']})")
+
+    for s in o.get("sections") or []:
+        lines.append(f"§{s['num']} {title(s.get('title'))} [{s['phase']}] ({s['id']}){' — ' + s['role'] if s.get('role') else ''}")
+        steps(s.get("items") or [], "  ")
+    if len(lines) > limit:
+        lines = lines[:limit] + [f"… {len(lines) - limit} more lines (rd_outline)"]
+    return lines

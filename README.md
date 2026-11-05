@@ -1,25 +1,28 @@
 # Research Deck
 
-A local research dashboard over your project folders. It keeps a **research map** — what you tried, what is
-confirmed, what a change invalidates, which experiments must be rerun — and one **AI conversation per project**,
-backed by the Claude Code or Codex CLI, next to your paper, your experiments and your code. Chinese and English UI.
+A local research dashboard over your project folders. You work from the paper's **outline** — what each section
+argues, item by item, with the literature, code, figures and experiments each item needs — over a **research map** that
+keeps what you tried, what is confirmed, what a change invalidates and which experiments must be rerun, and one **AI
+conversation per project**, backed by the Claude Code or Codex CLI, next to your paper, your experiments and your code.
+Chinese and English UI.
 
-本地运行的科研工作台：用一张「研究地图」管理想法、证据和实验之间的依赖（尝试过什么、哪些已确认、改动之后哪些要复核或重跑），
-每个项目一个 AI 对话（Claude Code 或 Codex），旁边是稿件、实验和代码。界面支持中文和英文。
+本地运行的科研工作台：以论文提纲为主线（每一节要论证什么、每一条需要哪些文献、代码、图和实验），下面是一张「研究地图」管理想法、
+证据和实验之间的依赖（尝试过什么、哪些已确认、改动之后哪些要复核或重跑），每个项目一个 AI 对话（Claude Code 或 Codex），旁边是
+稿件、实验和代码。界面支持中文和英文。
 
 
 ## What it does
 
 | View | |
 |---|---|
-| **Today** | What needs you now, each with the action that settles it: agent proposals, drafted nodes to review, open decisions, experiments to run, failed runs. Above it, the stage the project is in and how many checks stand before the next one. |
-| **Map** | The research DAG as a list grouped by stage (or as a graph). Rows show only exceptions; one opens in place with what it rests on, what depends on it, and the options of a decision — choosing one previews its impact first. Review drafts with J / K / Y / N. |
+| **Outline** (home) | The paper's sections, each a chain of numbered items (2.1, 2.2; sub-items 3.1.1, at any depth; parallel items framed together), grouped by phase (idea → insight → design → evaluation) with what leaving the current one takes. Write and reorder items like an outliner (↵, ⌥↵, Tab, ⇧Tab). Each item gets tasks — literature, code, figure, experiment — tracked as done, in progress, not started or blocked, and what they produce is its evidence. A design direction or a problem to validate is a fork: choose one, and the others fold away (the research tree keeps them, with why they were given up). Also a task board, the research tree, and any item as the root. Templates (systems, ML, workshop, your own) are editable in Settings. At the top: what needs you now (agent proposals, drafts, decisions, runs, forks to choose, blocked tasks). |
+| **Map** | The research DAG as a list grouped by stage (or as a graph), opened from the outline. Rows show only exceptions; one opens in place with what it rests on, what depends on it, and the options of a decision — choosing one previews its impact first. Review drafts with J / K / Y / N. |
 | **Experiments** | Runs with their freshness from the map, the log in a read-only terminal that follows the file, the run plan for what must be rerun, and a resources tab (demo data). |
-| **Paper** | Edit `.tex` / `.md` with preview; **AI proofread** runs fixed passes (typos → terminology → wording) and shows suggestions in the text to accept or reject. Figures: draw.io in the official embedded editor, matplotlib with live preview, OmniGraffle / DataGraph when installed; an AI edit is shown as a diff before anything is written. |
+| **Paper** | Edit `.tex` / `.md` with preview, the outline of the section at the cursor beside the text (which items are written, which not yet; draft or check the section against them); **AI proofread** runs fixed passes (typos → terminology → wording) and shows suggestions in the text to accept or reject. Figures: draw.io in the official embedded editor, matplotlib with live preview, OmniGraffle / DataGraph when installed; an AI edit is shown as a diff before anything is written. |
 | **Code** | Git history and diffs of the project's repositories, AI code review and explanations. |
 | **Conversation** (⌘J) | One thread per project, whichever view you ask from; what you are looking at is attached. Switch between Claude and Codex and the context is handed over. Model, effort and Fast sit behind one button. |
 
-Agents never change the map directly: what they draft is *proposed* until you accept it, and every change shows its
+Agents never change the map or the outline directly: what they draft is *proposed* until you accept it, and every change shows its
 impact (which nodes need a review, which experiments a rerun) before it is applied. ⌘K jumps anywhere.
 
 **New from an idea.** Paste an idea (or upload a .md, .txt or .pdf) and Research Deck creates the project folder

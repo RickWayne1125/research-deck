@@ -45,6 +45,14 @@ Four lenses answer the researcher's questions:
 - revise: live nodes in review, orphaned or broken (what to fix, attest or roll back);
 - rerun: experiment cells that are stale or not yet run, in waves (what to rerun).
 
+The paper outline is the project's main line (rd_outline): its sections in paper order, each a numbered chain of
+items (claims) that argue what the section makes the reader accept; the phases group the sections; tasks (literature,
+code, figure, experiment) hang on items, and what a task produces is the item's evidence. You may add items
+(rd_outline_ops add_item; they come in proposed, dashed, until the researcher accepts them) and suggest tasks
+(rd_suggest_task); rewording, moving, removing, forking and choosing a direction become a proposal. In the paper, put
+the paragraph that argues an item under a line `% rd:describes <item id>` inside the section's `% rd:sec <section id>`
+region.
+
 Start with rd_brief or rd_lenses, then rd_graph / rd_node / rd_explain. Preview every change with rd_impact before
 rd_apply. You create nodes as proposed and may edit proposed or active nodes directly; changes to confirmed or locked
 nodes (and any batch that touches a lock) become a proposal for the researcher, and so do status changes beyond your
@@ -200,6 +208,39 @@ def build_server(project: str | None = None, http: httpx.Client | None = None, *
     async def rd_brief() -> str:
         data = await call("GET", "/brief")
         return data.get("markdown", "") if isinstance(data, dict) else _compact(data)
+
+    @mcp.tool(structured_output=False, description=(
+        "The paper outline as numbered lines: each section ([phase], id, what it makes the reader accept) and its "
+        "items as `num [state] text (id; tasks)`, parallel items marked ‖, forks with their directions (chosen, given "
+        "up and why). States: holds, doing, todo, blocked, locked (waits for its phase), needs_tasks, choose (a fork "
+        "waits for a direction), pending (a summary item), proposed, abandoned. Ids are what rd_outline_ops takes."))
+    async def rd_outline() -> str:
+        from .outline.model import as_text
+        data = await call("GET", "/outline", params={"lang": "en"})
+        if not isinstance(data, dict) or not data.get("has_outline"):
+            return "No outline yet: the researcher writes it on the outline page (or asks you to draft one as text)."
+        c = data.get("counts") or {}
+        head = (f"phase {data.get('project_phase')} · tasks {c.get('done', 0)} done, {c.get('doing', 0)} doing, "
+                f"{c.get('todo', 0)} todo, {c.get('blocked', 0)} blocked")
+        return "\n".join([head, *as_text(data, "en", limit=400)])
+
+    @mcp.tool(structured_output=False, description=(
+        "Change the outline with outline ops (server/research_deck/outline/ops.py), applied as one batch: "
+        "{op:add_item, parent:<section or item id>, text, at?:{after:<id>}|{parallel:<id>}|{first:true}, derived?}, "
+        "{op:edit_item, item, text?|derived?|condition?|summary_of?}, {op:move_item, item, how:up|down|indent|outdent|"
+        "join|split}, {op:remove_item, item}, {op:set_note, parent, step, text}, {op:fork, item, question?, directions:"
+        "[…]}, {op:add_direction, item, text}, {op:choose_direction|abandon_direction, item, direction, reason?}, "
+        "{op:link, item, to:<node id>, type:basis|evidence|cites}. Items you add come in proposed; anything else you "
+        "change becomes ONE proposal for the researcher (the answer says which)."))
+    async def rd_outline_ops(ops: list[dict]) -> str:
+        return _compact(await call("POST", "/outline/ops", body={"ops": ops, "lang": "en"}))
+
+    @mcp.tool(structured_output=False, description=(
+        "Suggest a task for outline items: type lit (literature) | code | fig (figure) | exp (experiment), a short "
+        "title, the item ids it serves, and optionally links {node: <map node it produces or uses>}. It waits as a "
+        "suggestion until the researcher takes it."))
+    async def rd_suggest_task(type: Literal["lit", "code", "fig", "exp"], title: str, items: list[str], links: dict | None = None) -> str:
+        return _compact(await call("POST", "/tasks", body={"type": type, "title": title, "items": items, "links": links or {}}))
 
     @mcp.tool(structured_output=False, description=(
         "Counts and item ids of the four lenses. tried: every attempt including dead ones (what was tried, with "

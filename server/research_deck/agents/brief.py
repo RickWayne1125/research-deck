@@ -195,6 +195,24 @@ def _agents_section(pid: str) -> list[str]:
     return lines
 
 
+def _outline_section(pid: str) -> list[str]:
+    """The paper outline (the project's main line), when the project has one."""
+    try:
+        from ..outline import model as outline_model
+        o = outline_model.build(pid, "en")
+    except Exception:  # noqa: BLE001 — the brief degrades without it
+        log.exception("outline.build failed for %s", pid)
+        return []
+    if not o.get("has_outline"):
+        return []
+    c = o.get("counts") or {}
+    return ["## Paper outline (the project's main line)", "",
+            f"Phase {o.get('project_phase')}; tasks: {c.get('done', 0)} done, {c.get('doing', 0)} in progress, "
+            f"{c.get('todo', 0)} not started, {c.get('blocked', 0)} blocked. Items as `num [state] text (id; tasks)`; "
+            "read and change it with rd_outline / rd_outline_ops / rd_suggest_task.", "",
+            "```", *outline_model.as_text(o, "en", limit=80), "```", ""]
+
+
 def build_markdown(pid: str) -> str:
     """The brief without its timestamp line."""
     cfg = project_config(pid)
@@ -236,6 +254,7 @@ def build_markdown(pid: str) -> str:
                 out.append(f"- … {len(items) - TOP_ITEMS} more (rd_graph / the DAG view)")
             out.append("")
 
+    out += _outline_section(pid)
     out += ["## Agents on this project", "", *_agents_section(pid), ""]
     paper, code = cfg.get("paper") or {}, cfg.get("code") or {}
     out += [
@@ -340,5 +359,5 @@ def _on_event(pid: str, topic: str, payload: Any) -> None:
 
 
 def watch() -> None:
-    """Follow DAG and project-config changes (called once when the agents routes load)."""
-    hooks.on_topic(("dag", "project"), _on_event)
+    """Follow DAG, outline and project-config changes (called once when the agents routes load)."""
+    hooks.on_topic(("dag", "project", "outline"), _on_event)

@@ -3,10 +3,16 @@
 A local research dashboard over one or more project folders. It runs on the researcher's machine at
 `http://127.0.0.1:8765` (loopback only) and drives the Claude Code and Codex CLIs headless inside each project.
 
-The UI has five views and one conversation: **Today** (`panels/overview`: what needs a decision), **Map**
-(`panels/dag`: the research DAG as a list or a graph), **Experiments**, **Paper** (`panels/writing`: the text, and the
-figures from `panels/visualization`), **Code** (`panels/coding`), Settings, and the **project conversation** on the
-right (`agent/AgentDock.tsx`, ⌘J). ⌘K jumps anywhere (`components/Palette.tsx`).
+A research project works from its **outline** (`panels/outline`, the home page): the paper's sections, each a chain
+of numbered items that argue what the section makes the reader accept; the phases (idea, insight, design, evaluation)
+group the sections, and the work is tasks hung on items (literature, code, figures, experiments) whose outputs come back
+as the items' evidence. Above it sits what waits for the researcher (Today's list); beside it the inspector; its other
+views are the task board, the research tree of every fork, and any item as the root (focus). The other views are
+**Experiments**, **Paper** (`panels/writing`: the text, with the outline of the section at the cursor beside it, and
+the figures from `panels/visualization`), **Code** (`panels/coding`) and Settings (with the outline templates); the
+**Map** (`panels/dag`: the research DAG as a list or a graph) opens from the outline, the palette and node links. An
+engineering project has **Today** (`panels/overview`) instead and no outline or map. The **project conversation** is on
+the right (`agent/AgentDock.tsx`, ⌘J); ⌘K jumps anywhere (`components/Palette.tsx`).
 
 ```
 research-deck/
@@ -21,14 +27,19 @@ research-deck/
     viz/      figure registry, matplotlib renderer, draw.io files, OmniGraffle/DataGraph adapters, the house style
     start/    new projects from an idea (folder, notes/idea.md, git init) and Settings → New projects
     survey/   the early survey: search arXiv / Semantic Scholar / OpenAlex, download open-access PDFs, BibTeX, draft nodes
+    outline/  the paper outline: model.py (the outline as the page shows it), ops.py (outline ops → map ops), service.py,
+              tasks.py (.research/outline/tasks.json), templates.py (+ templates/*.yaml), structure.py (a written outline
+              → a draft of sections and items)
     mcp_server.py              stdio MCP server exposing the dashboard to Codex/Claude (proxies the HTTP API)
   web/src/                     React 18 + TypeScript + Vite
     App.tsx state/ api/client.ts types.ts i18n/ styles/ components/   shell + shared (core)
-    state/                     app.tsx (route, project, events), today.tsx (what needs a decision), stages.ts, views.ts
+    state/                     app.tsx (route, project, events), today.tsx (what needs a decision, the outline, the
+                               task being worked on), stages.ts, views.ts
     agent/                     AgentDock (the project conversation), useAgentRun (core hook), parts
-    start/                     the new-project dialog, the survey card on Today, Settings → New projects
-    panels/<view>/index.tsx    one folder per view: overview (Today), dag (Map), experiments, writing (Paper),
-                               coding (Code), settings; visualization holds the figures half of Paper
+    start/                     the new-project dialog, the survey card (on the outline page), Settings → New projects
+    panels/<view>/index.tsx    one folder per view: outline (a research project's home), overview (Today; its list
+                               shows on the outline page), dag (Map), experiments, writing (Paper), coding (Code),
+                               settings; visualization holds the figures half of Paper
     demo.py                    materializes the demo project from demo/minimal into ~/.research-deck/demo/toycache on first start
   demo/minimal/                the demo's source files only (a toy synthetic project); history and DAG are built by demo.py
   tests/                       pytest (backend); RD_FAKE_AGENT=1 replaces the CLIs
@@ -43,9 +54,27 @@ research-deck/
   example an engineering effort and a research project over the same repositories. Every package reaches the state
   folder through `projects.research_dir(pid)` / `project_state(pid)`; the DAG store takes it as `DagStore(root, state=…)`.
   Any `.research*` folder is state, never code (DAG fingerprints, traces and walks skip them).
-- `kind` in project.yaml: `research` (the full pipeline: the map, stages and their gates) or `engineering` (code,
-  documents, runs and figures of a non-research effort such as a PR; the map is hidden, and Today shows repositories,
-  commits, documents, runs and figures). `views: [...]` overrides the views a project shows.
+- `kind` in project.yaml: `research` (the full pipeline: the outline, the map, stages and their gates) or
+  `engineering` (code, documents, runs and figures of a non-research effort such as a PR; no outline or map, and Today
+  shows repositories, commits, documents, runs and figures). `views: [...]` overrides the views a project shows
+  (state/views.ts; in a research project `overview` and `dag` there mean the outline page).
+
+## The outline
+
+- One copy, on the map: sections are `section` nodes with an `order` facet (paper sync's sections from `% rd:sec`
+  anchors are adopted), items are `claim` nodes; the structure (chains, parallel groups, notes, forks) lives in their
+  facets (docs/DAG.md § The paper outline). The outline page never edits the map directly: `outline/ops.py` plans outline
+  ops locally and writes one batch of map ops (the researcher's apply at once; an agent's adds apply as proposed nodes
+  and anything else becomes one proposal).
+- Tasks are a separate store (`.research/outline/tasks.json`); a task serves one or more items and links what it makes
+  (a map node, a figure, a survey). Its shown state is derived from that link where it can be (an experiment node's
+  runs, a survey). Templates are data: built-ins in `outline/templates/*.yaml`, the researcher's in
+  `~/.research-deck/templates/`.
+- Phases: a section belongs to one (or `summary`, which follows the items it cites); a task to the earliest phase of its
+  items, and waits ("locked") while that phase is ahead of the project under the stage rules. The map's stage rules do
+  not apply to the outline's own nodes (`dag/stages.py OUTLINE_KINDS`).
+- The paper: `% rd:describes <item>` markers (HTML comments in Markdown) put a paragraph under an item; after a save that
+  changes them the paper is synced to the map, so the item counts as written.
 
 ## Conventions every slice follows
 

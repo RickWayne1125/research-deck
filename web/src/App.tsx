@@ -48,7 +48,7 @@ function lazyPanel(load: () => Promise<{ default: React.ComponentType }>) {
     (err) => {
       let reloaded = false;
       try { reloaded = sessionStorage.getItem('rd.chunkReload') === '1'; sessionStorage.setItem('rd.chunkReload', '1'); } catch { /* ignore */ }
-      if (!reloaded && /dynamically imported module|Importing a module script failed|Loading chunk/i.test(String(err?.message ?? err))) {
+      if (!reloaded && /dynamically imported module|Importing a module script failed|Loading chunk|Unable to preload CSS/i.test(String(err?.message ?? err))) {
         location.reload();
         return new Promise<never>(() => {});
       }
