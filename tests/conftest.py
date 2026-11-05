@@ -13,6 +13,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from research_deck import config
+from research_deck.dag import resolve
 
 
 @pytest.fixture(autouse=True)
@@ -33,6 +34,7 @@ def isolated(tmp_path_factory, monkeypatch):
     gitconfig = local / "gitconfig"
     gitconfig.write_text("[user]\n\tname = Test\n\temail = test@example.invalid\n[commit]\n\tgpgsign = false\n[tag]\n\tgpgsign = false\n")
     monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(gitconfig))
+    monkeypatch.setitem(resolve.GIT_ENV, "GIT_CONFIG_GLOBAL", str(gitconfig))   # the map's git calls copy the env at import
     yield
 
 
