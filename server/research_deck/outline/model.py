@@ -12,6 +12,7 @@ On the map (one copy, no separate outline file):
   chain_notes  {"<step index>": "…"}: what a parallel group is ("two components"); without one, "together lead to
                the next item"
 Edges of an item (evidence, basis, cites) point at what backs it: experiment outputs, findings, designs, references.
+Its evidence as shown adds what its tasks produce (the node a task is linked to), rel "task".
 
 Numbers: sections 1…n in order; items <section>.<i>, sub-items <item>.<j>; a fork's directions are "direction 1, 2…"
 of the fork item, and each direction numbers its own sub-items under the fork item's number.
@@ -184,16 +185,24 @@ class Builder:
         return out
 
     # ------------------------------------------------------------ state
-    def evidence(self, nid: str) -> list[dict]:
-        node, out = self.nodes[nid], []
-        for e in edges(node, "evidence", "basis", "cites"):
-            t = ref_id(e.get("to"))
+    def evidence(self, nid: str, tasks: list[dict] | None = None) -> list[dict]:
+        """What backs the item: the nodes its edges point at, then what its tasks produce (the node a task is linked
+        to: its experiment, figure, module), each once."""
+        node, out, seen = self.nodes[nid], [], set()
+
+        def add(t: str | None, rel: str, task: str | None = None) -> None:
             m = self.nodes.get(t) if t else None
-            if not m or t in self.items:
-                continue
+            if not m or t in self.items or t in seen:
+                return
+            seen.add(t)
             ev = self.st.E.get(t) if self.st is not None else None
-            out.append({"id": t, "kind": m.get("kind"), "rel": e.get("type"), "title": title_of(m), "status": m.get("status"),
-                        "level": ev.level if ev is not None else None})
+            out.append({"id": t, "kind": m.get("kind"), "rel": rel, "title": title_of(m), "status": m.get("status"),
+                        "level": ev.level if ev is not None else None, **({"task": task} if task else {})})
+        for e in edges(node, "evidence", "basis", "cites"):
+            add(ref_id(e.get("to")), e.get("type"))
+        for t in tasks or []:
+            if t["status"] != "sugg":
+                add((t.get("links") or {}).get("node"), "task", t["id"])
         return out
 
     def settle(self, rec: dict, task_by_item: dict[str, list[dict]]) -> str:
@@ -205,7 +214,7 @@ class Builder:
                 self.settle(d, task_by_item)
         rec["tasks"] = [t["id"] for t in task_by_item.get(rec["id"], []) if t["status"] != "sugg"]
         rec["suggested"] = [t["id"] for t in task_by_item.get(rec["id"], []) if t["status"] == "sugg"]
-        rec["evidence"] = self.evidence(rec["id"])
+        rec["evidence"] = self.evidence(rec["id"], task_by_item.get(rec["id"]))
         rec["written"] = self.written.get(rec["id"], [])
         rec["proposals"] = [p["id"] for p in self.open_props if any(
             (o.get("node") == rec["id"]) or (isinstance(o.get("node"), dict) and o["node"].get("id") == rec["id"]) for o in p.get("ops") or [])]
@@ -236,7 +245,7 @@ class Builder:
             return "holds"
         ts = [t for t in task_by_item.get(rec["id"], []) if t["status"] != "sugg"]
         if not ts:
-            ev = [e for e in rec["evidence"] if e["status"] not in DEAD]
+            ev = [e for e in rec["evidence"] if e["status"] not in DEAD and e["rel"] != "task"]
             if not ev:
                 return "needs_tasks"
             return "holds" if all(e["status"] in ("confirmed", "locked") for e in ev) else "todo"

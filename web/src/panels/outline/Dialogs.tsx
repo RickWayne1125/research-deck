@@ -11,7 +11,8 @@ import '../overview/i18n';
 import { TASK_TYPES, outlineApi, type Item, type Phase, type Task, type TaskStatus, type TaskType } from './api';
 import { errMsg, useOl, type DialogSpec } from './ctx';
 import { bi, outlineItemIds } from './model';
-import { useGoTask, useTaskStatus } from './parts';
+import { useTaskStatus } from './parts';
+import { PHASE_EXPERIMENT, useWork } from './work';
 
 const REASONS = ['infeasible', 'dominated', 'no_headroom', 'competitor_closed_gap', 'out_of_scope', 'cost', 'time', 'other'] as const;
 
@@ -144,7 +145,7 @@ function TaskDialog({ spec, onClose }: { spec: Extract<DialogSpec, { kind: 'task
   const t = useT();
   const { pid, tasks, items, reload } = useOl();
   const nodes = useMapNodes();
-  const go = useGoTask();
+  const { go, makeExperiment, startSurvey } = useWork();
   const statusText = useTaskStatus();
   const task = spec.task ? tasks.get(spec.task) : undefined;
   const it = spec.item ? items.get(spec.item) : undefined;
@@ -195,6 +196,19 @@ function TaskDialog({ spec, onClose }: { spec: Extract<DialogSpec, { kind: 'task
             ))}
           </div>
           <TaskFields {...{ type, setType, title, setTitle, who, setWho, node, setNode, nodes }} />
+          {task.status !== 'sugg' && task.status !== 'locked' && task.type === 'exp' && !task.links?.node && (
+            <div className="row wrap" style={{ gap: 8 }}>
+              <Button size="sm" icon="plus" disabled={busy} onClick={() => act(() => makeExperiment(task))}>
+                {t('ol.work.makeExp', { stage: PHASE_EXPERIMENT[task.phase ?? 'evaluation'].stage })}
+              </Button>
+            </div>
+          )}
+          {task.status !== 'sugg' && task.status !== 'locked' && task.type === 'lit' && !task.links?.survey && (
+            <div className="row wrap" style={{ gap: 8 }}>
+              <Button size="sm" icon="search" disabled={busy} onClick={() => act(() => startSurvey(task))}>{t('ol.work.survey')}</Button>
+              <span className="ol-hint grow">{t('ol.work.surveyHint')}</span>
+            </div>
+          )}
           {task.status !== 'sugg' && (
             <div className="row wrap" style={{ gap: 12 }}>
               <label className="field"><span className="label">{t('ol.task.set')}</span>

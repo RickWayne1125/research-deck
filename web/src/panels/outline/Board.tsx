@@ -7,7 +7,8 @@ import { useT } from '../../i18n';
 import { TASK_TYPES, outlineApi, type Phase, type Task, type TaskType } from './api';
 import { errMsg, useOl } from './ctx';
 import { COLUMNS, boardColumns, phaseMark, typeCounts } from './model';
-import { useGoTask, useTaskStatus } from './parts';
+import { useTaskStatus } from './parts';
+import { useWork } from './work';
 
 export function Board() {
   const t = useT();
@@ -43,7 +44,7 @@ function TaskCard({ task }: { task: Task }) {
   const t = useT();
   const { navigate } = useApp();
   const { pid, items, openDialog, reload } = useOl();
-  const go = useGoTask();
+  const { go } = useWork();
   const status = useTaskStatus();
   const [error, setError] = useState<string | null>(null);
   const act = async (fn: () => Promise<unknown>) => { setError(null); try { await fn(); await reload(); } catch (e) { setError(errMsg(e)); } };

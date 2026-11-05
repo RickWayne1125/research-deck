@@ -212,3 +212,14 @@ export function arrangeDraft(template: Template | null, draft: Draft | null, lan
 export function draftCount(steps: DraftStep[]): number {
   return steps.reduce((n, st) => n + (Array.isArray(st) ? st : [st]).reduce((m, it) => m + 1 + draftCount(it.children ?? []), 0), 0);
 }
+
+/** A new node id from a title: prefix.slug, made unique among `taken` (Chinese titles have no ASCII slug: a short
+ *  random one then). */
+export function slugId(prefix: string, title: string, taken: Set<string>): string {
+  const base = title.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32).replace(/-+$/, '')
+    || Math.random().toString(36).slice(2, 8);
+  let id = `${prefix}.${base}`;
+  for (let n = 2; taken.has(id); n++) id = `${prefix}.${base}-${n}`;
+  return id;
+}

@@ -128,7 +128,7 @@ function ItemPane({ it }: { it: Item }) {
                 <div key={`${e.rel}:${e.id}`} className="ol-ins-row">
                   <span className="ol-faint" style={{ fontSize: 'var(--fs-xs)', minWidth: 34 }}>{t(`ol.link.${e.rel}`)}</span>
                   <span className="grow"><EvidenceChip e={e} /></span>
-                  {live && <button type="button" className="ol-link" disabled={busy} onClick={() => run([{ op: 'unlink', item: it.id, to: e.id, type: e.rel }])}>{t('ol.link.remove')}</button>}
+                  {live && e.rel !== 'task' && <button type="button" className="ol-link" disabled={busy} onClick={() => run([{ op: 'unlink', item: it.id, to: e.id, type: e.rel }])}>{t('ol.link.remove')}</button>}
                 </div>
               ))}
             </div>

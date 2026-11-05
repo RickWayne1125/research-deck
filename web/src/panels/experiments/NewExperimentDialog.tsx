@@ -7,12 +7,12 @@ import { useT } from '../../i18n';
 import type { DagNode } from '../../types';
 import { exApi, type ExRecord, type ExResources } from './api';
 
-export function NewExperimentDialog({ pid, initialNode, onClose, onCreated }: {
-  pid: string; initialNode?: string | null; onClose: () => void; onCreated: (rec: ExRecord) => void;
+export function NewExperimentDialog({ pid, initialNode, initialTitle, onClose, onCreated }: {
+  pid: string; initialNode?: string | null; initialTitle?: string; onClose: () => void; onCreated: (rec: ExRecord) => void;
 }) {
   const t = useT();
   const L = useDagLabels();
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState(initialTitle ?? '');
   const [node, setNode] = useState(initialNode ?? '');
   const [command, setCommand] = useState('');
   const [config, setConfig] = useState('{\n  \n}');

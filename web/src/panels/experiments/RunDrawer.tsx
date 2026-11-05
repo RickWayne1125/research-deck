@@ -11,6 +11,7 @@ import { exApi, LIVE_STATUSES, type ExRecord } from './api';
 import { clampDrawerWidth, DRAWER_DEFAULT, DRAWER_MIN, drawerMax, keyDrawerWidth, loadDrawerWidth, saveDrawerWidth } from './drawerWidth';
 import { LogTerminal } from './LogTerminal';
 import { formatDuration, formatValue, reasonText, runDuration, StatusCell, toYaml, useNow } from './parts';
+import { ServesRow } from '../outline/Serves';
 
 const CONTEXT_LOG_LINES = 40;
 
@@ -142,6 +143,7 @@ function DrawerBody({ pid, rec }: { pid: string; rec: ExRecord }) {
         <dl className="kv">
           <dt>{t('ex.d.node')}</dt>
           <dd>{rec.node_id ? <button type="button" className="ex-link mono" onClick={() => navigate('dag', rec.node_id!)}>{rec.node_id}</button> : <span className="faint">{t('ex.noNode')}</span>}</dd>
+          <ServesRow node={rec.node_id} />
           {cell && <><dt>{t('ex.d.cell')}</dt><dd className="mono">{cell}</dd></>}
           {rec.run_id && <><dt>{t('ex.d.run')}</dt><dd className="mono">{rec.run_id}</dd></>}
           {rec.job_id && <><dt>{t('ex.d.job')}</dt><dd className="mono">{rec.job_id}</dd></>}

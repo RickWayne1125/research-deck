@@ -227,6 +227,8 @@ def test_experiment_tasks_follow_their_runs(client, made):
     o = outline(client, pid)
     task = next(x for x in o["tasks"] if x["id"] == t["id"])
     assert task["status"] == "done" and task["reason"] is None and flat(o)["2.1"]["state"] == "holds"
+    # what the task produces shows as the item's evidence (once, and not as an edge to remove)
+    assert [(e["id"], e["rel"], e.get("task")) for e in flat(o)["2.1"]["evidence"]] == [("exp.base", "task", t["id"])]
 
 
 def test_a_pdf_outline_is_read_for_the_box(client, project):

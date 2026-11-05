@@ -28,6 +28,9 @@ export interface TodayValue {
   outline: Outline | null;
   /** Reload the outline now (after an outline or task change). */
   reloadOutline: () => Promise<void>;
+  /** The outline task being worked on (shown above Experiments, Code and Paper), per project for this tab. */
+  activeTask: string | null;
+  setActiveTask: (id: string | null) => void;
   /** Today's items, without the outline's own items (the outline page shows those itself). */
   needs: Needs;
   waiting: Waiting;
@@ -110,6 +113,13 @@ export function TodayProvider({ children }: { children: ReactNode }) {
     } catch { /* keep the last one; the page shows the map's error */ }
   }, [projectId, research, lang]);
   useEffect(() => { loadOutline(); }, [loadOutline]);
+  const taskKey = `rd.outline.task.${projectId ?? ''}`;
+  const [activeTask, setActive] = useState<string | null>(null);
+  useEffect(() => { try { setActive(sessionStorage.getItem(taskKey)); } catch { setActive(null); } }, [taskKey]);
+  const setActiveTask = useCallback((id: string | null) => {
+    setActive(id);
+    try { if (id) sessionStorage.setItem(taskKey, id); else sessionStorage.removeItem(taskKey); } catch { /* storage unavailable */ }
+  }, [taskKey]);
   useEffect(() => {
     let timer = 0;
     const soon = () => { window.clearTimeout(timer); timer = window.setTimeout(() => loadOutline(), 300); };
@@ -124,9 +134,9 @@ export function TodayProvider({ children }: { children: ReactNode }) {
     const needs = { ...all, review: all.review.filter(n => !inOutline.has(n.id)) };
     const w = computeWaiting(raw.graph);         // an outline item without backing shows on the outline itself
     const waiting = { ...w, evidence: w.evidence.filter(n => !inOutline.has(n.id)) };
-    return { ...raw, outline: o, reloadOutline: loadOutline, needs, waiting,
+    return { ...raw, outline: o, reloadOutline: loadOutline, activeTask, setActiveTask, needs, waiting,
              count: needsCount(needs) + outlinePending(o).length, reload: load };
-  }, [raw, load, outline, projectId, loadOutline]);
+  }, [raw, load, outline, projectId, loadOutline, activeTask, setActiveTask]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

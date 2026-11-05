@@ -193,3 +193,7 @@ button.ol-chip:hover { border-color: var(--slate); }
 .ol-tt .chip { height: 18px; padding: 0 5px; font-size: 10.5px; }
 .ol-tt .input, .ol-tt .select { width: 100%; min-height: 28px; padding: 3px 7px; }
 .ol-ph { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+
+/* the task being worked on, above Experiments, Code and Paper */
+.ol-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 6px 18px; border-bottom: var(--line) solid var(--rule); background: var(--info-wash); }
+.ol-bar .ol-tk { max-width: 520px; }

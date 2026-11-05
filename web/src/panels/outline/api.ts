@@ -15,7 +15,8 @@ export const TASK_TYPES: TaskType[] = ['lit', 'code', 'fig', 'exp'];
 export type TaskStatus = 'todo' | 'doing' | 'blocked' | 'done' | 'sugg' | 'locked';
 export type Bi = { zh?: string; en?: string };
 
-export interface Evidence { id: string; kind: string; rel: 'evidence' | 'basis' | 'cites'; title: string; status: string; level: string | null }
+/** rel "task": what one of the item's tasks produces (the node the task is linked to). */
+export interface Evidence { id: string; kind: string; rel: 'evidence' | 'basis' | 'cites' | 'task'; title: string; status: string; level: string | null; task?: string }
 export interface Step { items: Item[]; note: string | null }
 export interface Item {
   id: string; num: string; depth: number; section: string; parent: string;

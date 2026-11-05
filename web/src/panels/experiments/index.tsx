@@ -1,7 +1,7 @@
 // The Experiments view: Runs (records, "does this need a rerun?", the log in a read-only terminal) | Resources. When the
 // map says experiments need to run or rerun, a bar above the runs opens the run plan (#/<project>/experiments/plan).
-// The route's sub-path is the tab, "plan", or an experiment id, which opens that run's drawer on the Runs tab:
-// #/<project>/experiments/resources, #/<project>/experiments/e7-main.
+// The route's sub-path is the tab, "plan", "new[:<node>]" (a new run, from an outline task), or an experiment id,
+// which opens that run's drawer on the Runs tab: #/<project>/experiments/resources, #/<project>/experiments/e7-main.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Badge, Button, PanelHead, useLoad } from '../../components/ui';
 import { useToday } from '../../state/today';
@@ -26,10 +26,13 @@ export default function ExperimentsPanel() {
   const pid = projectId!;
   const t = useT();
 
-  // "plan" is the run plan; any other sub-path that is not a tab is an experiment id, shown on the Runs tab.
+  // "plan" is the run plan; "new" or "new:<node>" opens the new-experiment dialog (from an outline task); any other
+  // sub-path that is not a tab is an experiment id, shown on the Runs tab.
   const plan = sub === 'plan';
-  const openId = sub && !isTab(sub) && !plan ? sub : null;
+  const newFor = sub === 'new' ? '' : sub?.startsWith('new:') ? sub.slice('new:'.length) : null;
+  const openId = sub && !isTab(sub) && !plan && newFor === null ? sub : null;
   const today = useToday();
+  const task = today.outline?.tasks.find(x => x.id === today.activeTask) ?? null;
   const toRun = today.needs.rerun.ids.length;
   const [tab, setTabState] = useState<Tab>(() => {
     if (isTab(sub)) return sub;
@@ -43,6 +46,8 @@ export default function ExperimentsPanel() {
     navigate('experiments', next);
   }, [navigate]);
 
+  const [creating, setCreating] = useState(false);
+  useEffect(() => { if (newFor !== null) setCreating(true); }, [newFor]);
   const list = useLoad(() => exApi.list(pid), [pid]);
   // Records and their freshness change on 'experiments' and 'dag' events; one reload per burst.
   const reloadRef = useRef(list.reload);
@@ -61,7 +66,6 @@ export default function ExperimentsPanel() {
     return () => window.clearInterval(id);
   }, [anyLive]);
 
-  const [creating, setCreating] = useState(false);
   const records = list.data;
   const stale = useMemo(() => (records ?? []).filter(r => r.freshness === 'stale').length, [records]);
   const summary = openId ? records?.find(r => r.id === openId) : undefined;
@@ -104,8 +108,9 @@ export default function ExperimentsPanel() {
         {!plan && tab === 'runs' && openId && <RunDrawer key={openId} pid={pid} id={openId} summary={summary} onClose={close} />}
       </div>
       {creating && (
-        <NewExperimentDialog pid={pid} onClose={() => setCreating(false)}
-          onCreated={(rec) => { setCreating(false); list.reload(); navigate('experiments', rec.id); }} />
+        <NewExperimentDialog pid={pid} initialNode={newFor || null} initialTitle={newFor !== null ? task?.title : undefined}
+          onClose={() => { setCreating(false); if (newFor !== null) navigate('experiments', 'runs', undefined, { replace: true }); }}
+          onCreated={(rec) => { setCreating(false); list.reload(); navigate('experiments', rec.id, undefined, { replace: newFor !== null }); }} />
       )}
     </div>
   );

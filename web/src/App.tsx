@@ -56,6 +56,10 @@ function lazyPanel(load: () => Promise<{ default: React.ComponentType }>) {
     }));
 }
 
+/** The outline task being worked on, shown above the pages where tasks are done. */
+const TaskBar = lazyPanel(() => import('./panels/outline/TaskBar'));
+const TASK_VIEWS: ViewId[] = ['experiments', 'coding', 'writing'];
+
 const PANEL_COMPONENTS: Record<ViewId, React.LazyExoticComponent<React.ComponentType>> = {
   outline: lazyPanel(() => import('./panels/outline')),
   overview: lazyPanel(() => import('./panels/overview')),
@@ -157,9 +161,14 @@ export default function App() {
 
       <main className="main" aria-live="polite">
         {!projectId ? <NoProject hasProjects={projects.length > 0} /> : (
-          <Suspense fallback={<div className="empty"><Spinner /></div>}>
-            {current && !hidden ? <PanelBoundary key={`${projectId}:${view}`} label={t(`nav.${view}`)}><View /></PanelBoundary> : <div className="empty"><Spinner /></div>}
-          </Suspense>
+          <div className="main-col">
+            <div>{today.activeTask && TASK_VIEWS.includes(view) && current && isResearch(current) && <Suspense fallback={null}><TaskBar /></Suspense>}</div>
+            <div className="main-view">
+              <Suspense fallback={<div className="empty"><Spinner /></div>}>
+                {current && !hidden ? <PanelBoundary key={`${projectId}:${view}`} label={t(`nav.${view}`)}><View /></PanelBoundary> : <div className="empty"><Spinner /></div>}
+              </Suspense>
+            </div>
+          </div>
         )}
       </main>
 

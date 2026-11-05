@@ -1,8 +1,6 @@
-// Small pieces of the outline page: an item's state chip, a task chip, an evidence chip, phase names, and where a
-// task's work happens (its "go" action).
+// Small pieces of the outline page: an item's state chip, a task chip, an evidence chip, phase names.
 import { useCallback } from 'react';
-import { FIGURES, useApp } from '../../state/app';
-import { useToday } from '../../state/today';
+import { useApp } from '../../state/app';
 import { useT } from '../../i18n';
 import type { Evidence, Item, Phase, SectionPhase, Task } from './api';
 import { useOl } from './ctx';
@@ -80,24 +78,4 @@ export function EvidenceChip({ e }: { e: Evidence }) {
       {e.title || e.id}
     </button>
   );
-}
-
-/** Where a task's work happens: the experiment's runs, the code, the figure, the survey. */
-export function useGoTask(): (task: Task) => void {
-  const { navigate } = useApp();
-  const today = useToday();
-  return useCallback((task: Task) => {
-    const l = task.links ?? {};
-    if (task.type === 'exp') {
-      const run = l.node ? (today.runs ?? []).find(r => r.node_id === l.node) : undefined;
-      navigate('experiments', run ? run.id : null);
-    } else if (task.type === 'code') {
-      navigate('coding', l.path ?? null);
-    } else if (task.type === 'fig') {
-      navigate('writing', l.figure ? `${FIGURES}/${l.figure}` : FIGURES);
-    } else {
-      const sv = today.survey && (!l.survey || l.survey === today.survey.id) ? today.survey : null;
-      navigate('writing', l.path ?? sv?.files.survey ?? null);
-    }
-  }, [navigate, today.runs, today.survey]);
 }

@@ -16,6 +16,7 @@ import { errMessage, KIND_LABEL, vz, type FigureView, type StyleFull } from './a
 import type { EditorHandle } from './editor';
 import './i18n';
 import './visualization.css';
+import { ServesInline } from '../outline/Serves';
 
 export function FiguresView() {
   const { projectId, sub: route, navigate, onEvent, askAgent } = useApp();
@@ -102,6 +103,7 @@ export function FiguresView() {
             <KindBadge kind={figure.kind} />
             <StatusBadge status={figure.status} />
             {figure.node_id && <NodeChip id={figure.node_id} />}
+            <ServesInline node={figure.node_id} figure={figure.id} />
             <FigureMeta projectId={pid} figure={figure} onSaved={reloadFigs} />
           </>
         )}
