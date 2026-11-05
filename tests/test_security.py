@@ -3,7 +3,7 @@ import os
 import subprocess
 
 from conftest import git
-from research_deck import util
+from research_deck import config, util
 from research_deck.agents import runner
 
 
@@ -94,7 +94,10 @@ def test_session_ids_cannot_be_cli_options(client, project):
         pass
 
 
-def test_claude_runs_are_restricted_and_codex_ignores_user_config():
+def test_claude_runs_are_restricted_and_codex_ignores_user_config(monkeypatch):
+    # the commands are only built, never run: any name stands in for the CLIs, installed or not
+    monkeypatch.setattr(config, "CLAUDE_CLI", "claude")
+    monkeypatch.setattr(config, "CODEX_CLI", "codex")
     spec = runner.RunSpec(project_id="p", panel="project", provider="claude", model="claude-opus-5-5", effort="low",
                           fast=False, prompt="x", cwd=".", mcp=False)
     cmd = runner.build_command(spec, "/tmp")

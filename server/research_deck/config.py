@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import sys
 from pathlib import Path
 
 APP_ROOT = Path(__file__).resolve().parents[2]          # research-deck/
@@ -52,7 +53,10 @@ CODEX_CLI = os.environ.get("RD_CODEX_CLI") or shutil.which("codex") or _first_ex
 FAKE_AGENT = os.environ.get("RD_FAKE_AGENT") == "1"
 
 
-PYTHON_FOR_FIGURES = os.environ.get("RD_FIGURE_PYTHON") or str(APP_ROOT / ".venv" / "bin" / "python")
+# The Python that renders matplotlib figures: RD_FIGURE_PYTHON, else the checkout's .venv, else the Python running the server
+# (an install without .venv, e.g. conda or a plain pip install, has matplotlib there).
+_VENV_PYTHON = APP_ROOT / ".venv" / "bin" / "python"
+PYTHON_FOR_FIGURES = os.environ.get("RD_FIGURE_PYTHON") or (str(_VENV_PYTHON) if _VENV_PYTHON.exists() else sys.executable)
 
 APPS = {
     "drawio": ["/Applications/draw.io.app"],

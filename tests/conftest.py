@@ -28,6 +28,11 @@ def isolated(tmp_path_factory, monkeypatch):
     (local / "settings.json").write_text('{"dag_defaults": {"stages": {"mode": "free"}}}')
     monkeypatch.setattr(config, "DEMO_ENABLED", False)      # only tests/test_demo.py materializes the demo
     monkeypatch.setattr(config, "FAKE_AGENT", True)
+    # The map commits and tags with the user's git identity: tests bring their own (and never read ~/.gitconfig), so a
+    # machine or CI runner without one runs them too. An explicit `git -c user.name=…` (the demo's) still wins.
+    gitconfig = local / "gitconfig"
+    gitconfig.write_text("[user]\n\tname = Test\n\temail = test@example.invalid\n[commit]\n\tgpgsign = false\n[tag]\n\tgpgsign = false\n")
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(gitconfig))
     yield
 
 
