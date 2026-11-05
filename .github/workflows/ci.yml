@@ -1,0 +1,131 @@
+# Checks on every pull request and every push to main: lint and tests for the server, type checks, tests and the build
+# for the web app, the documentation in strict mode, and a smoke test that starts the built app. release.yml calls it.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  NO_MKDOCS_2_WARNING: "1"
+
+jobs:
+  python:
+    name: Python ${{ matrix.python }} · ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, python: "3.12", lint: true }
+          - { os: ubuntu-latest, python: "3.13" }
+          - { os: macos-latest, python: "3.12" }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install
+        run: python -m pip install -e ".[dev]"
+      - name: Lint (ruff)
+        if: matrix.lint
+        run: ruff check --output-format=github .
+      - name: Tests (pytest)
+        run: python -m pytest -q
+
+  web:
+    name: Web app
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: web/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Type check (strict, no unused code)
+        run: pnpm typecheck
+      - name: Tests (vitest)
+        run: pnpm test
+      - name: Build
+        run: pnpm exec vite build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist
+          retention-days: 7
+
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install MkDocs
+        run: python -m pip install "mkdocs-material>=9.5,<10"
+      - name: Build (strict)
+        run: mkdocs build --strict
+
+  smoke:
+    name: Smoke test (the built app)
+    needs: web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install
+        run: python -m pip install -e .
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist
+      - name: Start Research Deck
+        env:
+          RD_LOCAL_DIR: ${{ runner.temp }}/rd
+          RD_FAKE_AGENT: "1"
+        run: |
+          nohup python -m research_deck --port 8765 > "$RUNNER_TEMP/server.log" 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:8765/api/system/health > /dev/null && exit 0
+            sleep 1
+          done
+          echo "the server did not answer within 60 s"; exit 1
+      - name: The page, the API and the demo
+        run: |
+          set -euo pipefail
+          curl -sf http://127.0.0.1:8765/ | grep -q '<div id="root">'
+          curl -sf http://127.0.0.1:8765/api/system/health | python -c 'import json, sys; assert json.load(sys.stdin)["ok"] is True'
+          curl -sf http://127.0.0.1:8765/api/projects | python -c 'import json, sys; ids = [p["id"] for p in json.load(sys.stdin)]; assert "demo" in ids, ids'
+          curl -sf "http://127.0.0.1:8765/api/projects/demo/outline?lang=en" | python -c 'import json, sys; o = json.load(sys.stdin); assert o["has_outline"] and len(o["sections"]) == 7, o.get("sections")'
+          curl -sf http://127.0.0.1:8765/api/projects/demo/dag/lenses | python -c 'import json, sys; assert json.load(sys.stdin)["tried"]["count"] > 0'
+      - name: Server log
+        if: always()
+        run: cat "$RUNNER_TEMP/server.log" || true

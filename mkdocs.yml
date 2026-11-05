@@ -1,0 +1,82 @@
+site_name: Research Deck
+site_description: A local research dashboard — the paper's outline, a research map with dependencies, experiments, the paper and the code, with one AI conversation per project.
+site_url: https://rickwayne1125.github.io/research-deck/
+repo_url: https://github.com/RickWayne1125/research-deck
+repo_name: RickWayne1125/research-deck
+edit_uri: edit/main/docs/
+copyright: Copyright © The Research Deck authors · Apache License 2.0
+
+theme:
+  name: material
+  language: en
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue grey
+      accent: red
+      toggle:
+        icon: material/weather-night
+        name: Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue grey
+      accent: red
+      toggle:
+        icon: material/weather-sunny
+        name: Light mode
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - navigation.indexes
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Installation: getting-started/install.md
+      - A tour of the demo: getting-started/quickstart.md
+  - User guide:
+      - Projects: guide/projects.md
+      - The outline: guide/outline.md
+      - Tasks and experiments: guide/experiments.md
+      - The paper: guide/paper.md
+      - The research map: guide/map.md
+      - Agents and the conversation: guide/agents.md
+      - Configuration: guide/configuration.md
+  - Examples:
+      - From an idea to a paper: examples/idea-to-paper.md
+      - An outline template of your own: examples/template.md
+      - The MCP server in your own terminal: examples/mcp-terminal.md
+      - Why a result goes stale: examples/stale-result.md
+  - Reference:
+      - Architecture: ARCHITECTURE.md
+      - HTTP API: API.md
+      - The research map (DAG): DAG.md
+  - Contributing: contributing.md

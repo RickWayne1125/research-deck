@@ -1,5 +1,9 @@
 # Research Deck
 
+[![CI](https://github.com/RickWayne1125/research-deck/actions/workflows/ci.yml/badge.svg)](https://github.com/RickWayne1125/research-deck/actions/workflows/ci.yml)
+[![Docs](https://github.com/RickWayne1125/research-deck/actions/workflows/docs.yml/badge.svg)](https://rickwayne1125.github.io/research-deck/)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+
 A local research dashboard over your project folders. You work from the paper's **outline** — what each section
 argues, item by item, with the literature, code, figures and experiments each item needs — over a **research map** that
 keeps what you tried, what is confirmed, what a change invalidates and which experiments must be rerun, and one **AI
@@ -97,9 +101,17 @@ downloads open-access PDFs (public addresses only, PDF files only, 60 MB at most
 
 ## Documentation
 
+The documentation site, **<https://rickwayne1125.github.io/research-deck/>**, has the installation guide, a tour of
+the demo, the user guide and examples. Its reference pages are in this repository:
+
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): how the pieces fit, conventions, safety, agents and context sharing
 - [docs/API.md](docs/API.md): the HTTP API and on-disk formats
 - [docs/DAG.md](docs/DAG.md): the research map's model — nodes, edges, freshness, impact preview, gates
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the development setup and the checks CI runs, and [SECURITY.md](SECURITY.md)
+for reporting security problems.
 
 ## License
 

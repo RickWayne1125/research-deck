@@ -1,0 +1,55 @@
+# A release for a version tag (v0.3.0): the tag must match the version in pyproject.toml and web/package.json, every CI
+# check must pass, and the release carries the built web app, the Python sdist and wheel, and generated notes.
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: Tag matches the version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          py=$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
+          web=$(python3 -c 'import json; print(json.load(open("web/package.json"))["version"])')
+          echo "tag $tag · pyproject $py · web $web"
+          [ "$tag" = "$py" ] && [ "$tag" = "$web" ] || { echo "the tag must match both versions"; exit 1; }
+
+  checks:
+    needs: version
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    needs: checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build the Python package
+        run: |
+          python -m pip install build
+          python -m build
+      - name: Pack the web app
+        run: tar -czf "research-deck-web-${GITHUB_REF_NAME}.tar.gz" -C web dist
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes --title "Research Deck $GITHUB_REF_NAME" \
+            dist/*.whl dist/*.tar.gz "research-deck-web-${GITHUB_REF_NAME}.tar.gz"

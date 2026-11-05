@@ -1,0 +1,20 @@
+name: Feature request
+description: Something Research Deck should do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you are trying to do in your research workflow, and what gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you would like
+      description: How it could work. Sketches and examples are welcome.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you do now instead
