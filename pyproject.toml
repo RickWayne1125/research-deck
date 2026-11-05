@@ -3,7 +3,8 @@ name = "research-deck"
 version = "0.2.0"
 description = "A local research dashboard: a research map with dependencies, one AI conversation per project (Claude Code or Codex), the paper, the experiments and the code."
 readme = "README.md"
-license = "MIT"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.12"
 dependencies = ["fastapi>=0.118", "uvicorn[standard]>=0.37", "pydantic>=2", "pyyaml", "httpx", "matplotlib", "numpy", "mcp>=1"]
 

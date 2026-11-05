@@ -85,4 +85,4 @@ Nothing submits jobs to remote machines or creates credentials. Details: [docs/A
 
 ## License
 
-[MIT](LICENSE)
+[Apache License 2.0](LICENSE). Redistributions keep the license and the [NOTICE](NOTICE) file.
