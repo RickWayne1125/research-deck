@@ -9,10 +9,9 @@ from ..actors import actor_of, is_human
 from . import gates, paper
 from .evaluate import current
 from .impact import impact as compute_impact
-from .ops import (OpError, apply_ops, approve, create_proposal, make_snapshot, record_run, reject, restore_proposal,
-                  submit)
-from .service import explain, graph_json, node_detail, node_json, past_state, publish, run_summary, store_for, versions
+from .ops import OpError, apply_ops, approve, create_proposal, make_snapshot, record_run, reject, restore_proposal, submit
 from .service import check as check_dag
+from .service import explain, graph_json, node_detail, node_json, past_state, publish, run_summary, store_for, versions
 
 router = APIRouter(prefix="/api/projects/{pid}/dag", tags=["dag"])
 

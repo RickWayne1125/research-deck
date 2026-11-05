@@ -188,6 +188,7 @@ def test_task_states_roll_up(client, made):
     assert group["holds"] == 3 and group["missing"] == ["2.4"]
     # an agent suggests a task; it does not count until the researcher takes it
     from fastapi.testclient import TestClient
+
     from research_deck.app import create_app
     with TestClient(create_app(), headers={"X-RD-Request": "1"}) as agent:
         s = agent.post(f"{base(pid)}/tasks", json={"type": "exp", "title": "Queue lead time", "items": [f["2.4"]["id"]]}).json()
@@ -255,6 +256,7 @@ def test_summary_items_follow_the_body(client, made):
 def test_agents_propose_and_loose_results_show(client, made):
     pid, root = made
     from fastapi.testclient import TestClient
+
     from research_deck.app import create_app
     f = flat(outline(client, pid))
     with TestClient(create_app(), headers={"X-RD-Request": "1"}) as agent:

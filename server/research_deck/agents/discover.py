@@ -12,8 +12,7 @@ from __future__ import annotations
 import json
 import os
 import re
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import UTC, datetime
 
 from .. import config
 
@@ -26,7 +25,7 @@ def claude_slug(cwd: str) -> str:
 
 
 def _iso(ts: float) -> str:
-    return datetime.fromtimestamp(ts, timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return datetime.fromtimestamp(ts, UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def _text_of(content) -> str:

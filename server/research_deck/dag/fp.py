@@ -13,7 +13,8 @@ import json
 import re
 import tokenize
 import unicodedata
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 FP_ALGO = "rd/1"
 MISSING = "∅"

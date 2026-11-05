@@ -10,6 +10,9 @@ dependencies = ["fastapi>=0.118", "uvicorn[standard]>=0.37", "pydantic>=2", "pyy
 
 [project.optional-dependencies]
 test = ["pytest"]
+# contributors: the checks CI runs (ruff, pytest) and the documentation site (MkDocs)
+dev = ["pytest", "ruff>=0.8"]
+docs = ["mkdocs-material>=9.5"]
 
 [build-system]
 requires = ["setuptools>=77"]
@@ -24,3 +27,28 @@ research_deck = ["outline/templates/*.yaml"]
 [tool.pytest.ini_options]
 pythonpath = ["server"]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 140
+target-version = "py312"
+src = ["server", "tests"]
+# the demo's sample project: its files make the demo's fixed git history, so they stay as they are
+extend-exclude = ["demo/minimal"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "C4"]
+ignore = [
+    "E501",  # long lines: line-length guides imports and reviewers; nothing reflows code
+    "E741",  # short names such as l in comprehensions
+    "B008",  # FastAPI's Query(...) and Depends(...) defaults
+    "B904",  # raise ... from inside except: optional
+    "B905",  # zip(strict=...): optional
+]
+
+[tool.ruff.lint.per-file-ignores]
+"server/research_deck/writing/review.py" = ["B023"]  # the callbacks run at once, inside the loop
+"tests/**" = ["B023", "E731"]
+"server/research_deck/dag/rd_exec/rd_trace/**" = ["UP"]  # runs inside the traced program's Python, which may be older
+
+[tool.ruff.lint.isort]
+known-first-party = ["research_deck"]

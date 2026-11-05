@@ -9,10 +9,10 @@ from pathlib import Path
 
 from .. import projects
 from ..events import hub
+from . import stages
 from .evaluate import State, build, current
 from .model import DEAD, authored_fp, edges, facet_value, input_cycle, is_action, parse_addr, ref_id, title_of, validate_node, warnings_for
 from .resolve import Repo, Tree, check_rev, git_text
-from . import stages
 from .store import DagStore, at_commit
 
 log = logging.getLogger("research_deck.dag")
@@ -323,7 +323,8 @@ def brief_data(pid: str) -> dict:
     st = _state(pid)
     if not st:
         return {"stage": None, "lenses": {}, "revise": [], "rerun": [], "confirmed": [], "attempts": [], "open_proposals": [], "gates": []}
-    from .gates import compute, lenses as compute_lenses
+    from .gates import compute
+    from .gates import lenses as compute_lenses
     L = compute_lenses(st)
     order = ("S0", "S1", "S2", "S3", "S4", "S5", "S6")
     stages = [n.get("stage") for n in st.nodes.values() if n.get("status") not in DEAD and n.get("stage") in order]

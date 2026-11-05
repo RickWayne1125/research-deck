@@ -13,7 +13,8 @@ from ..dag.evaluate import current
 from ..dag.service import publish, store_for
 from ..events import hub
 from ..util import slugify
-from . import model, tasks as task_store, templates
+from . import model, templates
+from . import tasks as task_store
 from .ops import OutlineError, Plan
 
 
@@ -75,7 +76,7 @@ def apply(pid: str, ops: list[dict], actor: str, lang: str = "zh") -> dict:
 
 def _add_items(plan: Plan, parent: str, steps: list, notes: dict | None = None) -> None:
     """Items of a structured draft under `parent`: steps of {text, children, derived} (a step: one item or a list)."""
-    for si, step in enumerate(steps or []):
+    for step in steps or []:
         group = step if isinstance(step, list) else [step]
         first = None
         for spec in group:

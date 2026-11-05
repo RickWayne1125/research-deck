@@ -5,7 +5,7 @@ import { parseAddr } from '../../dag/api';
 import { actorKind } from '../../dag/encoding';
 import {
   DAG_STAGES, DEAD_STATUSES,
-  type DagEdge, type DagEvent, type DagNode, type EdgeType, type Freshness, type GraphResponse, type Lenses,
+  type DagEdge, type DagEvent, type DagNode, type EdgeType, type Freshness, type GraphResponse,
   type NodeEval, type NodeKind, type NodeStatus, type Reason, type StageKey,
 } from '../../dag-types';
 

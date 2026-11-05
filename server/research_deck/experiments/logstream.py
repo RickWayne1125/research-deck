@@ -34,8 +34,9 @@ import signal
 import stat
 import threading
 import time
+from collections.abc import AsyncIterator, Awaitable, Callable
 from pathlib import Path
-from typing import AsyncIterator, Awaitable, BinaryIO, Callable
+from typing import BinaryIO
 
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
@@ -234,7 +235,7 @@ class LogStream:
         self.tail = _tail(self.src, offset)
 
     @classmethod
-    def open(cls, pid: str, eid: str, offset: int) -> "LogStream":
+    def open(cls, pid: str, eid: str, offset: int) -> LogStream:
         """404 (project, experiment) and 400 (a log path outside the project) are raised here, before the response."""
         return cls(pid, eid, records.get_state(pid, eid), offset)
 

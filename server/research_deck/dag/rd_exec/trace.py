@@ -19,7 +19,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from .. import fp as F
@@ -32,7 +32,7 @@ T95 = {1: 12.71, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571, 6: 2.447, 7: 2.365, 8: 
 
 
 def now() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def git(root: Path, *args: str, env: dict | None = None, input: bytes | None = None) -> bytes | None:
@@ -285,7 +285,7 @@ def run_job(spec_doc: dict, cell: dict, command: list[str], root: Path, *, repli
     outputs = spec_doc.get("outputs") or {}
     context = spec_doc.get("context") or {}
     root = root.resolve()
-    run_id = run_id or datetime.now(timezone.utc).strftime("r-%Y%m%d-%H%M-") + secrets.token_hex(2)
+    run_id = run_id or datetime.now(UTC).strftime("r-%Y%m%d-%H%M-") + secrets.token_hex(2)
     files = manifest(root)
     git_info = snapshot(root, run_id)
     env = probe_env()

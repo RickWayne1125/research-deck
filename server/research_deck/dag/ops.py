@@ -10,19 +10,37 @@ from __future__ import annotations
 import copy
 import hashlib
 import secrets
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from ..actors import is_human
 from ..util import now_iso, safe_join, write_text_atomic
-from .evaluate import State, build, check_run, current, invalidate, RunIndex
+from . import stages
+from .evaluate import RunIndex, State, build, check_run, current, invalidate
 from .fp import cell_id, fp_json, parse_cell, quantize, show, spec_fp
-from .model import (ABANDON_REASONS, DEAD, KIND_STAGE, PREVIEW_ONLY, PURPOSE_STAGE, SOFT, TRANSITIONS,
-                    agent_mode, authored_fp, edge_key, edges, facet_value, input_cycle, is_action, normalize_facet,
-                    parse_addr, ref_id, spec_of, validate_node)
+from .model import (
+    ABANDON_REASONS,
+    DEAD,
+    KIND_STAGE,
+    PREVIEW_ONLY,
+    PURPOSE_STAGE,
+    SOFT,
+    TRANSITIONS,
+    agent_mode,
+    authored_fp,
+    edge_key,
+    edges,
+    facet_value,
+    input_cycle,
+    is_action,
+    normalize_facet,
+    parse_addr,
+    ref_id,
+    spec_of,
+    validate_node,
+)
 from .resolve import Resolver, check_rev, git_text, yaml_set_text
 from .store import DagStore, safe_name
-from . import stages
 
 
 class OpError(Exception):
@@ -598,7 +616,7 @@ def impact_signature(imp: dict | None) -> tuple:
 def submit(store: DagStore, ops: list[dict], actor: str, *, base_digest: str | None = None, rationale: str | None = None,
            title: str | None = None) -> dict:
     """POST /ops: apply directly (humans; agents under the safe rule) or turn the batch into one proposal."""
-    from .impact import impact          # noqa: PLC0415 — impact imports this module
+    from .impact import impact  # noqa: PLC0415 — impact imports this module
     if not isinstance(ops, list) or not ops:
         raise OpError(400, "ops must be a non-empty list")
     before = current(store)
@@ -631,7 +649,7 @@ def summarize(ops: list[dict]) -> str:
 
 def create_proposal(store: DagStore, title: str, rationale: str | None, ops: list[dict], actor: str, imp: dict | None = None,
                     code: dict | None = None) -> dict:
-    from .impact import impact          # noqa: PLC0415
+    from .impact import impact  # noqa: PLC0415
     if not isinstance(ops, list) or not ops:
         raise OpError(400, "ops must be a non-empty list")
     imp = imp or impact(store, {"ops": ops, **({"code": code} if code else {})}, actor=actor)
@@ -649,7 +667,7 @@ def create_proposal(store: DagStore, title: str, rationale: str | None, ops: lis
 
 
 def approve(store: DagStore, pid: str, actor: str, indices: list[int] | None = None) -> dict:
-    from .impact import impact          # noqa: PLC0415
+    from .impact import impact  # noqa: PLC0415
     if not is_human(actor):
         raise OpError(403, "open a proposal")
     prop = store.proposal(pid)
@@ -773,7 +791,7 @@ def _within(a: Any, v: Any, tol: dict) -> bool:
 
 
 def new_run_id() -> str:
-    return datetime.now(timezone.utc).strftime("r-%Y%m%d-%H%M-") + secrets.token_hex(2)
+    return datetime.now(UTC).strftime("r-%Y%m%d-%H%M-") + secrets.token_hex(2)
 
 
 def record_run(store: DagStore, record: dict, actor: str = "system") -> dict:
@@ -806,7 +824,7 @@ def record_run(store: DagStore, record: dict, actor: str = "system") -> dict:
         rec.setdefault("node_vid", (n.get("head") or {}).get("vid"))
         rec["trace"] = {a: (i if isinstance(i, dict) else {"fp": i}) for a, i in (rec.get("trace") or {}).items()}
         rec.setdefault("trace_quality", "traced" if rec["trace"] else "coarse")
-        rec["recorded_at"] = datetime.now(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
+        rec["recorded_at"] = datetime.now(UTC).isoformat(timespec="microseconds").replace("+00:00", "Z")
         specs, out_cfg = facet_value(n, "outputs") or {}, st.cfg.get("outputs") or {}
         ev_cell = st.E[n["id"]].cells.get(cell)
         prev = (ev_cell.run if ev_cell and ev_cell.run else None) or next(iter(st.runs.usable(n["id"], cell)), None)

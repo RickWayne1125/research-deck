@@ -62,7 +62,7 @@ async def events(request: Request, project: str = Query("*")):
                     # Waiting on the queue (not on an async generator) keeps a timeout from ending the stream.
                     msg = await asyncio.wait_for(q.get(), timeout=15)
                     yield sse(msg["topic"], msg)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     yield ": keep-alive\n\n"
         finally:
             hub.close(project, q)

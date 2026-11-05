@@ -11,11 +11,10 @@ import types
 import pytest
 import yaml
 
+from conftest import git
 from research_deck.agents import runner
 from research_deck.writing import findings as F
 from research_deck.writing import prompts
-
-from conftest import git
 
 PAPER = r"""\documentclass{article}
 \title{ToyCache: Tiered \emph{KV} Caching for Long Contexts}
@@ -138,7 +137,7 @@ def test_full_pipeline_finds_each_kind_of_problem(client, paper):
     pid, root = paper
     r = review(client, pid, lang="en")
     assert r["status"] == "done" and r["passes"] == list(prompts.PIPELINE)
-    assert r["progress"] == {p: "done" for p in prompts.PIPELINE}
+    assert r["progress"] == dict.fromkeys(prompts.PIPELINE, "done")
     text = (root / "paper" / "main.tex").read_text()
     lines = text.split("\n")
     got = {(f["pass"], f["quote"], f["replacement"]) for f in r["findings"]}

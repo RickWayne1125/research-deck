@@ -143,7 +143,7 @@ class RdApi:
         elif os.environ.get("RD_LOCAL_DIR"):
             folder = Path(os.environ["RD_LOCAL_DIR"])
         else:
-            from . import config      # the dashboard's own default (research-deck/.local)
+            from . import config  # the dashboard's own default (research-deck/.local)
             folder = config.LOCAL_DIR
         try:
             return (folder / "agent.token").read_text(encoding="utf-8").strip()

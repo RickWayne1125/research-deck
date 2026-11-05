@@ -19,10 +19,11 @@ research_deck/demo.py builds the demo project's DAG with these helpers.
 from __future__ import annotations
 
 import threading
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable, Iterator
+from typing import Any
 
 from .. import util
 from ..util import write_json
@@ -154,7 +155,7 @@ def trace_for(s: DagStore, nid: str, cell: dict | str, *, reads: Iterable[str] =
         else:
             T[f"cfg:{k}"] = {"fp": st.R.cfg_fp(k, n, values)}
     probe = s.env_probe(spec_of(n).get("platform") or "") or {}
-    for k in (list((probe.get("key") or {})) if env_keys is None else env_keys):
+    for k in (list(probe.get("key") or {}) if env_keys is None else env_keys):
         v = (probe.get("pkgs") or {}).get(k[4:]) if k.startswith("pkg:") else (probe.get("key") or {}).get(k)
         if v is not None:
             T[f"env:{k}"] = {"fp": fp_json(v), "v": v}

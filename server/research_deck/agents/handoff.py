@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import HTTPException
 
@@ -50,11 +50,11 @@ def _other(provider: str) -> str:
 
 
 def _file_ts() -> str:
-    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
 
 
 def _iso_now() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def _trim(text: str, limit: int) -> str:
@@ -176,7 +176,7 @@ def smart_prompt(panel: str, frm: str, to: str, messages: list[dict]) -> str:
 
 def _smart_summary(pid: str, panel: str, frm: str, to: str, messages: list[dict]) -> tuple[str | None, str | None, str | None]:
     """(summary, written_by, error) from one ephemeral run on the outgoing backend."""
-    from .api import RunBody, spec_for   # api imports this module
+    from .api import RunBody, spec_for  # api imports this module
     model, effort = QUICK.get(frm, (None, "low"))
     body = RunBody(panel=panel, prompt=smart_prompt(panel, frm, to, messages), purpose="handoff", ephemeral=True,
                    provider=frm, model=model, effort=effort, fast=False, permission="read")

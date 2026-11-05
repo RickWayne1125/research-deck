@@ -16,7 +16,7 @@ them and records the result.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from ..actors import is_human
 from .evaluate import current
@@ -29,7 +29,7 @@ MAX_CELLS = 200
 
 
 def agent_gpu_hours_today(store: DagStore) -> float:
-    today = datetime.now(timezone.utc).date().isoformat()
+    today = datetime.now(UTC).date().isoformat()
     total = 0.0
     for e in store.events():
         if e.get("op") == "runs_queued" and str(e.get("by", "")).startswith("agent:") and str(e.get("at", "")).startswith(today):

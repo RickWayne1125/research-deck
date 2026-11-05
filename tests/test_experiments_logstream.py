@@ -87,7 +87,7 @@ def names(events) -> list[str]:
 
 def test_a_finished_log_is_sent_raw_and_ends_with_eof(client, project, script):
     pid, root = project
-    raw = "\x1b[32mok\x1b[0m step 1\r\nloss 0.9\r10%|#    |\r100%|#####|\n".encode()
+    raw = b"\x1b[32mok\x1b[0m step 1\r\nloss 0.9\r10%|#    |\r100%|#####|\n"
     (root / "run.log").write_bytes(raw)
     eid = record(client, pid, logs="run.log", status="succeeded")
     ev = stream(client, pid, eid)

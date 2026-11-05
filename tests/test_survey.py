@@ -214,6 +214,7 @@ def test_settings_roundtrip(client, tmp_path):
     assert client.patch("/api/settings/new-projects", json={"dir": None}).json()["dir"] == start_settings.default_dir()
     # an agent (no cookie) may not change them
     from fastapi.testclient import TestClient
+
     from research_deck.app import create_app
     with TestClient(create_app(), headers={"X-RD-Request": "1"}) as agent:
         assert agent.patch("/api/settings/new-projects", json={"git_init": False}).status_code == 403
@@ -295,7 +296,7 @@ def test_new_project_in_a_chosen_folder_with_an_upload(client, tmp_path, scholar
     as_human(client)
     folder = tmp_path / "work" / "mine"
     upload = {"name": "proposal.md", "content_base64": base64.b64encode(
-        "# Proposal\nPrefetch experts from the request queue to hide transfers.".encode()).decode()}
+        b"# Proposal\nPrefetch experts from the request queue to hide transfers.").decode()}
     r = client.post("/api/projects/new", json={"name": "Prefetch", "folder": str(folder), "file": upload,
                                                "survey": {"enabled": False}})
     assert r.status_code == 200, r.text
@@ -326,6 +327,7 @@ def test_new_project_refusals(client, body, status):
 
 def test_only_the_researcher_starts_a_survey_or_a_project(project):
     from fastapi.testclient import TestClient
+
     from research_deck.app import create_app
     pid, _ = project
     with TestClient(create_app(), headers={"X-RD-Request": "1"}) as agent:

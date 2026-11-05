@@ -15,8 +15,6 @@ import os
 import re
 import sqlite3
 import subprocess
-
-from ..util import git_filter_overrides
 import threading
 import tomllib
 from pathlib import Path
@@ -24,6 +22,7 @@ from typing import Any
 
 import yaml
 
+from ..util import git_filter_overrides
 from .fp import MISSING, UNKNOWN, H, fp_dir, fp_file, fp_json, git_blob_sha, glob_match, show
 from .model import facet_value, parse_addr, spec_of
 
@@ -109,7 +108,7 @@ def _kind(path: str) -> str:
 class Tree:
     """Files at one ref: {path: blob sha, or None = read it from disk}."""
 
-    def __init__(self, repo: "Repo", files: dict[str, str | None], rev: str | None = None, disk: Path | None = None):
+    def __init__(self, repo: Repo, files: dict[str, str | None], rev: str | None = None, disk: Path | None = None):
         self.repo, self.files, self.rev, self.disk = repo, files, rev, disk
         self._dirs: dict[str, set[str]] | None = None
         self._fp: dict[str, str] = {}
@@ -255,7 +254,7 @@ class Repo:
             except OSError:
                 pass
             h.update(self.status_raw())
-            for _, y, p in self._status_entries():
+            for _, _y, p in self._status_entries():
                 try:
                     st = os.stat(self.root / p)
                     h.update(f"{p}:{st.st_mtime_ns}:{st.st_size}".encode())
@@ -320,7 +319,7 @@ class Repo:
                     if blob is not None and _kind(p) == "g":
                         t._fp[p] = "g:" + blob[:12]
             else:
-                t = Tree(self, {p: None for p in self._walk()}, disk=self.root)
+                t = Tree(self, dict.fromkeys(self._walk()), disk=self.root)
         elif ref == "index":
             t = Tree(self, dict(self._ls_files()))
         elif ref.startswith("wt:"):

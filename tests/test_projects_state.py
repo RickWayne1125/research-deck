@@ -42,9 +42,9 @@ def test_one_projects_state_is_never_another_projects_code(client, tmp_path):
     (ws / "src" / "a.py").write_text("x = 1\n")
     client.post("/api/projects", json={"root": str(ws), "name": "Eng", "kind": "engineering"})
     b = client.post("/api/projects", json={"root": str(ws), "name": "Res", "state": ".research-res"}).json()
+    from research_deck.dag.evaluate import current
     from research_deck.dag.resolve import Resolver  # noqa: F401 — the walk lives there
     from research_deck.dag.service import store_for
-    from research_deck.dag.evaluate import current
     st = current(store_for(b["id"]))
     assert st is not None
     (ws / ".research" / "notes.txt").write_text("changes in the other project's state")

@@ -11,7 +11,7 @@ from __future__ import annotations
 import hashlib
 import re
 import subprocess
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import HTTPException
@@ -54,7 +54,7 @@ def snapshot(pid: str, path: str, label: str | None = None, *, content: str | No
     else:
         path = docs.resolve_doc(pid, path)[1]
     sha = sha256_text(content)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     ts = now.strftime("%Y%m%dT%H%M%S") + f"{now.microsecond // 1000:03d}Z"
     with _lock:
         index = _index(pid, path)

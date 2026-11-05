@@ -23,7 +23,8 @@ from pydantic import BaseModel
 from .. import actors
 from ..agents import runner
 from ..events import hub
-from . import model, service, structure, tasks as task_store, templates
+from . import model, service, structure, templates
+from . import tasks as task_store
 
 router = APIRouter(tags=["outline"])
 runner.register_fake("outline-structure", structure.fake_answer)
@@ -98,6 +99,7 @@ def post_extract(pid: str, body: ExtractBody, request: Request):
     """A PDF's text, for the outline box (the page reads .md, .tex and .txt itself)."""
     import base64
     import binascii
+
     from ..start.create import MAX_UPLOAD, pdf_text
     _human(request)
     if not body.name.lower().endswith(".pdf"):

@@ -18,8 +18,22 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .fp import MISSING, UNKNOWN, H, canon, fp_json, fp_table, glob_match, show, spec_fp
-from .model import (DEAD, SOFT, authored_fp, edge_key, edges, facet_value, is_action, parse_addr, parse_sel, rank, ref_id, sel_matches, spec_of,
-                    worst)
+from .model import (
+    DEAD,
+    SOFT,
+    authored_fp,
+    edge_key,
+    edges,
+    facet_value,
+    is_action,
+    parse_addr,
+    parse_sel,
+    rank,
+    ref_id,
+    sel_matches,
+    spec_of,
+    worst,
+)
 from .resolve import NOPROBE, Repo, Resolver, digest
 from .store import DagStore
 

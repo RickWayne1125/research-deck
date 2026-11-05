@@ -19,7 +19,7 @@ from pathlib import Path
 
 from fastapi import HTTPException
 
-from ..util import rel_to, safe_join, git_filter_overrides
+from ..util import git_filter_overrides, rel_to, safe_join
 
 GIT = shutil.which("git")
 TIMEOUT_S = 20

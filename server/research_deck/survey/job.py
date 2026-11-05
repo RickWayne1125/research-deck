@@ -24,9 +24,10 @@ import os
 import re
 import threading
 import time
+from collections.abc import Callable
 from datetime import date
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from fastapi import HTTPException
 
@@ -131,7 +132,7 @@ def start(pid: str, idea: str, *, idea_file: str | None = None, unread: str | No
         stamp = time.strftime("%Y%m%d-%H%M%S")
         sid = f"sv-{stamp}-{len(list(_dir(pid).glob(f'sv-{stamp}-*.json'))) + 1:04x}"
         _ACTIVE[sid] = {"pid": pid, "cancel": False, "run_id": None, "stop": threading.Event()}
-    s = {"id": sid, "status": "running", "step": "frame", "steps": {k: "pending" for k in STEPS},
+    s = {"id": sid, "status": "running", "step": "frame", "steps": dict.fromkeys(STEPS, "pending"),
          "created_at": now_iso(), "finished_at": None, "by": actor, "error": None, "warnings": [],
          "idea_file": idea_file, "lang": prompts.language(idea),
          "options": {"sources": chosen, "count": count, "download_pdfs": cfg["download_pdfs"] if download_pdfs is None

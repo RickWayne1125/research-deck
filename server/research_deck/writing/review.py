@@ -80,7 +80,7 @@ def start(pid: str, path: str, passes: list[str] | None = None, text: str | None
         truncated_at = max(1, n)
     review = {
         "review_id": new_id("rv-"), "path": path, "passes": order, "findings": [], "status": "running",
-        "progress": {p: "pending" for p in order}, "created_at": now_iso(), "created_ns": time.time_ns(), "finished_at": None,
+        "progress": dict.fromkeys(order, "pending"), "created_at": now_iso(), "created_ns": time.time_ns(), "finished_at": None,
         "lang": "en" if lang == "en" else "zh", "range": {"start_line": scope[0], "end_line": scope[1]} if scope else None,
         "base_sha": sha256_text(text), "words": docs.word_count(text, docs.doc_kind(path) or "md"),
         "summaries": {}, "pass_errors": {}, "agents": {}, "truncated_at": truncated_at, "by": actor,
@@ -163,7 +163,8 @@ def _work(pid: str, review_id: str, text: str, scope: tuple[int, int] | None, tr
             _publish(pid, store.load_review(pid, review_id), current=pass_)
     except Exception as e:  # noqa: BLE001 — the review must end in a recorded state
         log.exception("review %s failed", review_id)
-        store.update_review(pid, review_id, lambda r: r.__setitem__("error", str(e)[:500]))
+        error = str(e)[:500]
+        store.update_review(pid, review_id, lambda r: r.__setitem__("error", error))
     finally:
         with _ACTIVE_LOCK:
             cancelled = bool(_ACTIVE.pop(review_id, {}).get("cancel"))

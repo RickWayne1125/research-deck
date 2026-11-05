@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import threading
 from collections import defaultdict
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Callable, Iterator
 
 from ..projects import research_dir
 from ..util import new_id, now_iso, read_json, read_yaml, write_json, write_yaml

@@ -7,7 +7,7 @@ implement the edited facet UNKNOWN, as does `touch_code`. Precision is "predicte
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from .evaluate import NodeE, State, build, current, pred_text
@@ -28,7 +28,7 @@ def family(path: str) -> str:
 def _age(run: dict) -> str | None:
     at = run.get("ended") or run.get("started") or run.get("recorded_at")
     try:
-        days = (datetime.now(timezone.utc) - datetime.fromisoformat(str(at).replace("Z", "+00:00"))).days
+        days = (datetime.now(UTC) - datetime.fromisoformat(str(at).replace("Z", "+00:00"))).days
     except (TypeError, ValueError):
         return None
     return f"{days}d"
@@ -296,7 +296,7 @@ def impact(store, body: dict, actor: str = "human:preview") -> dict:
                                                "op": {"op": "rollback", "node": nid, "to_vid": v["vid"], "edges": "only"}})
                 break
     try:
-        from .gates import compute as gates_of   # noqa: PLC0415
+        from .gates import compute as gates_of  # noqa: PLC0415
         g0 = {g["gate"]: g["state"] for g in gates_of(s0e)}
         gates = [{"gate": g["gate"], "from": g0.get(g["gate"]), "to": g["state"]} for g in gates_of(s1) if g0.get(g["gate"]) != g["state"]]
     except Exception:  # noqa: BLE001 — gates are advisory; a preview must not fail on them

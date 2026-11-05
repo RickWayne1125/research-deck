@@ -196,7 +196,7 @@ def _dag_node(pid: str, node_id: str | None) -> dict | None:
     if not node_id:
         return None
     try:
-        from ..dag import service as dag   # noqa: PLC0415 — optional; written by another slice
+        from ..dag import service as dag  # noqa: PLC0415 — optional; written by another slice
         getter = getattr(dag, "get_node", None)
         node = getter(pid, node_id) if callable(getter) else None
         if isinstance(node, dict):

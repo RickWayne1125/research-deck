@@ -1,7 +1,7 @@
 // Small pieces Today shares: the node index, actor avatars, and plural / fallback strings.
 import { Icon } from '../../components/icons';
 import { useCallback } from 'react';
-import { useI18n, useT } from '../../i18n';
+import { useI18n } from '../../i18n';
 import { actorKind, useDagLabels } from '../../dag/encoding';
 import type { DagNode, NodeEval } from '../../dag-types';
 

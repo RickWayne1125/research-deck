@@ -34,7 +34,7 @@ _LINE_PREFIX = re.compile(r"^\s*\d+[|:]\s?")
 
 
 def fingerprint(pass_: str, quote: str, replacement: str | None) -> str:
-    return hashlib.sha256(f"{pass_}|{quote}|{replacement or ''}".encode("utf-8")).hexdigest()[:16]
+    return hashlib.sha256(f"{pass_}|{quote}|{replacement or ''}".encode()).hexdigest()[:16]
 
 
 # ------------------------------------------------------------------ parsing

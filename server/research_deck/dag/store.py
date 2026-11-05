@@ -13,15 +13,15 @@ import os
 import re
 import subprocess
 import threading
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 from urllib.parse import quote
 
 import yaml
 
 from .. import config as _config
-
 from ..util import append_jsonl, now_iso, read_json, read_yaml, write_json, write_text_atomic, write_yaml
 
 log = logging.getLogger("research_deck.dag")
@@ -362,7 +362,7 @@ class DagStore:
 
 def at_commit(root: Path, rev: str, state: str = ".research") -> DagStore:
     """A read-only store over <state>/dag as it was at a commit (git ls-tree + cat-file --batch)."""
-    from .resolve import git_bytes   # noqa: PLC0415 — resolve imports store helpers
+    from .resolve import git_bytes  # noqa: PLC0415 — resolve imports store helpers
     dag_rel = f"{state}/dag"
     listing = git_bytes(root, "ls-tree", "-r", "-z", rev, "--", dag_rel)
     entries = []
@@ -409,7 +409,7 @@ def maybe_autocommit(store: DagStore, events: list[dict]) -> None:
 
 def _autocommit(store: DagStore, paths: list[str], actor: str) -> None:
     """`git commit --only` of the DAG paths, only on home_branch; never code."""
-    from .resolve import git_text   # noqa: PLC0415
+    from .resolve import git_text  # noqa: PLC0415
     key = str(store.root)
     branch = (git_text(store.root, "rev-parse", "--abbrev-ref", "HEAD") or "").strip()
     if branch != store.config().get("home_branch", "main"):

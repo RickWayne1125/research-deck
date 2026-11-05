@@ -9,7 +9,7 @@ import { dagApi } from '../../dag/api';
 import { StatusBadge, useDagLabels } from '../../dag/encoding';
 import { DAG_STAGES, type DagNode, type GateStatus, type GraphResponse, type Impact, type NodeKind, type Op, type OpsResult, type StageKey } from '../../dag-types';
 import type { StatusAction } from './Inspector';
-import { DEFAULT_STAGE, ID_PREFIX, isDead, isLive, slug } from './model';
+import { DEFAULT_STAGE, ID_PREFIX, isLive, slug } from './model';
 import { errText } from './preview';
 
 // ------------------------------------------------------------------ status verdicts

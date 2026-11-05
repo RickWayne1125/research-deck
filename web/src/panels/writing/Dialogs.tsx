@@ -5,9 +5,8 @@ import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { MergeView } from '@codemirror/merge';
 import { useT, useRelTime } from '../../i18n';
-import { Button, Dialog, Empty, ErrorNote, IconButton, Spinner, useLoad } from '../../components/ui';
-import { REVIEW_PASSES, type GlossaryTerm } from '../../types';
-import { writingApi, type WrRule, type WrVersion } from './api';
+import { Button, Dialog, Empty, ErrorNote, Spinner, useLoad } from '../../components/ui';
+import { writingApi, type WrVersion } from './api';
 import { languageFor, proseLook } from './cm';
 
 const mergeTheme = EditorView.theme({

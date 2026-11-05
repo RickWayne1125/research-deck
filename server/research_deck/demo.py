@@ -184,7 +184,7 @@ def _at_stage(files: dict[str, bytes], label: str, rel: str) -> bytes:
 
 def build(src: Path, dst: Path) -> dict:
     """Materialize the demo from `src` into the new folder `dst`; returns {commit label: sha}."""
-    from .dag import seed   # noqa: PLC0415 — the DAG engine is only needed while building
+    from .dag import seed  # noqa: PLC0415 — the DAG engine is only needed while building
 
     files = _source_files(src)
     code = {r for r in files if not r.startswith(".research/")}
@@ -238,7 +238,8 @@ def _outline(dst: Path) -> None:
     from .dag import seed
     from .dag.evaluate import current
     from .dag.ops import apply_ops
-    from .outline import model as outline_model, templates
+    from .outline import model as outline_model
+    from .outline import templates
     from .outline.ops import Plan
 
     def item(key: str) -> str:
@@ -305,7 +306,7 @@ def _outline(dst: Path) -> None:
 def _write_dag_config(dst: Path, stage_mode: str = "free") -> None:
     """A complete config.yaml, so neither the user's dag_defaults nor future engine defaults change the demo's files.
     The history is replayed without the stage rules (free), then the finished demo follows them like any project."""
-    from .dag.store import DEFAULT_CONFIG, deep_merge   # noqa: PLC0415
+    from .dag.store import DEFAULT_CONFIG, deep_merge  # noqa: PLC0415
     cfg = deep_merge(DEFAULT_CONFIG, {
         "code": {"roots": ["toycache", "figures"], "exclude": ["**/*.md", "**/test_*.py"]},
         "config": {"roots": ["configs"], "ignore_keys": ["log_level"]},
@@ -317,7 +318,7 @@ def _write_dag_config(dst: Path, stage_mode: str = "free") -> None:
 
 def _link_records(dst: Path, records: dict[str, dict], run_ids: dict[str, str], shas: dict[str, str]) -> None:
     """node_id, cell, run_id, code commit and footprint into .research/experiments/*.json; node ids into figures.json."""
-    from .dag.fp import cell_id   # noqa: PLC0415
+    from .dag.fp import cell_id  # noqa: PLC0415
     when = {"baseline-lru": "c1", "baseline-lfu": "c2", "lookahead": "c3"}
     for eid, rec in records.items():
         if eid in RUNS:
@@ -378,7 +379,7 @@ class Story:
     """What the researcher did in the DAG while each commit was HEAD (methods c1 … c4, called right after the commit)."""
 
     def __init__(self, root: Path, records: dict[str, dict]):
-        from .dag import seed   # noqa: PLC0415
+        from .dag import seed  # noqa: PLC0415
         self.seed, self.root, self.records = seed, root, records
         self.s = None
         self.clk = None

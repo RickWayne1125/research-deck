@@ -33,9 +33,9 @@ import tempfile
 import threading
 import time
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable
 
 from .. import config
 from ..util import append_jsonl, now_iso

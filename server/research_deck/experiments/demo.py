@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import math
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 
 def _iso(dt: datetime) -> str:
@@ -21,7 +21,7 @@ def _wave(t: float, period: float, lo: float, hi: float, phase: float = 0.0) -> 
 
 def resources(now: float | None = None) -> dict:
     t = time.time() if now is None else now
-    at = datetime.fromtimestamp(t, tz=timezone.utc)
+    at = datetime.fromtimestamp(t, tz=UTC)
 
     unknown_gpu = lambda name, mem_total: {"name": name, "util": None, "mem_used": None, "mem_total": mem_total,  # noqa: E731
                                            "temp": None, "power": None, "mem_unit": "MiB", "demo": True}

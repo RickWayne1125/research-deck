@@ -10,8 +10,7 @@ Besides the documented routes, a run's log is served for the terminal view (logs
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query, Request
-from pydantic import BaseModel
+from fastapi import APIRouter, Query, Request
 
 from ..actors import actor_of
 from . import demo, logstream, records

@@ -12,7 +12,7 @@ _CAND = re.compile(r"^\[(\d+)\] (.+?) \(", re.M)
 
 def _frame(spec: runner.RunSpec) -> str:
     idea = re.search(r"<idea>\n(.*?)\n</idea>", spec.prompt, re.S)
-    words = [w for w in re.findall(r"[A-Za-z][A-Za-z\-]{3,}", idea.group(1) if idea else "")][:12] or ["research"]
+    words = re.findall(r"[A-Za-z][A-Za-z\-]{3,}", idea.group(1) if idea else "")[:12] or ["research"]
     queries = [" ".join(words[i:i + 3]) for i in range(0, min(len(words), 12), 3)][:4]
     return "```json\n" + json.dumps({
         "title": "Fake problem title", "summary": "Fake one-line summary.", "queries": queries,

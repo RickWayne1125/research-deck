@@ -1,13 +1,12 @@
 // A suggestion over a marked passage: what changes, why, accept / reject, and "why?" after a rejection.
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { diffWordsWithSpace } from 'diff';
 import { useT } from '../../i18n';
 import { Button, IconButton, Kbd } from '../../components/ui';
-import { ResizeHandle, type Resizable } from '../../components/resize';
 import { Icon } from '../../components/icons';
-import { REVIEW_PASSES, type ReviewPass } from '../../types';
-import type { WrFinding, WrReview } from './api';
-import { AUTO_FIX, KEYS, LESS_CERTAIN, PASS_TINT } from './text';
+import type { ReviewPass } from '../../types';
+import type { WrFinding } from './api';
+import { LESS_CERTAIN, PASS_TINT } from './text';
 
 export const WHY_KEYS = ['wr.why.1', 'wr.why.2', 'wr.why.3', 'wr.why.4'];
 

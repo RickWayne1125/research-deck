@@ -152,8 +152,9 @@ def test_tailnet_requests_need_an_owner_identity(client, project, monkeypatch):
     monkeypatch.setattr(config, "TAILNET_HOST", "box.example.ts.net")
     monkeypatch.setattr(config, "TAILNET_OWNERS", {"owner@example.com"})
     monkeypatch.setattr(config, "ALLOWED_HOSTS", [*config.ALLOWED_HOSTS, "box.example.ts.net"])
-    from research_deck.app import create_app
     from fastapi.testclient import TestClient
+
+    from research_deck.app import create_app
     c = TestClient(create_app(), base_url="https://box.example.ts.net:8765")
     assert c.get("/api/system/health").status_code == 403                                   # no identity (tagged device)
     assert c.get("/api/system/health", headers={"Tailscale-User-Login": "other@example.com"}).status_code == 403

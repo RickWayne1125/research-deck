@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from .. import config
@@ -110,7 +110,7 @@ def _ts_key(ts: str | None) -> float:
 def _iso(ts: str | None) -> str:
     """Normalize a log timestamp to the dashboard's second-precision UTC form."""
     t = _ts_key(ts)
-    return datetime.fromtimestamp(t, timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z") if t else ""
+    return datetime.fromtimestamp(t, UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z") if t else ""
 
 
 def _strip_injected(text: str) -> str:

@@ -1,6 +1,5 @@
 """User-level defaults, run queueing for agents, blocking gates and autocommit."""
 import json
-import subprocess
 import time
 
 from conftest import git
@@ -56,6 +55,7 @@ def test_agents_queue_only_within_the_policy(client, project, tmp_path):
     human(client)
     assert client.post(f"{dag(pid)}/ops", json={"ops": [EXP]}).status_code == 200
     from fastapi.testclient import TestClient
+
     from research_deck.app import create_app
     agent = TestClient(create_app(), headers={"X-RD-Request": "1"})      # no cookie: agent permissions
     cells = [{"node": "exp.bench", "cell": "_"}]

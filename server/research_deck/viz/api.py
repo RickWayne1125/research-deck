@@ -20,7 +20,7 @@ from pydantic import BaseModel
 
 from ..events import hub
 from ..projects import project_root, research_dir
-from ..util import safe_join, rel_to, write_json
+from ..util import rel_to, safe_join, write_json
 from . import agent, figures, native, render, style
 
 router = APIRouter(tags=["viz"])
