@@ -3,11 +3,18 @@
 // Proofreading: "AI proofread" (⇧⌘K) runs the fixed passes typo → terminology → wording on the selection, or on the
 // whole document when nothing is selected; suggestions tint the text as each pass lands. Hover a tint (or step with
 // ⌥⌘↓/↑) to accept ↵ or reject ⌫; a rejection asks why, and the answer becomes a learned rule. "Accept all" (⌥⌘K)
-// takes every open suggestion as one undoable edit. The gutter marks map claims bound to the document.
+// takes every open suggestion as one undoable edit. The gutter marks map claims bound to the document; an outline item
+// shows its number there. In a research project the left pane switches between the outline (the items of the section
+// at the cursor and how far the text has got with each: panels/outline/Rail.tsx) and the documents; after a save that
+// changed the outline markers (% rd:sec, % rd:describes) the paper is synced to the map.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './i18n';
 import './writing.css';
 import { useApp } from '../../state/app';
+import { useToday } from '../../state/today';
+import { dagApi } from '../../dag/api';
+import { OutlineRail } from '../outline/Rail';
+import { allItems } from '../outline/model';
 import { useI18n } from '../../i18n';
 import { ApiError } from '../../api/client';
 import { Button, ErrorNote, IconButton, PanelHead, Segmented, Spinner, useLoad } from '../../components/ui';
@@ -40,6 +47,10 @@ function readLocal<T>(key: string, fallback: T): T {
 function writeLocal(key: string, value: unknown) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage unavailable */ }
 }
+/** The lines that tie the text to the outline (% rd:sec / rd:end / rd:describes, \rdref): a save that changes them syncs
+ *  the paper to the map. */
+const MARKER = /%\s*rd:(?:sec|end|describes)\b|\\rdref\{/;
+const markerSig = (text: string) => text.split('\n').filter(l => MARKER.test(l)).join('\n');
 const frames = (n = 2) => new Promise<void>(r => { const step = (k: number) => (k ? requestAnimationFrame(() => step(k - 1)) : r()); step(n); });
 
 export function WritingView() {
@@ -50,6 +61,14 @@ export function WritingView() {
   // ------------------------------------------------------------ documents
   const docs = useLoad(() => writingApi.docs(pid), [pid]);
   const [drawerOpen, setDrawerOpen] = useState(() => readLocal('rd.wr.drawer', true));
+  // The left pane of a research project: the outline beside the text, or the documents.
+  const today = useToday();
+  const research = project?.kind !== 'engineering';
+  const [left, setLeft] = useState<'outline' | 'docs'>(() => readLocal('rd.wr.left', 'outline'));
+  useEffect(() => writeLocal('rd.wr.left', left), [left]);
+  const [railText, setRailText] = useState('');
+  const [cursorLine, setCursorLine] = useState(1);
+  const railTimer = useRef<number | undefined>(undefined);
   // Below this width the documents list floats over the text instead of taking a column.
   const bodyRef = useRef<HTMLDivElement>(null);
   const [bodyWidth, setBodyWidth] = useState(1400);
@@ -79,6 +98,7 @@ export function WritingView() {
   const [doc, setDoc] = useState<OpenDoc | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const textRef = useRef('');
+  const synced = useRef('');                     // the outline markers as last synced to the map
   const lastSaved = useRef('');
   const baseSha = useRef<string | null>(null);
   const saving = useRef<Promise<void> | null>(null);
@@ -107,6 +127,7 @@ export function WritingView() {
       if (!alive) return;
       textRef.current = f.content; lastSaved.current = f.content; baseSha.current = f.sha;
       setWords(wordCount(f.content, docKind(path)));
+      setRailText(f.content); setCursorLine(1); synced.current = markerSig(f.content);
       docPath.current = path;
       setDoc({ path, kind: docKind(path), initial: f.content });
     }).catch(e => { if (alive) setLoadError(String((e as Error).message)); });
@@ -152,6 +173,8 @@ export function WritingView() {
     setSaveState('saving');
     const run = writingApi.save(pid, doc.path, content, baseSha.current).then(r => {
       baseSha.current = r.sha; lastSaved.current = content; setRestored(null);
+      const sig = markerSig(content);
+      if (doc.kind === 'tex' && sig !== synced.current) { synced.current = sig; dagApi.paperSync(pid).catch(() => {}); }
       setSaveState(textRef.current === content ? 'saved' : 'dirty');
       if (textRef.current !== content) timer.current = window.setTimeout(() => save(), AUTOSAVE_MS);
     }).catch(async (e: unknown) => {
@@ -182,6 +205,8 @@ export function WritingView() {
     onChange(text);
     clearTimeout(wordsTimer.current);
     wordsTimer.current = window.setTimeout(() => setWords(wordCount(text, doc?.kind ?? 'md')), 400);
+    clearTimeout(railTimer.current);
+    railTimer.current = window.setTimeout(() => setRailText(text), 300);
   }, [onChange, doc]);
 
   /** Put text into the editor as the saved state (reload from disk). */
@@ -230,7 +255,10 @@ export function WritingView() {
   }, [doc, pid]);
   useEffect(() => { loadClaims(); }, [loadClaims]);
   useEffect(() => onEvent('dag', () => { loadClaims(); docs.reload(); }), [onEvent, loadClaims]);  // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { editor.current?.setClaims(claims); }, [claims, doc]);
+  const outlineNums = useMemo(() => new Map([...allItems(today.outline)].map(i => [i.id, i.num])), [today.outline]);
+  useEffect(() => {
+    editor.current?.setClaims(claims.map(c => (outlineNums.has(c.id) ? { ...c, outline: outlineNums.get(c.id) } : c)));
+  }, [claims, doc, outlineNums]);
   useEffect(() => { if (saveState === 'saved' && doc) loadClaims(); }, [saveState]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   const [claimCard, setClaimCard] = useState<{ claims: DocClaim[]; rect: DOMRect } | null>(null);
@@ -501,6 +529,10 @@ export function WritingView() {
     askAgent(t(sel ? 'wr.ask.selection' : 'wr.ask.doc'), { file: doc.path, ...(sel ? { selection: sel } : {}) });
   };
   const showRestored = !!restored && (saveState === 'dirty' || saveState === 'saved');   // a conflict or an error says more
+  const leftSwitch = (
+    <Segmented<'outline' | 'docs'> value={left} onChange={setLeft} ariaLabel={t('wr.docs')}
+      options={[{ value: 'outline', label: t('ol.rail.tab.outline') }, { value: 'docs', label: t('ol.rail.tab.docs') }]} />
+  );
   const statusLabel = showRestored ? t('wr.status.restored') : t(`wr.status.${saveState}`);
 
   return (
@@ -530,8 +562,14 @@ export function WritingView() {
 
       <div ref={bodyRef} className={`panel-body wr-body${docsShown && !narrow ? ' with-docs' : ''}${narrow ? ' narrow' : ''}`}
         style={docsW.style}>
-        {docsShown && <DocsDrawer docs={docs.data} loading={docs.loading} current={path} onRefresh={docs.reload} floating={narrow} width={docsW}
-          onOpen={(p) => { setFloatingDocs(false); if (p !== path) navigate('writing', p); }} />}
+        {docsShown && (research && left === 'outline' ? (
+          <OutlineRail head={leftSwitch} text={railText} cursor={cursorLine} path={doc?.path ?? null} floating={narrow} width={docsW}
+            onJump={(line) => editor.current?.goToLine(line)} onInsert={(lines) => editor.current?.insertLines(lines)} />
+        ) : (
+          <DocsDrawer docs={docs.data} loading={docs.loading} current={path} onRefresh={docs.reload} floating={narrow} width={docsW}
+            head={research ? leftSwitch : undefined}
+            onOpen={(p) => { setFloatingDocs(false); if (p !== path) navigate('writing', p); }} />
+        ))}
         <div className="wr-main">
           {docs.error && <div className="wr-banner"><ErrorNote error={docs.error} onRetry={docs.reload} /></div>}
           {loadError && <div className="wr-banner"><ErrorNote error={t('wr.loadError', { msg: loadError })} /></div>}
@@ -554,6 +592,7 @@ export function WritingView() {
               <div className={`wr-page${mode === 'preview' ? ' hidden' : ''}`}>
                 <WritingEditor key={doc.path} ref={editor} kind={doc.kind} initial={doc.initial} ariaLabel={doc.path}
                   onChange={onChangeWords} onSave={() => save(true)} onSelection={(empty) => setHasSelection(!empty)}
+                  onCursorLine={setCursorLine}
                   onHoverMark={onHoverMark} onHoverClaim={onHoverClaim}
                   onClickClaim={(cs) => cs[0] && navigate('dag', cs[0].id)}
                   onUserKey={() => { if (cardRef.current?.keys && !cardRef.current.why) closeCard(); }} />

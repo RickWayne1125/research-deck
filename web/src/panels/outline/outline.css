@@ -197,3 +197,11 @@ button.ol-chip:hover { border-color: var(--slate); }
 /* the task being worked on, above Experiments, Code and Paper */
 .ol-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 6px 18px; border-bottom: var(--line) solid var(--rule); background: var(--info-wash); }
 .ol-bar .ol-tk { max-width: 520px; }
+
+/* the outline beside the paper's text (Paper › the left pane) */
+.ol-rail .ol-rail-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 10px 12px 14px; display: flex; flex-direction: column; gap: 12px; }
+.ol-rail-pick { width: 100%; font-weight: 600; }
+.ol-rail-text { border: 0; background: none; padding: 0; text-align: left; font: inherit; font-size: var(--fs-sm); line-height: 1.5; color: var(--ink-strong); cursor: pointer; }
+.ol-rail-text:hover { text-decoration: underline; text-decoration-color: var(--faint); }
+.ol-rail .ol-nr.off .ol-rail-text { color: var(--muted); }
+.wr-docs-head .seg { flex: none; }

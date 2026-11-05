@@ -24,6 +24,8 @@ export interface EditorHandle {
   focus: () => void;
   selection: () => Selection | null;
   cursor: () => number;
+  /** Put whole lines before the cursor's line (one undoable change) and leave the cursor after them. */
+  insertLines: (lines: string[]) => void;
   /** Mark these findings in the text (locating each by quote + before); returns the ids that are not in the text any more. */
   syncMarks: (findings: Placeable[]) => string[];
   dropMarks: (ids: string[]) => void;
@@ -42,6 +44,8 @@ export interface EditorEvents {
   onChange: (text: string) => void;
   onSave: () => void;
   onSelection: (empty: boolean) => void;
+  /** The line the cursor is on (1-based), when it changes. */
+  onCursorLine?: (line: number) => void;
   onHoverMark: (id: string | null, rect: DOMRect | null) => void;
   onHoverClaim: (claims: DocClaim[] | null, rect: DOMRect | null) => void;
   onClickClaim: (claims: DocClaim[]) => void;
@@ -81,6 +85,10 @@ export const WritingEditor = forwardRef<EditorHandle, { kind: 'tex' | 'md'; init
             EditorView.updateListener.of(u => {
               if (u.docChanged) cb.current.onChange(u.state.doc.toString());
               if (u.selectionSet) cb.current.onSelection(u.state.selection.main.empty);
+              if (u.selectionSet || u.docChanged) {
+                const line = u.state.doc.lineAt(u.state.selection.main.head).number;
+                if (line !== u.startState.doc.lineAt(u.startState.selection.main.head).number || u.docChanged) cb.current.onCursorLine?.(line);
+              }
             }),
             EditorView.domEventHandlers({
               mouseover(e) {
@@ -140,6 +148,14 @@ export const WritingEditor = forwardRef<EditorHandle, { kind: 'tex' | 'md'; init
         return { text, start_line: v.state.doc.lineAt(from).number, end_line: v.state.doc.lineAt(Math.max(from, to - 1)).number };
       },
       cursor: () => view.current?.state.selection.main.head ?? 0,
+      insertLines: (lines) => {
+        const v = view.current;
+        if (!v || !lines.length) return;
+        const at = v.state.doc.lineAt(v.state.selection.main.head).from;
+        const insert = lines.join('\n') + '\n';
+        v.dispatch({ changes: { from: at, insert }, selection: { anchor: at + insert.length }, scrollIntoView: true, userEvent: 'input' });
+        v.focus();
+      },
       syncMarks: (findings) => {
         const v = view.current;
         if (!v) return [];

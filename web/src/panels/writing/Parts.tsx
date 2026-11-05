@@ -1,5 +1,5 @@
 // Smaller pieces of the writing panel: the documents drawer, the preview, the claim card of the claims gutter.
-import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useT, useRelTime } from '../../i18n';
 import { Empty, IconButton, Spinner } from '../../components/ui';
 import { ResizeHandle, type Resizable } from '../../components/resize';
@@ -10,9 +10,11 @@ import type { WritingDoc } from '../../types';
 import type { DocClaim } from './api';
 import { renderTex } from './texPreview';
 
-export function DocsDrawer({ docs, loading, current, onOpen, onRefresh, floating, width }: {
+export function DocsDrawer({ docs, loading, current, onOpen, onRefresh, floating, width, head }: {
   docs: WritingDoc[] | null; loading: boolean; current: string | null; onOpen: (path: string) => void; onRefresh: () => void; floating?: boolean;
   width?: Resizable;
+  /** In place of the "Documents" label: the switch between the outline and the documents (research projects). */
+  head?: ReactNode;
 }) {
   const t = useT();
   const rel = useRelTime();
@@ -22,7 +24,7 @@ export function DocsDrawer({ docs, loading, current, onOpen, onRefresh, floating
     <nav id="wr-docs" className={`wr-docs${floating ? ' floating' : ''}`} aria-label={t('wr.docs')}>
       {width && <ResizeHandle pane={width} edge="right" label={t('wr.docs.resize')} controls="wr-docs" />}
       <div className="wr-docs-head">
-        <span className="label grow">{t('wr.docs')}</span>
+        {head ? <span className="grow">{head}</span> : <span className="label grow">{t('wr.docs')}</span>}
         <IconButton icon="refresh" label={t('wr.docs.refresh')} onClick={onRefresh} />
       </div>
       {(docs?.length ?? 0) > 8 && (

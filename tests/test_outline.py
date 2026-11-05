@@ -319,3 +319,21 @@ def test_paper_sync_sections_are_adopted(client, project):
     assert r.status_code == 200, r.text
     ids = [s["id"] for s in outline(client, pid)["sections"]]
     assert "sec.motivation" in ids and "sec.motivation-2" not in ids
+
+
+def test_paper_markers_write_items(client, made):
+    """% rd:describes markers in the paper make an item written (after the paper sync), on the marker's line."""
+    pid, root = made
+    f = flat(outline(client, pid))
+    item = f["2.1"]["id"]
+    tex = root / "paper" / "motivation.tex"
+    tex.parent.mkdir(parents=True, exist_ok=True)
+    tex.write_text("\\section{Background and Motivation}\n% rd:sec sec.motivation\n\n% rd:describes " + item
+                   + "\nOn-demand loading waits for experts 58% of the time.\n", encoding="utf-8")
+    assert f["2.1"]["written"] == []
+    r = client.post(f"{base(pid)}/dag/paper/sync")
+    assert r.status_code == 200, r.text
+    written = flat(outline(client, pid))["2.1"]["written"]
+    assert [w["section"] for w in written] == ["sec.motivation"]
+    claims = client.get(f"{base(pid)}/writing/claims", params={"path": "paper/motivation.tex"}).json()["claims"]
+    assert next(c for c in claims if c["id"] == item)["line"] == 4

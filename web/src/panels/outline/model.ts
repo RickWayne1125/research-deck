@@ -223,3 +223,92 @@ export function slugId(prefix: string, title: string, taken: Set<string>): strin
   for (let n = 2; taken.has(id); n++) id = `${prefix}.${base}-${n}`;
   return id;
 }
+
+// ------------------------------------------------------------------ the outline in a paper file
+
+/** What a .tex / .md file says about the outline: `% rd:sec <section>` regions (up to `% rd:end` or the next one),
+ *  `% rd:describes <item>` / `\rdref{<item>}` markers (the first line naming each item), and its section headings.
+ *  Markdown writes the markers as comments: `<!-- rd:sec … -->`, `<!-- rd:describes … -->`. */
+export interface DocMarks {
+  regions: { sec: string; line: number; end: number }[];
+  describes: Map<string, number>;
+  headings: { title: string; label: string | null; line: number }[];
+  lines: number;
+}
+
+const SEC_LINE = /^\s*(?:%|<!--)\s*rd:sec\s+([^\s>]+)/;
+const END_LINE = /^\s*(?:%|<!--)\s*rd:end\b/;
+const DESCRIBES = /(?:%|<!--)\s*rd:describes\s+([^\s>]+)|\\rdref\{([^}]+)\}/g;
+const HEADING = /^\s*(?:\\section\*?\{([^}]*)\}(?:\s*\\label\{([^}]*)\})?|#{1,2}\s+(.+))/;
+
+export function docMarks(text: string): DocMarks {
+  const lines = text.split('\n');
+  const regions: DocMarks['regions'] = [];
+  const describes = new Map<string, number>();
+  const headings: DocMarks['headings'] = [];
+  let open: { sec: string; line: number } | null = null;
+  lines.forEach((raw, i) => {
+    const n = i + 1;
+    const s = SEC_LINE.exec(raw);
+    if (s) {
+      if (open) regions.push({ ...open, end: n - 1 });
+      open = { sec: s[1], line: n };
+      return;
+    }
+    if (END_LINE.test(raw)) { if (open) regions.push({ ...open, end: n }); open = null; return; }
+    for (const m of raw.matchAll(DESCRIBES)) {
+      const id = (m[1] || m[2]).replace(/^node:/, '');
+      if (!describes.has(id)) describes.set(id, n);
+    }
+    const h = HEADING.exec(raw);
+    if (h) headings.push({ title: (h[1] ?? h[3] ?? '').trim().replace(/^§?\s*\d+(?:\.\d+)*\.?\s+/, ''), label: h[2] ?? null, line: n });
+  });
+  if (open) regions.push({ ...(open as { sec: string; line: number }), end: lines.length });
+  return { regions, describes, headings, lines: lines.length };
+}
+
+/** The outline section the line is in: its `% rd:sec` region, else the heading above it (by title or by
+ *  \label{sec:<key>}), else the section most of the file's markers belong to. */
+export function sectionAt(o: Outline | null | undefined, marks: DocMarks, line: number): string | null {
+  if (!o) return null;
+  const ids = new Set(o.sections.map(s => s.id));
+  const region = marks.regions.find(r => line >= r.line && line <= r.end && ids.has(r.sec));
+  if (region) return region.sec;
+  const norm = (x: string) => x.trim().toLowerCase().replace(/\s+/g, ' ');
+  const heading = [...marks.headings].reverse().find(h => h.line <= line) ?? marks.headings[0];
+  if (heading) {
+    const byLabel = heading.label?.match(/^sec:(.+)$/)?.[1];
+    if (byLabel && ids.has(`sec.${byLabel}`)) return `sec.${byLabel}`;
+    const hit = o.sections.find(s => [s.title.zh, s.title.en].some(x => x && norm(x) === norm(heading.title)));
+    if (hit) return hit.id;
+  }
+  const counts = new Map<string, number>();
+  const owner = new Map<string, string>();
+  for (const s of o.sections) for (const it of walk(s.items)) owner.set(it.id, s.id);
+  for (const id of marks.describes.keys()) { const s = owner.get(id); if (s) counts.set(s, (counts.get(s) ?? 0) + 1); }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+}
+
+export type WriteState = 'here' | 'written' | 'elsewhere' | 'todo';
+
+/** How far the text has got with each item of a section: being written (the marker nearest above the cursor), written
+ *  here (a marker in this file), written in another file (the map's describes edges), or not yet. */
+export function writeStates(section: Section, marks: DocMarks, cursor: number): Map<string, WriteState> {
+  const out = new Map<string, WriteState>();
+  let here: string | null = null, best = 0;
+  for (const it of walk(section.items)) {
+    const at = marks.describes.get(it.id);
+    if (at && at <= cursor && at > best) { best = at; here = it.id; }
+  }
+  for (const it of walk(section.items)) {
+    out.set(it.id, it.id === here ? 'here' : marks.describes.has(it.id) ? 'written' : it.written.length ? 'elsewhere' : 'todo');
+  }
+  return out;
+}
+
+/** The marker lines for a file: LaTeX comments in .tex, HTML comments in Markdown. */
+export function markerLines(path: string | null, marks: { sec?: string; describes: string }): string[] {
+  const md = !!path && /\.(md|markdown)$/i.test(path);
+  const line = (body: string) => (md ? `<!-- ${body} -->` : `% ${body}`);
+  return [...(marks.sec ? [line(`rd:sec ${marks.sec}`)] : []), line(`rd:describes ${marks.describes}`)];
+}

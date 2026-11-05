@@ -174,12 +174,20 @@ export function worstLevel(claims: DocClaim[]): Freshness | null {
 class ClaimMarker extends GutterMarker {
   constructor(readonly claims: DocClaim[]) { super(); }
   eq(other: GutterMarker): boolean {
-    return other instanceof ClaimMarker && other.claims.map(c => c.id + c.freshness).join() === this.claims.map(c => c.id + c.freshness).join();
+    return other instanceof ClaimMarker && other.claims.map(c => c.id + c.freshness + (c.outline ?? '')).join() === this.claims.map(c => c.id + c.freshness + (c.outline ?? '')).join();
   }
   toDOM(): Node {
     const level = worstLevel(this.claims);
     const style = FRESH_STYLE[level ?? 'unknown'];
     const el = document.createElement('span');
+    const num = this.claims.find(c => c.outline)?.outline;
+    if (num) {                                   // an outline item: its number, as the paragraph's label
+      el.className = 'wr-claim-num';
+      el.textContent = num;
+      el.style.setProperty('--claim-color', style.color);
+      el.dataset.claims = this.claims.map(c => c.id).join(' ');
+      return el;
+    }
     el.className = `wr-claim-dot${style.dashed ? ' dashed' : ''}${this.claims.some(c => c.kind === 'section' || c.id.startsWith('sec.')) && this.claims.length === 1 ? ' section' : ''}`;
     el.style.setProperty('--claim-color', style.color);
     el.style.setProperty('--claim-wash', style.wash);
@@ -220,7 +228,7 @@ export function claimsGutter(on: { hover: (claims: DocClaim[], rect: DOMRect) =>
     domEventHandlers: {
       mouseover(view, line, event) {
         const claims = claimsAt(view.state, line.from);
-        const target = (event.target as HTMLElement | null)?.closest('.wr-claim-dot');
+        const target = (event.target as HTMLElement | null)?.closest('.wr-claim-dot, .wr-claim-num');
         if (claims.length && target) on.hover(claims, target.getBoundingClientRect());
         return false;
       },

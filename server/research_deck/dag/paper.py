@@ -38,14 +38,15 @@ def macro_owners(st: State) -> dict[str, str]:
 
 
 def anchors(st: State) -> dict[str, dict]:
-    """{section id: {file, line, targets: set of addresses}} from every tex file."""
+    """{section id: {file, line, targets: set of addresses, lines: {address: first line naming it}}} from every tex
+    file."""
     owners, out = macro_owners(st), {}
     for path in tex_files(st):
         text = (st.R.tree().read(path) or b"").decode("utf-8", errors="replace")
         cur = None
         for i, line in enumerate(text.splitlines(), 1):
             if (m := SEC_RE.match(line)):
-                cur = out.setdefault(m.group(1), {"file": path, "line": i, "targets": set()})
+                cur = out.setdefault(m.group(1), {"file": path, "line": i, "targets": set(), "lines": {}})
                 continue
             if END_RE.match(line):
                 cur = None
@@ -54,10 +55,13 @@ def anchors(st: State) -> dict[str, dict]:
                 continue
             for a, b in DESCRIBES_RE.findall(line):
                 target = a or b
-                cur["targets"].add(target if target.startswith("node:") else f"node:{target}")
+                addr = target if target.startswith("node:") else f"node:{target}"
+                cur["targets"].add(addr)
+                cur["lines"].setdefault(addr, i)
             for macro in MACRO_RE.findall(line):
                 if macro in owners:
                     cur["targets"].add(f"node:{owners[macro]}")
+                    cur["lines"].setdefault(f"node:{owners[macro]}", i)
     return out
 
 
@@ -146,7 +150,8 @@ def claims_for_doc(st: State, path: str) -> list[dict]:
         for t in a["targets"]:
             tid = t.split(":", 1)[1].split("#")[0]
             if st.nodes.get(tid, {}).get("kind") == "claim":
-                picked.setdefault(tid, None)
+                at = (a.get("lines") or {}).get(t)                   # the line that names it (a % rd:describes marker)
+                picked[tid] = min(x for x in (picked.get(tid), at) if x is not None) if at or picked.get(tid) else None
     for macro, nid in owners.items():
         if macro in by_macro and st.nodes.get(nid, {}).get("kind") == "claim":
             picked[nid] = min(by_macro[macro], picked.get(nid) or by_macro[macro])

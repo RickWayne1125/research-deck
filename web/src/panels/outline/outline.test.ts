@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Draft, Item, Outline, Step, Task, Template } from './api';
-import { arrangeDraft, boardColumns, forks, itemIndex, liveSteps, outlinePending, outlineText, pathTo } from './model';
+import { arrangeDraft, boardColumns, docMarks, forks, itemIndex, liveSteps, markerLines, outlinePending, outlineText, pathTo, sectionAt, writeStates } from './model';
 
 function item(id: string, num: string, extra: Partial<Item> = {}): Item {
   return {
@@ -97,5 +97,44 @@ describe('a structured draft', () => {
       ['intro', 'Introduction', 1], [null, 'Threat model', 1], ['motivation', 'Background and Motivation', 0], ['design', 'Design', 1]]);
     expect(out[3].notes).toEqual({ '0': 'two parts' });
     expect(out[1].fromTemplate).toBe(false);
+  });
+});
+
+describe('the outline in a paper file', () => {
+  const tex = [
+    '\\section{Design}\\label{sec:design}',            // 1
+    '% rd:sec sec.design',                              // 2
+    '% rd:describes claim.policy',                      // 3
+    'We read the queue.',                               // 4
+    'Ties go to LRU \\rdref{claim.ties}.',              // 5
+    '% rd:end',                                         // 6
+    'Outside.',                                         // 7
+  ].join('\n');
+  it('finds regions, markers and headings', () => {
+    const m = docMarks(tex);
+    expect(m.regions).toEqual([{ sec: 'sec.design', line: 2, end: 6 }]);
+    expect([...m.describes.entries()]).toEqual([['claim.policy', 3], ['claim.ties', 5]]);
+    expect(m.headings).toEqual([{ title: 'Design', label: 'sec:design', line: 1 }]);
+  });
+  it('places a line in a section: its region, else the heading above it', () => {
+    const m = docMarks(tex);
+    expect(sectionAt(outline, m, 4)).toBe('sec.design');
+    expect(sectionAt(outline, m, 7)).toBe('sec.design');            // the heading's \label
+    expect(sectionAt(outline, docMarks('# Nothing here'), 1)).toBeNull();
+  });
+  it('reads Markdown markers and numbered headings', () => {
+    const md = docMarks('## 3 Design\n<!-- rd:describes claim.ties -->\nTies go to LRU.');
+    expect(md.headings[0].title).toBe('Design');
+    expect(md.describes.get('claim.ties')).toBe(2);
+    expect(sectionAt(outline, md, 3)).toBe('sec.design');
+    expect(markerLines('paper/main.md', { sec: 'sec.design', describes: 'claim.ties' })).toEqual(['<!-- rd:sec sec.design -->', '<!-- rd:describes claim.ties -->']);
+    expect(markerLines('paper/design.tex', { describes: 'claim.ties' })).toEqual(['% rd:describes claim.ties']);
+  });
+  it('says how far each item is written', () => {
+    const st = writeStates(outline.sections[0], docMarks(tex), 4);
+    expect(st.get('claim.policy')).toBe('here');
+    expect(st.get('claim.ties')).toBe('written');
+    expect(st.get('claim.mods')).toBe('todo');
+    expect(writeStates(outline.sections[0], docMarks(tex), 6).get('claim.ties')).toBe('here');
   });
 });

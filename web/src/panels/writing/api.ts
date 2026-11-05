@@ -25,6 +25,8 @@ export interface ReviewSummary {
 export interface DocClaim {
   id: string; label: string; text: string; line: number | null; evidence: string[];
   freshness: Freshness | null; values?: Record<string, unknown>; kind?: string;
+  /** Its number on the outline, when it is an outline item (added by the paper view). */
+  outline?: string;
 }
 
 export interface WrVersion extends DocVersion { author?: string; words?: number; auto?: boolean }
