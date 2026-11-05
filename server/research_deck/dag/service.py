@@ -12,6 +12,7 @@ from ..events import hub
 from .evaluate import State, build, current
 from .model import DEAD, authored_fp, edges, facet_value, input_cycle, is_action, parse_addr, ref_id, title_of, validate_node, warnings_for
 from .resolve import Repo, Tree, check_rev, git_text
+from . import stages
 from .store import DagStore, at_commit
 
 log = logging.getLogger("research_deck.dag")
@@ -53,7 +54,8 @@ def graph_json(st: State, *, dead: bool = True, at: str | None = None) -> dict:
     from .gates import lenses
     nodes = [node_json(n) for _, n in sorted(st.nodes.items()) if dead or n.get("status") not in DEAD]
     ev = st.eval_json()
-    return {"nodes": nodes, "eval": {n["id"]: ev[n["id"]] for n in nodes}, "lenses": lenses(st), "digest": st.digest, "at": at}
+    return {"nodes": nodes, "eval": {n["id"]: ev[n["id"]] for n in nodes}, "lenses": lenses(st), "digest": st.digest, "at": at,
+            "stage_mode": stages.mode(st.cfg)}
 
 
 def versions(st: State, nid: str) -> list[dict]:
@@ -197,7 +199,13 @@ def _empty_lenses() -> dict:
 
 def graph(pid: str) -> dict:
     st = _state(pid)
-    return graph_json(st) if st else {"nodes": [], "eval": {}, "lenses": _empty_lenses(), "digest": "", "at": None}
+    if st:
+        return graph_json(st)
+    try:
+        mode = stages.mode(store_for(pid).config())
+    except Exception:  # noqa: BLE001 — an unknown project: empty results, never an error (module docstring)
+        mode = stages.mode({})
+    return {"nodes": [], "eval": {}, "lenses": _empty_lenses(), "digest": "", "at": None, "stage_mode": mode}
 
 
 def node(pid: str, node_id: str) -> dict | None:

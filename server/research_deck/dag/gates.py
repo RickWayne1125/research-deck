@@ -61,7 +61,7 @@ def compute(st: State) -> list[dict]:
         for name, spec in (facet_value(n, "outputs") or {}).items():
             exp_v = spec.get("expected") if isinstance(spec, dict) else None
             for _, v, _, _ in (st.E[n["id"]].rows(name, None) or []) if exp_v else []:
-                if isinstance(v, (int, float)) and abs(v - exp_v) > float(c1.get("baseline_repro_tol", 0.1)) * abs(exp_v):
+                if isinstance(v, (int, float)) and abs(v - exp_v) > float((g.get("G2") or {}).get("baseline_repro_tol", 0.1)) * abs(exp_v):
                     within = False
         if not ((_fresh(st, n["id"]) and within) or n["id"] in explained):
             bad.append(n["id"])
@@ -69,8 +69,11 @@ def compute(st: State) -> list[dict]:
         _chk("problem_confirmed", "Problem confirmed", "问题已确认", bool(probs), len(probs), 1, probs),
         _chk("references", "References", "参考文献数", len(refs) >= c1.get("min_refs", 5), len(refs), c1.get("min_refs", 5)),
         _chk("competitors", "Competitors with a delta", "有差异说明的竞品", len(comps) >= 2, len(comps), 2, comps),
-        _chk("baselines_reproduced", "Baselines reproduced", "基线已复现", bool(repro) and not bad, len(repro) - len(bad), len(repro), bad),
     ]
+    # Reproducing the baselines is the first experiment, so it belongs to Motivation & insight (G2), not to Idea: the
+    # first step is framing and the survey of existing work.
+    baselines = _chk("baselines_reproduced", "Baselines reproduced", "基线已复现", bool(repro) and not bad,
+                     len(repro) - len(bad), len(repro), bad)
 
     c2 = g.get("G2") or {}
     good = []
@@ -89,7 +92,8 @@ def compute(st: State) -> list[dict]:
             reps = reps or [int(spec_of(un).get("replicates") or 1)]
         if len(workloads - {"None"}) >= c2.get("min_workloads", 2) and reps and min(reps) >= c2.get("min_replicates", 3):
             good.append(f["id"])
-    checks["G2"] = [_chk("finding_replicated", "Confirmed finding on enough workloads and replicates", "已确认且多负载、多次复现的发现",
+    checks["G2"] = [baselines,
+                    _chk("finding_replicated", "Confirmed finding on enough workloads and replicates", "已确认且多负载、多次复现的发现",
                          bool(good), len(good), 1, good)]
 
     c3 = g.get("G3") or {}

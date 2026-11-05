@@ -82,13 +82,32 @@ The user's four steps are kept. S0–S1 = "Draft idea", S2–S4 = "Motivation an
 
 | gate | after | checks (each turns green or red live) |
 |---|---|---|
-| G1 worth pursuing | S1 | problem confirmed; ≥5 references, including ≥2 competitors with a delta; each reproduce experiment fresh and within `baseline_repro_tol` (10%), or a finding that explains the gap |
-| G2 issue is real | S2 | ≥1 confirmed finding with fresh evidence on ≥`min_workloads` (2) workloads, n ≥ 3 replicates |
+| G1 worth pursuing | S1 | problem confirmed; ≥5 references, including ≥2 competitors with a delta (the survey of existing work: the first step runs no experiment) |
+| G2 issue is real | S2 | each reproduce experiment fresh and within `baseline_repro_tol` (G2 config, 10%), or a finding that explains the gap; ≥1 confirmed finding with fresh evidence on ≥`min_workloads` (2) workloads, n ≥ 3 replicates |
 | G3 go / no-go | S3 | ≥1 confirmed gap with headroom ≥ `min_headroom` (1.3×); no competitor reference marked `closes_gap` |
 | G4 commit to an approach | S4 | decision locked; ≥2 alternatives tried, each with a verdict; the validation of the chosen solution captures ≥ `min_captured` (50%) of the headroom; claims drafted |
 | G5 design frozen | S5 | design confirmed or locked; no module `implements` edge in review; microbenchmarks fresh and ≥ `microbench_vs_proto` (80%) of the prototype gain |
 | G6 claims hold | S6 | every live claim fresh with its predicate holding; every figure fresh; no stale or unbuilt cell in any claim's evidence closure |
 | G7 submission | W | G6, plus no section in review; snapshot `submit-<venue>`; claims, figures and design locked |
+
+### 1.1 Stage by stage
+
+The map grows one step at a time (dag/stages.py). The project's stage (project.yaml) says which step it is in: idea → 0;
+motivation, insight → 1; design → 2; evaluation, writing → 3. A node's step comes from its DAG stage (S0 S1 → 0, S2–S4
+→ 1, S5 → 2, S6 W → 3). `stages.mode` in the DAG config (default `strict`; `dag_defaults.stages.mode` in the user's
+settings, Settings → New projects) chooses the rules:
+
+| mode | rules |
+|---|---|
+| `strict` | a node of a later step than the project's cannot be created (409 `stage_locked`); an edge from a node to one of an earlier step needs that node confirmed or locked (409 `unconfirmed_parent`) |
+| `ahead` | later-step nodes may be drafted (proposed) and linked freely, but none becomes active or confirmed until its step has started and its earlier-step parents are confirmed |
+| `free` | no stage rules (projects that predate them; the demo builds its history this way) |
+
+In `strict` and `ahead`, no new edge may point at a refuted, abandoned or superseded node (409 `dead_parent`): a failed
+branch ends there, while its concurrent siblings go on. Moving a node to active or confirmed re-checks both rules. The
+UI marks drafts of a step that has not started as locked (no accept), shows each row's parents and whether they are
+confirmed, and once the project moves to the next step, prefills the conversation with a request to draft it from the
+confirmed nodes.
 
 **Loop-backs.** A failed gate or a broken claim never rewrites history. The agent proposes one of three things: a new node whose `basis` is the failing evidence, an edit with an impact preview, or a rollback. Dead nodes stay visible in the Tried lens. A gate that later loses a check shows `passed-degraded`.
 

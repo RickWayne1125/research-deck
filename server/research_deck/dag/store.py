@@ -43,12 +43,13 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "env": {"key": ["python", "gpu_model", "gpu_count", "driver_major", "cuda", "pkg:*"], "lockfile": "uv.lock"},
     "outputs": {"default_tol": {"rel": 0.03}, "sig": 4},
     "paper": {"root": "paper", "macros": "paper/generated/rdvalues.tex"},
-    "gates": {"blocking": False, "G1": {"min_refs": 5, "baseline_repro_tol": 0.10},
-              "G2": {"min_workloads": 2, "min_replicates": 3}, "G3": {"min_headroom": 1.3},
+    "gates": {"blocking": False, "G1": {"min_refs": 5},
+              "G2": {"min_workloads": 2, "min_replicates": 3, "baseline_repro_tol": 0.10}, "G3": {"min_headroom": 1.3},
               "G4": {"min_captured": 0.5, "min_alternatives": 2}, "G5": {"microbench_vs_proto": 0.8}},
     "policy": {"agent_auto_apply": "safe",
                "agent_auto_run": {"max_gpu_hours_per_day": 0, "platforms": [], "kinds": ["experiment", "figure"]}},
     "autocommit": {"enabled": False, "debounce_s": 30, "paths": ["{dag}", "paper/generated"]},   # {dag} = this store's DAG folder
+    "stages": {"mode": "strict"},          # stage-by-stage progression (stages.py): strict | ahead | free
 }
 
 _LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)

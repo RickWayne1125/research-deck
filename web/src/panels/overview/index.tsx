@@ -14,6 +14,7 @@ import { useRelTime, useT } from '../../i18n';
 import { useDagLabels } from '../../dag/encoding';
 import { dagApi } from '../../dag/api';
 import { ImpactView } from '../../dag/ImpactView';
+import { errText } from '../dag/preview';
 import type { DagNode, Impact, Proposal } from '../../dag-types';
 import { Activity } from './Activity';
 import { StartCard } from './StartCard';
@@ -21,6 +22,9 @@ import { EngineeringOverview } from './EngineeringOverview';
 import { ActorAvatar, errorMessage, usePlural, type NodeIndex } from './parts';
 import { facetText } from './today';
 import { Steps } from './NextStep';
+import { FolderCard, SurveyCard, dismiss, duration, isDismissed, paperCounts } from '../../start/Survey';
+import type { Survey } from '../../start/api';
+import { stepOfStage, waitsForStep } from '../../state/stages';
 import './overview.css';
 import './i18n';
 
@@ -74,10 +78,17 @@ function ResearchToday() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  const [, setDismissedN] = useState(0);
   if (!project) return null;
   const empty = today.loaded && !!graph && graph.nodes.length === 0 && !needs.proposals.length;
+  // The early survey: its card while it runs (or after it stopped or failed, until closed); once done, while the
+  // project is still at the idea, an item that points at the survey and the card of what it left in the folder.
+  const survey = today.survey;
+  const atIdea = stepOfStage(project.stage) === 'idea';
+  const surveyCard = !!survey && (survey.status === 'running' || (survey.status !== 'done' && !isDismissed(pid, survey.id)));
+  const surveyDone = !!survey && survey.status === 'done' && atIdea;
   const decide = needs.proposals.length + (needs.review.length ? 1 : 0) + needs.decisions.length + (needs.fix.length ? 1 : 0)
-    + (needs.rerun.ids.length ? 1 : 0) + (needs.failed.length ? 1 : 0);
+    + (needs.rerun.ids.length ? 1 : 0) + (needs.failed.length ? 1 : 0) + (surveyDone ? 1 : 0);
   const wait = (waiting.evidence.length ? 1 : 0) + (waiting.blocked.length ? 1 : 0);
 
   return (
@@ -103,17 +114,22 @@ function ResearchToday() {
             </div>
           )}
 
-          {!today.loaded ? <div className="td-loading"><Spinner /></div> : empty ? <StartCard pid={pid} onCreated={today.reload} /> : (
+          {today.loaded && surveyCard && survey && (
+            <SurveyCard pid={pid} survey={survey} onDismiss={() => { dismiss(pid, survey.id); setDismissedN(n => n + 1); }} />
+          )}
+          {!today.loaded ? <div className="td-loading"><Spinner /></div> : empty ? (survey?.status !== 'running' && <StartCard pid={pid} onCreated={today.reload} />) : (
             <>
               <section className="td-sec" aria-labelledby="td-decide">
                 <div className="td-sec-head">
                   <h2 id="td-decide" className="td-h2">{t('td.decide')} <span className="muted td-count">{decide}</span></h2>
+                  {surveyDone && survey && <span className="faint td-keys">{t('sv.hint.done', { t: duration(t, survey.created_at, survey.finished_at) })}</span>}
                   {decide > 0 && <span className="faint td-keys">{t('td.keys')}</span>}
                 </div>
                 {decide === 0 ? <div className="card td-none muted">{t('td.nothing')}</div> : (
                   <div className="card td-list">
                     {needs.proposals.map(x => <ProposalItem key={x.id} pid={pid} proposal={x} register={register} onChanged={today.reload} />)}
                     {needs.review.length > 0 && <ReviewItem pid={pid} nodes={needs.review} register={register} onChanged={today.reload} />}
+                    {surveyDone && survey && <SurveyItem survey={survey} register={register} />}
                     {needs.decisions.map(d => <DecisionItem key={d.node.id} node={d.node} options={d.options} register={register} />)}
                     {needs.fix.length > 0 && <FixItem ids={needs.fix} index={index} register={register} />}
                     {needs.rerun.ids.length > 0 && <RerunItem ids={needs.rerun.ids} gpuH={needs.rerun.gpuH} index={index} register={register} />}
@@ -131,6 +147,8 @@ function ResearchToday() {
                   </div>
                 </section>
               )}
+
+              {surveyDone && survey && <section className="td-sec"><FolderCard survey={survey} /></section>}
 
               {!!today.events?.length && (
                 <section className="td-sec td-recent">
@@ -270,30 +288,58 @@ function ReviewItem({ pid, nodes, register, onChanged }: { pid: string; nodes: D
   );
 }
 
-function AcceptAllDialog({ pid, nodes, onClose, onDone }: { pid: string; nodes: DagNode[]; onClose: () => void; onDone: () => void }) {
+function AcceptAllDialog({ pid, nodes: all, onClose, onDone }: { pid: string; nodes: DagNode[]; onClose: () => void; onDone: () => void }) {
   const t = useT();
   const L = useDagLabels();
+  const { project } = useApp();
+  const { graph } = useToday();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Drafts of a step the project has not reached wait for it (stage rules); accepting them would be refused.
+  const step = stepOfStage(project?.stage);
+  const nodes = all.filter(n => !waitsForStep(n, step, graph?.stage_mode));
+  const waiting = all.length - nodes.length;
   const accept = async () => {
     setBusy(true); setError(null);
     try {
       await dagApi.ops(pid, nodes.map(n => ({ op: 'set_status', node: n.id, to: 'active' })), { rationale: t('td.review.rationale') });
       onDone();
-    } catch (e) { setError(errorMessage(e)); } finally { setBusy(false); }
+    } catch (e) { setError(errText(e, t)); } finally { setBusy(false); }
   };
   return (
     <Dialog title={t('td.review.allTitle', { n: nodes.length })} onClose={onClose} width={560} footer={
-      <><Button onClick={onClose}>{t('common.cancel')}</Button><Button variant="primary" onClick={accept} disabled={busy}>{busy && <Spinner />}{t('td.review.allGo', { n: nodes.length })}</Button></>
+      <><Button onClick={onClose}>{t('common.cancel')}</Button><Button variant="primary" onClick={accept} disabled={busy || nodes.length === 0}>{busy && <Spinner />}{t('td.review.allGo', { n: nodes.length })}</Button></>
     }>
       <div className="col" style={{ gap: 10 }}>
         <p style={{ margin: 0 }}>{t('td.review.allBody')}</p>
+        {waiting > 0 && <p className="muted" style={{ margin: 0 }}>{t('td.review.waiting', { n: waiting })}</p>}
         <ul className="td-names">
           {nodes.map(n => <li key={n.id}><span className="faint td-kind">{L.kind(n.kind)}</span>{L.title(n)}</li>)}
         </ul>
         {error && <div className="notice accent" role="alert">{error}</div>}
       </div>
     </Dialog>
+  );
+}
+
+/** The survey is written: open it, or ask the agent what it makes of it. */
+function SurveyItem({ survey, register }: { survey: Survey; register: Register }) {
+  const { navigate, askAgent } = useApp();
+  const t = useT();
+  const file = survey.files.survey ?? 'notes/survey.md';
+  const open = () => navigate('writing', file);
+  const ask = () => askAgent(t('sv.item.askPrompt', { file }), { file });
+  const roles = (['competitor', 'baseline', 'related', 'background'] as const)
+    .map(r => [r, survey.papers.filter(p => p.role === r).length] as const).filter(([, n]) => n > 0)
+    .map(([r, n]) => `${n} ${t(`sv.role.${r}`)}`).join(t('td.sep'));
+  const gaps = survey.papers.filter(p => p.closes_gap).length;
+  return (
+    <Item id="survey" tag={t('sv.item.tag')} register={register} keys={{ yes: open, no: ask }}
+      title={<>{t('sv.item.title')}<span className="mono td-file">{file}</span></>}
+      actions={<><Button size="sm" variant="primary" onClick={open}>{t('sv.item.open')}</Button><Button size="sm" icon="robot" onClick={ask}>{t('td.askAgent')}</Button></>}>
+      <p className="td-p">{t('sv.item.body', { n: survey.papers.length, roles, pdfs: paperCounts(survey).done })}</p>
+      {gaps > 0 && <p className="td-p td-warn-text">{t('sv.item.gap', { n: gaps })}</p>}
+    </Item>
   );
 }
 

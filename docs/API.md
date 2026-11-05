@@ -10,7 +10,7 @@ The research DAG's routes are in docs/DAG.md (§ HTTP API).
 | Method | Path | Body / query | Response |
 |---|---|---|---|
 | GET | /api/system/health | | `Health` |
-| GET | /api/events?project=pid | SSE; events named by topic (`dag`, `file`, `sessions`, `agent` (a conversation run finished), `experiments`, `figures`, `writing`, `project`) | `ProjectEvent` |
+| GET | /api/events?project=pid | SSE; events named by topic (`dag`, `file`, `sessions`, `agent` (a conversation run finished), `experiments`, `figures`, `writing`, `project`, `survey` (the survey's state)) | `ProjectEvent` |
 | GET | /api/projects | | `ProjectSummary[]` |
 | POST | /api/projects | `{root, name?, kind?: research\|engineering, state?: ".research-<slug>"}` | `ProjectSummary` (creates the state folder; `state` lets a second project share the folder) |
 | DELETE | /api/projects/{pid} | | `{ok}` (forgets it; files untouched) |
@@ -19,6 +19,36 @@ The research DAG's routes are in docs/DAG.md (§ HTTP API).
 | GET | /api/projects/{pid}/tree | `?dir=&depth=` | `TreeNode[]` |
 | GET | /api/projects/{pid}/file | `?path=` | `FileContent` |
 | PUT | /api/projects/{pid}/file | `{path, content, base_sha?}` | `{path, sha, mtime}`; 409 `{message, sha}` if the file changed on disk |
+
+## New projects (start/)
+
+| Method | Path | Body / query | Response |
+|---|---|---|---|
+| GET | /api/settings/new-projects | | `{dir, dir_expanded, default_dir, git_init, survey: {sources, count, download_pdfs, papers_dir}, stage_mode}` |
+| PATCH | /api/settings/new-projects | any of `{dir (null resets), git_init, survey: {sources, count 1–60, download_pdfs, papers_dir}, stage_mode: strict\|ahead\|free}` | the settings (writes only these keys of ~/.research-deck/settings.json; `stage_mode` is `dag_defaults.stages.mode`) |
+| POST | /api/projects/new | `{name, idea?, file?: {name (.md .txt .pdf), content_base64 (≤ 20 MB)}, folder?, survey?: {enabled, count?, download_pdfs?}}` | `{project: ProjectSummary, root, created, idea_file, upload, survey: Survey \| null}` |
+
+`folder` missing: `<dir>/<name as a folder name>` (-2, -3 … when taken); an existing folder is used as it is. The idea is
+saved as `notes/idea.md` (`idea-2.md` … when one exists) and an upload is kept in `notes/` (a PDF's text is extracted
+with pypdf). A folder created here gets `git init` (setting `git_init`, unless it is inside a repository) and a
+`.gitignore` with `<papers_dir>/*.pdf`. Both routes that change something are the researcher's only (403 for agents).
+
+## Survey (survey/)
+
+| Method | Path | Body / query | Response |
+|---|---|---|---|
+| GET | /api/projects/{pid}/survey | | the latest `Survey` or `null` |
+| POST | /api/projects/{pid}/survey | `{idea?, count?, download_pdfs?, sources?}` (idea defaults to notes/idea.md) | `Survey`; 409 while one runs; 403 for agents |
+| POST | /api/projects/{pid}/survey/cancel | | `{ok}` |
+
+`Survey` (web/src/start/api.ts) is `.research/survey/<id>.json`: `{id, status: running|done|error|cancelled, step,
+steps: {frame, search, select, download, draft, write: pending|running|done|error|skipped}, queries, search: {found,
+sources}, candidates, papers: [{key, title, year, venue, url, role, takeaway, delta, closes_gap, status:
+pending|running|done|failed|link, file, node, existing}], nodes, files: {bib, index, survey}, warnings, error, agent}`.
+It writes `<papers_dir>/<bibkey>.pdf`, `<papers_dir>/references.bib` (new keys appended), `<papers_dir>/index.md` and
+`notes/survey.md` (never overwriting: `survey-2.md` …), drafts a `problem` node (unless a live one exists) and one
+`reference` node per new paper as proposals (actor `agent:<provider>:survey`), adds a message to the project
+conversation and a note for each backend's next turn. It runs no experiment.
 
 ## Agents (agents/)
 

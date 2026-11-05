@@ -73,6 +73,19 @@ def model_info(provider: str, model: str) -> dict | None:
     return next((m for m in models if m["id"] == model), None)
 
 
+EFFORT_ORDER = ("minimal", "low", "medium", "high", "xhigh", "max", "ultra")
+
+
+def clamp_effort(provider: str, model: str, wanted: str) -> str:
+    """The strongest effort the model supports that is not above `wanted` (or its weakest, when all are above)."""
+    efforts = [e for e in (model_info(provider, model) or {}).get("efforts") or [] if e in EFFORT_ORDER]
+    if efforts and wanted not in efforts:
+        rank = EFFORT_ORDER.index(wanted)
+        below = [e for e in efforts if EFFORT_ORDER.index(e) <= rank]
+        wanted = max(below, key=EFFORT_ORDER.index) if below else min(efforts, key=EFFORT_ORDER.index)
+    return normalize(provider, model, wanted, False)[1]
+
+
 def normalize(provider: str, model: str | None, effort: str | None, fast: bool | None) -> tuple[str, str, bool]:
     """A model the backend knows, an effort it supports and fast only where a fast tier exists."""
     default = claude_default() if provider == "claude" else codex_default()

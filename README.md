@@ -22,6 +22,14 @@ backed by the Claude Code or Codex CLI, next to your paper, your experiments and
 Agents never change the map directly: what they draft is *proposed* until you accept it, and every change shows its
 impact (which nodes need a review, which experiments a rerun) before it is applied. ⌘K jumps anywhere.
 
+**New from an idea.** Paste an idea (or upload a .md, .txt or .pdf) and Research Deck creates the project folder
+(`~/Research/<name>` by default; `~/research` on Linux, `%USERPROFILE%\Research` on Windows; change it in Settings),
+keeps the idea in `notes/idea.md` and runs an **early survey**: it searches arXiv, Semantic Scholar and OpenAlex,
+downloads the open-access PDFs into `papers/` (paywalled ones get a link and BibTeX), writes `papers/references.bib`
+and `notes/survey.md`, and drafts the problem and reference nodes for you to review. It never runs experiments.
+The map then grows **one step at a time**: the next step is drafted from the confirmed nodes of the one before, several
+directions may run side by side, and an abandoned or refuted node grows no new branch.
+
 
 ## Quick start
 
@@ -36,8 +44,9 @@ scripts/dev.sh                    # installs and builds the web app, then serves
 ```
 
 On first start a demo project (`toycache`, a made-up cache-eviction study with a small DAG, runs, a paper and two
-figures) is created in `~/.research-deck/demo/`. Add your own project from the project menu: pick its folder and its
-kind — **research** (the full pipeline) or **engineering** (code, documents, runs and figures, without the map).
+figures) is created in `~/.research-deck/demo/`. Add your own project from the project menu: **New from an idea…**
+(above), or **Add an existing folder…** with its kind — **research** (the full pipeline) or **engineering** (code,
+documents, runs and figures, without the map).
 Research Deck keeps its state in a `.research/` folder inside the project and never touches anything else.
 
 ```bash
@@ -55,7 +64,10 @@ Machine-local state lives in `~/.research-deck/` (`RD_LOCAL_DIR`): the project r
 ```json
 {
   "agent_defaults": {"claude": {"model": "claude-opus-5-5", "effort": "high"}, "codex": {"effort": "high"}},
-  "dag_defaults": {"gates": {"blocking": false}, "autocommit": {"enabled": false}}
+  "dag_defaults": {"gates": {"blocking": false}, "autocommit": {"enabled": false}, "stages": {"mode": "strict"}},
+  "new_projects": {"dir": "~/Research", "git_init": true,
+                   "survey": {"sources": ["arxiv", "semantic_scholar", "openalex"], "count": 15,
+                              "download_pdfs": true, "papers_dir": "papers"}}
 }
 ```
 
@@ -75,7 +87,10 @@ Requests through Serve are accepted only from the listed owners.
 The server listens on 127.0.0.1 only and refuses requests from other origins (a CSRF header is required for every
 change, DNS rebinding is blocked). Agents run headless in the project folder: Claude Code restricted to the project
 with only Research Deck's MCP server; Codex in a read-only sandbox unless you allow writes for the conversation.
-Nothing submits jobs to remote machines or creates credentials. Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (Safety).
+Nothing submits jobs to remote machines or creates credentials. The early survey is the only part that reaches the
+network, and only when you start it: it queries arXiv, Semantic Scholar and OpenAlex (no keys, nothing about you) and
+downloads open-access PDFs (public addresses only, PDF files only, 60 MB at most). Details:
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (Safety).
 
 ## Documentation
 

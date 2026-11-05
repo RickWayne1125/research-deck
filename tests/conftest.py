@@ -23,6 +23,9 @@ def isolated(tmp_path_factory, monkeypatch):
     monkeypatch.setattr(config, "REGISTRY_FILE", local / "projects.json")
     monkeypatch.setattr(config, "SETTINGS_FILE", local / "settings.json")   # never the user's own defaults
     monkeypatch.setattr(config, "_SETTINGS_CACHE", (-1.0, {}))
+    # Most tests build graphs across every stage in a project still at "idea": they run without the stage rules
+    # (tests/test_stages.py covers those); a test that writes its own settings keeps this unless it says otherwise.
+    (local / "settings.json").write_text('{"dag_defaults": {"stages": {"mode": "free"}}}')
     monkeypatch.setattr(config, "DEMO_ENABLED", False)      # only tests/test_demo.py materializes the demo
     monkeypatch.setattr(config, "FAKE_AGENT", True)
     yield

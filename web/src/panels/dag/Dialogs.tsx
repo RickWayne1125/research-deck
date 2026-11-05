@@ -70,7 +70,7 @@ export function StatusDialog({ pid, node, action, graph, onClose, onDone }: {
       if (action === 'lock') { await dagApi.lock(pid, node.id, reason.trim()); onDone(null, action); }
       else if (action === 'unlock') { await dagApi.unlock(pid, node.id, reason.trim()); onDone(null, action); }
       else onDone(await dagApi.ops(pid, [op()], { base_digest: graph.digest, rationale: reason.trim() || enumReason }), action);
-    } catch (e) { setError(errText(e)); } finally { setBusy(false); }
+    } catch (e) { setError(errText(e, t)); } finally { setBusy(false); }
   };
 
   return (
@@ -245,7 +245,7 @@ export function NewNodeDialog({ pid, graph, starter, onClose, onCreated }: {
     try {
       const r = await dagApi.ops(pid, [{ op: 'create', node }]);
       onCreated(id, r);
-    } catch (e) { setError(errText(e)); } finally { setBusy(false); }
+    } catch (e) { setError(errText(e, t)); } finally { setBusy(false); }
   };
 
   const valid = (titleZh.trim() || titleEn.trim()) && !clash && (!starter || text.trim());

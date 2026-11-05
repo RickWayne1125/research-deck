@@ -19,11 +19,14 @@ research-deck/
     coding/   git status/log/diff, architecture extraction (context for explanations), code review / explanation
     experiments/  experiment records + freshness from the DAG, their logs, demo resources
     viz/      figure registry, matplotlib renderer, draw.io files, OmniGraffle/DataGraph adapters, the house style
+    start/    new projects from an idea (folder, notes/idea.md, git init) and Settings → New projects
+    survey/   the early survey: search arXiv / Semantic Scholar / OpenAlex, download open-access PDFs, BibTeX, draft nodes
     mcp_server.py              stdio MCP server exposing the dashboard to Codex/Claude (proxies the HTTP API)
   web/src/                     React 18 + TypeScript + Vite
     App.tsx state/ api/client.ts types.ts i18n/ styles/ components/   shell + shared (core)
     state/                     app.tsx (route, project, events), today.tsx (what needs a decision), stages.ts, views.ts
     agent/                     AgentDock (the project conversation), useAgentRun (core hook), parts
+    start/                     the new-project dialog, the survey card on Today, Settings → New projects
     panels/<view>/index.tsx    one folder per view: overview (Today), dag (Map), experiments, writing (Paper),
                                coding (Code), settings; visualization holds the figures half of Paper
     demo.py                    materializes the demo project from demo/minimal into ~/.research-deck/demo/toycache on first start
@@ -92,6 +95,13 @@ research-deck/
   - nothing submits jobs to remote machines or creates credentials; queued runs wait as experiment records until the
     researcher runs them; autocommit and agent queueing are off unless the user's or the project's DAG config turns
     them on.
+  - the early survey (`survey/`) is the only part that reaches the network, and only when the researcher starts it
+    (creating a project from an idea, or `POST /survey`; agents get 403). It sends the search queries to arXiv,
+    Semantic Scholar and OpenAlex (public APIs, no keys, a generic `research-deck/<version>` User-Agent, nothing about
+    the user; 429/503 are retried after a short wait). PDF links come from those answers and are untrusted: http(s)
+    only, every redirect hop (at most 5) must resolve to public addresses only, the body must start with `%PDF`, at
+    most 60 MB is written, through a temporary file next to the target. The agent requests of the survey are
+    one-shot and tool-less (they read abstracts from the prompt); the agent never reaches the network itself.
   - known limit: agent identities are self-asserted once the shared agent token matches (per-run tokens are a v2 item).
 
 ## Agents and context sharing

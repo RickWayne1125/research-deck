@@ -50,6 +50,13 @@ rd_apply. You create nodes as proposed and may edit proposed or active nodes dir
 nodes (and any batch that touches a lock) become a proposal for the researcher, and so do status changes beyond your
 own proposed nodes. Locking, approving proposals and passing gates are the researcher's; ask instead of working
 around them. Use full node ids (e.g. design.sched) and the exact addresses the tools return.
+
+The map grows one step at a time (Idea → Motivation & insight → System design → Evaluation; the project's stage says
+which step it is in). Draft nodes of the current step only, resting on confirmed nodes of the steps before; draft
+the next step once the researcher has passed the current one's gate. Several directions within a step are fine, but
+never extend a refuted, abandoned or superseded node: a failed branch ends there. A refusal with reason
+stage_locked, unconfirmed_parent or dead_parent is one of these rules; say so to the researcher instead of
+working around it.
 """
 
 

@@ -1,0 +1,89 @@
+/* New project from an idea (NewProjectDialog), the survey on Today (Survey.tsx) and Settings → New projects. */
+
+/* ---------------------------------------------------------------- the dialog */
+.np-body { gap: 16px; }
+.np-idea { gap: 6px; border-radius: var(--r-md); }
+.np-idea.dragging { outline: 2px dashed var(--info); outline-offset: 4px; }
+.np-drop {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 10px; border: var(--line) dashed var(--rule-strong);
+  border-radius: var(--r-md); background: var(--plate); font-size: var(--fs-sm); color: var(--muted);
+}
+.np-link { border: 0; background: none; padding: 0; color: var(--info); cursor: pointer; font: inherit; text-align: left; }
+.np-link:hover { text-decoration: underline; }
+.np-small { font-size: var(--fs-xs); }
+.np-error { font-size: var(--fs-xs); color: var(--accent); }
+.np-row { gap: 14px; align-items: flex-start; }
+.np-kind { min-height: 34px; }
+.np-where { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.np-where legend { margin-bottom: 6px; padding: 0; }
+.np-opt {
+  display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: var(--line) solid var(--rule);
+  border-radius: var(--r-md); cursor: pointer; min-width: 0;
+}
+.np-opt.on { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+.np-opt input[type="radio"] { margin-top: 3px; flex: none; }
+.np-path { overflow-wrap: anywhere; }
+.np-survey { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border: var(--line) solid var(--rule); border-radius: var(--r-md); background: var(--plate); }
+.np-survey-body { gap: 8px; padding-left: 24px; font-size: var(--fs-sm); }
+.np-check { gap: 8px; align-items: flex-start; cursor: pointer; }
+.np-check input { margin-top: 3px; flex: none; }
+.np-count { width: auto; padding: 3px 8px; font-size: var(--fs-sm); }
+.np-writes { font-size: var(--fs-xs); min-width: 0; overflow-wrap: anywhere; }
+
+/* ---------------------------------------------------------------- the survey card */
+.sv-card { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.sv-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 16px; border-bottom: var(--line) solid var(--rule); }
+.sv-h2 { margin: 0; font: 600 var(--fs-md)/1.35 var(--sans); color: var(--ink-strong); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sv-small { font-size: var(--fs-xs); }
+.sv-chip.is-running { color: var(--info); border-color: color-mix(in srgb, var(--info) 45%, transparent); background: var(--info-wash); }
+.sv-chip.is-done { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, transparent); background: var(--ok-wash); }
+.sv-chip.is-error { color: var(--accent); border-color: var(--accent-line); background: var(--accent-wash); }
+.sv-note { margin: 10px 16px 0; }
+.sv-steps { list-style: none; margin: 0; padding: 6px 16px 10px; display: flex; flex-direction: column; }
+.sv-step { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; font-size: var(--fs-sm); }
+.sv-step + .sv-step { border-top: var(--line) solid var(--rule); }
+.sv-step.is-pending, .sv-step.is-skipped { color: var(--muted); }
+.sv-step-main { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.sv-meta { flex: none; font-size: var(--fs-xs); }
+.sv-mark {
+  flex: none; width: 15px; height: 15px; margin-top: 2px; border-radius: 50%; border: 1.5px solid var(--rule-strong);
+  display: inline-grid; place-items: center; color: var(--paper);
+}
+.sv-mark.is-done { background: var(--ok); border-color: var(--ok); }
+.sv-mark.is-error { background: var(--accent); border-color: var(--accent); }
+.sv-mark.is-running { border-color: var(--info); border-top-color: transparent; animation: sv-spin 1s linear infinite; }
+.sv-mark.is-skipped { border-style: dashed; }
+@keyframes sv-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .sv-mark.is-running { animation: none; border-top-color: var(--info); } }
+.sv-queries { display: flex; flex-wrap: wrap; gap: 4px; }
+.sv-bar { height: 4px; border-radius: 2px; background: var(--wash); overflow: hidden; max-width: 360px; }
+.sv-bar > span { display: block; height: 100%; background: var(--info); transition: width .3s var(--ease); }
+.sv-warnings { margin: 0; padding: 0 16px 8px 42px; font-size: var(--fs-xs); }
+.sv-table-wrap { border-top: var(--line) solid var(--rule); overflow-x: auto; }
+.sv-table-title { padding: 10px 16px 4px; font-size: var(--fs-sm); color: var(--ink-strong); }
+.sv-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.sv-table th { text-align: left; font: 500 var(--fs-xs)/1.4 var(--sans); color: var(--muted); padding: 6px 16px; border-bottom: var(--line) solid var(--rule); white-space: nowrap; }
+.sv-table td { padding: 6px 16px; border-bottom: var(--line) solid var(--rule); vertical-align: top; }
+.sv-table tr:last-child td { border-bottom: 0; }
+.sv-file { font-size: var(--fs-xs); white-space: nowrap; }
+.sv-paper { min-width: 240px; }
+.sv-paper a { color: var(--ink); text-decoration: none; }
+.sv-paper a:hover { color: var(--info); text-decoration: underline; }
+.sv-paper-st.is-done { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, transparent); background: var(--ok-wash); }
+.sv-paper-st.is-running { color: var(--info); border-color: color-mix(in srgb, var(--info) 45%, transparent); background: var(--info-wash); }
+.sv-paper-st.is-failed, .sv-paper-st.is-link { color: var(--stale); border-color: color-mix(in srgb, var(--stale) 45%, transparent); background: var(--stale-wash); }
+.sv-agent { padding: 0 16px 10px; }
+
+.sv-folder { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; }
+.sv-root { font-size: var(--fs-xs); color: var(--muted); overflow-wrap: anywhere; }
+.sv-files { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; font-size: var(--fs-sm); }
+
+/* ---------------------------------------------------------------- Settings → New projects */
+.np-st-dir { gap: 8px; align-items: center; }
+.np-st-dir .input { flex: 1 1 260px; min-width: 0; }
+.np-st-col { gap: 8px; align-items: flex-start; }
+.np-st-pdfdir { width: 120px; padding: 3px 8px; }
+.st-kv.np-st { align-items: start; }
+.st-kv.np-st > dt { min-height: 30px; }
+.st-kv.np-st > dd > .row:first-child, .st-kv.np-st .np-check { min-height: 30px; align-items: center; }
+.st-kv.np-st .np-check input { margin-top: 0; }

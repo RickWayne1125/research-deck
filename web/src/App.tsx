@@ -14,6 +14,8 @@ import { ResizeHandle, useResizableWidth } from './components/resize';
 import { Palette } from './components/Palette';
 import { post } from './api/client';
 import { AgentDock } from './agent/AgentDock';
+import { NewProjectDialog } from './start/NewProjectDialog';
+import './start/i18n';
 import { ProviderMark, useRunningPanels, useSessions } from './agent/parts';
 import type { ProjectKind, ProjectSummary, ViewId } from './types';
 import './styles/shell.css';
@@ -225,7 +227,7 @@ function DockRail({ pid, onOpen }: { pid: string; onOpen: () => void }) {
 function ProjectSwitcher({ current }: { current: ProjectSummary | null }) {
   const { projects, navigate, view } = useApp();
   const t = useT();
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState<'idea' | 'folder' | null>(null);
   const sub = !current ? '' : isResearch(current)
     ? `${t('nav.kind.research')} · ${t(`step.${stepOfStage(current.stage)}`)}` : t('nav.kind.engineering');
   return (
@@ -255,11 +257,13 @@ function ProjectSwitcher({ current }: { current: ProjectSummary | null }) {
               </button>
             ))}
             <hr style={{ border: 0, borderTop: '1px solid var(--rule)', margin: '6px 4px' }} />
-            <button type="button" className="menu-item" onClick={() => { setAdding(true); close(); }}><Icon name="plus" /> {t('nav.addProject')}</button>
+            <button type="button" className="menu-item" onClick={() => { setAdding('idea'); close(); }}><Icon name="sparkle" /> {t('np.menu.fromIdea')}</button>
+            <button type="button" className="menu-item" onClick={() => { setAdding('folder'); close(); }}><Icon name="folder" /> {t('np.menu.addFolder')}</button>
           </div>
         )}
       </Menu>
-      {adding && <AddProjectDialog onClose={() => setAdding(false)} />}
+      {adding === 'idea' && <NewProjectDialog onClose={() => setAdding(null)} />}
+      {adding === 'folder' && <AddProjectDialog onClose={() => setAdding(null)} />}
     </>
   );
 }
@@ -325,5 +329,19 @@ function ThemeSwitch() {
 
 function NoProject({ hasProjects }: { hasProjects: boolean }) {
   const t = useT();
-  return <div className="empty"><Icon name="folder" size={22} /><div className="h3">{hasProjects ? t('common.loading') : t('nav.addProject')}</div></div>;
+  const [adding, setAdding] = useState<'idea' | 'folder' | null>(null);
+  if (hasProjects) return <div className="empty"><Spinner /></div>;
+  return (
+    <div className="empty">
+      <Icon name="folder" size={22} />
+      <div className="h3">{t('np.empty.title')}</div>
+      <div className="muted">{t('np.empty.body')}</div>
+      <div className="row wrap" style={{ justifyContent: 'center' }}>
+        <Button variant="primary" icon="sparkle" onClick={() => setAdding('idea')}>{t('np.menu.fromIdea')}</Button>
+        <Button icon="folder" onClick={() => setAdding('folder')}>{t('np.menu.addFolder')}</Button>
+      </div>
+      {adding === 'idea' && <NewProjectDialog onClose={() => setAdding(null)} />}
+      {adding === 'folder' && <AddProjectDialog onClose={() => setAdding(null)} />}
+    </div>
+  );
 }

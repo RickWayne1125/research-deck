@@ -34,13 +34,19 @@ export function nextStage(step: StepId): StageId | null {
   return i < STEPS.length - 1 ? STEP_STAGES[STEPS[i + 1]][0] : null;
 }
 
-export interface Missing { gate: string; label: string; items: string[] }
+export interface Missing { gate: string; label: string; zh?: string; items: string[] }
 
 /** What stands between the project and the next step: the gates of this step and the earlier ones that are not
  *  passed yet, and the checks among them that fail ("2 to go"). A gate whose checks all hold is passed on the way. */
 export function leaving(step: StepId, gates: GateStatus[] | null | undefined): { gates: GateStatus[]; missing: Missing[] } {
   const wanted = new Set(STEPS.slice(0, STEPS.indexOf(step) + 1).flatMap(s => STEP_GATES[s]));
   const open = (gates ?? []).filter(g => wanted.has(g.gate) && g.state !== 'passed');
-  const missing = open.flatMap(g => g.checks.filter(c => !c.ok).map(c => ({ gate: g.gate, label: c.label, items: c.items ?? [] })));
+  const missing = open.flatMap(g => g.checks.filter(c => !c.ok).map(c => ({ gate: g.gate, label: c.label, zh: c.zh, items: c.items ?? [] })));
   return { gates: open, missing };
+}
+
+/** Under the stage rules (any mode but free), a node of a step the project has not reached waits for that step: it
+ *  can be drafted (mode ahead) but not accepted. */
+export function waitsForStep(n: { stage?: string | null }, current: StepId, mode: string | null | undefined): boolean {
+  return (mode ?? 'free') !== 'free' && STEPS.indexOf(stepOfDag(n.stage)) > STEPS.indexOf(current);
 }

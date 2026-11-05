@@ -1,6 +1,8 @@
 // The four steps (Idea → Motivation & insight → System design → Evaluation) with what stands before the next one, and
 // the dialog that lists the open checks and moves the project on: it passes the gates on the way (each pass saves a
-// snapshot) and sets the project's stage. Binding checks (project.yaml gates.blocking) must hold first.
+// snapshot) and sets the project's stage. Binding checks (project.yaml gates.blocking) must hold first. Then the
+// conversation opens with a request to draft the new step from the confirmed nodes (not sent: the researcher edits
+// and sends it).
 import { useState } from 'react';
 import { p, patch } from '../../api/client';
 import { Button, Dialog, Spinner } from '../../components/ui';
@@ -46,7 +48,7 @@ export function Steps({ pid }: { pid: string }) {
 }
 
 export function NextStepDialog({ pid, step, onClose }: { pid: string; step: StepId; onClose: () => void }) {
-  const { project, reloadProject, navigate } = useApp();
+  const { project, reloadProject, navigate, askAgent } = useApp();
   const { t, lang } = useI18n();
   const today = useToday();
   const [busy, setBusy] = useState(false);
@@ -63,6 +65,7 @@ export function NextStepDialog({ pid, step, onClose }: { pid: string; step: Step
       await reloadProject();
       today.reload();
       onClose();
+      if (nextStep) askAgent(t('td.next.draftPrompt', { step: t(`step.${nextStep}`), prev: t(`step.${step}`) }), {});
     } catch (e) { setError(errorMessage(e)); } finally { setBusy(false); }
   };
   const label = nextStep ? t('td.next.go', { step: t(`step.${nextStep}`) }) : t('td.next.goLast');
@@ -93,7 +96,7 @@ export function NextStepDialog({ pid, step, onClose }: { pid: string; step: Step
                 {g.checks.map((c, i) => (
                   <li key={i} className={c.ok ? 'ok' : 'no'}>
                     <Icon name={c.ok ? 'check' : 'close'} size={12} />
-                    <span className="grow">{c.label}
+                    <span className="grow">{(lang === 'zh' && c.zh) || c.label}
                       {!c.ok && !!c.items?.length && (
                         <span className="td-check-items">
                           {c.items.slice(0, 6).map(id => <button key={id} type="button" className="chip mono" onClick={() => { onClose(); navigate('dag', id); }}>{id}</button>)}

@@ -211,6 +211,7 @@ def build(src: Path, dst: Path) -> dict:
             shas[label] = _commit(dst, paths, when, message)
             getattr(story, label)(shas[label])
     _link_records(dst, records, story.run_ids, shas)
+    _write_dag_config(dst, "strict")               # the history is in; from here on the demo follows the stage rules
     write_text_atomic(dst / ".research" / ".gitignore", RESEARCH_GITIGNORE)
     label, when, message = RESEARCH_COMMIT
     union = [".gitattributes"] if (dst / ".gitattributes").is_file() else []   # the DAG's merge=union lines
@@ -227,13 +228,15 @@ def build(src: Path, dst: Path) -> dict:
     return shas
 
 
-def _write_dag_config(dst: Path) -> None:
-    """A complete config.yaml, so neither the user's dag_defaults nor future engine defaults change the demo's files."""
+def _write_dag_config(dst: Path, stage_mode: str = "free") -> None:
+    """A complete config.yaml, so neither the user's dag_defaults nor future engine defaults change the demo's files.
+    The history is replayed without the stage rules (free), then the finished demo follows them like any project."""
     from .dag.store import DEFAULT_CONFIG, deep_merge   # noqa: PLC0415
     cfg = deep_merge(DEFAULT_CONFIG, {
         "code": {"roots": ["toycache", "figures"], "exclude": ["**/*.md", "**/test_*.py"]},
         "config": {"roots": ["configs"], "ignore_keys": ["log_level"]},
         "env": {"key": ["python", "gpu_model", "gpu_count"], "lockfile": None},
+        "stages": {"mode": stage_mode},
     })
     write_yaml(dst / ".research" / "dag" / "config.yaml", cfg)
 

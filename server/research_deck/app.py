@@ -16,7 +16,7 @@ from . import __version__, actors, config, events, projects, system
 log = logging.getLogger("research_deck")
 
 # Each package owns its routes in <pkg>/api.py and exports `router`.
-PANEL_PACKAGES = ("dag", "agents", "writing", "coding", "experiments", "viz")
+PANEL_PACKAGES = ("dag", "agents", "writing", "coding", "experiments", "viz", "start", "survey")
 MUTATING = {"POST", "PUT", "PATCH", "DELETE"}
 
 

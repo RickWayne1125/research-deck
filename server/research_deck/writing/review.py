@@ -24,7 +24,6 @@ from .findings import Validator, parse_answer
 
 log = logging.getLogger("research_deck.writing")
 MAX_REVIEW_CHARS = 160_000
-EFFORT_ORDER = ("minimal", "low", "medium", "high", "xhigh", "max", "ultra")
 
 # review_id -> {"cancel": bool, "run_id": str | None}; only reviews running in this process
 _ACTIVE: dict[str, dict] = {}
@@ -32,19 +31,12 @@ _ACTIVE_LOCK = threading.Lock()
 
 
 def effort_for(pid: str, pass_: str, words: int) -> str:
-    """The pass's effort, clamped to the writing panel's model: the strongest supported effort not above the wanted
-    one (or the weakest it has, when all are above)."""
+    """The pass's effort, clamped to what the bound model supports (catalog.clamp_effort)."""
     wanted = prompts.EFFORT[pass_]
     if pass_ == "typo" and words < prompts.SHORT_TYPO_WORDS:
         wanted = "low"
     b = sessions.get_binding(pid, "writing")
-    info = catalog.model_info(b["provider"], b["model"]) or {}
-    efforts = [e for e in info.get("efforts") or [] if e in EFFORT_ORDER]
-    if efforts and wanted not in efforts:
-        rank = EFFORT_ORDER.index(wanted)
-        below = [e for e in efforts if EFFORT_ORDER.index(e) <= rank]
-        wanted = max(below, key=EFFORT_ORDER.index) if below else min(efforts, key=EFFORT_ORDER.index)
-    return catalog.normalize(b["provider"], b["model"], wanted, b.get("fast"))[1]
+    return catalog.clamp_effort(b["provider"], b["model"], wanted)
 
 
 def _publish(pid: str, review: dict, **extra) -> None:

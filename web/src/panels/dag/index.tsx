@@ -8,7 +8,7 @@ import { ApiError, get, p as path } from '../../api/client';
 import { Icon } from '../../components/icons';
 import { Button, Empty, ErrorNote, IconButton, PanelHead, Segmented, Spinner } from '../../components/ui';
 import { ResizeHandle, useResizableWidth } from '../../components/resize';
-import { useT } from '../../i18n';
+import { useI18n } from '../../i18n';
 import { useApp, useLiveReload } from '../../state/app';
 import { useToday } from '../../state/today';
 import { leaving, stepOfStage } from '../../state/stages';
@@ -54,7 +54,7 @@ function useStored<T extends string>(key: string, initial: T, allowed: readonly 
 export default function DagPanel() {
   const { projectId, project, sub, navigate, askAgent } = useApp();
   const pid = projectId!;
-  const t = useT();
+  const { t, lang } = useI18n();
   const L = useDagLabels();
   const toasts = useToasts();
   const today = useToday();
@@ -193,7 +193,7 @@ export default function DagPanel() {
         if (d && typeof d === 'object' && d.impact) preview.setImpact(d.impact, t('dag.preview.rebased'));
         else { toasts.push({ tone: 'warn', text: t('dag.preview.conflict', { msg: errText(e) }) }); load(); }
       } else {
-        toasts.push({ tone: 'accent', text: t('dag.toast.failed', { msg: errText(e) }) }, 9000);
+        toasts.push({ tone: 'accent', text: t('dag.toast.failed', { msg: errText(e, t) }) }, 9000);
       }
     } finally { setBusy(false); }
   }, [preview, pid, reportOps, load, navigate, toasts, t]);
@@ -218,7 +218,7 @@ export default function DagPanel() {
 
   const runOps = useCallback(async (ops: Op[], title: string) => {
     try { reportOps(await dagApi.ops(pid, ops, { base_digest: graph?.digest }), title); load(); today.reload(); }
-    catch (e) { toasts.push({ tone: 'accent', text: t('dag.toast.failed', { msg: errText(e) }) }, 9000); }
+    catch (e) { toasts.push({ tone: 'accent', text: t('dag.toast.failed', { msg: errText(e, t) }) }, 9000); }
   }, [pid, graph?.digest, reportOps, load, today, toasts, t]);
 
   // Choosing a decision's option is a what-if first: the side panel shows what it changes before Apply.
@@ -273,7 +273,9 @@ export default function DagPanel() {
   const counts = useMemo(() => Object.fromEntries(FILTERS.map(f => [f, graph ? filterMembers(graph, f).size : 0])) as Record<Filter, number>, [graph]);
   const lensSet = useMemo(() => (graph && filter !== 'all' && filter !== 'dead' && !impact ? members : null), [graph, filter, members, impact]);
   const step = stepOfStage(project?.stage);
-  const missing = leaving(step, gates).missing.length;
+  const missingList = leaving(step, gates).missing;
+  const missing = missingList.length;
+  const staged = (graph?.stage_mode ?? 'free') !== 'free';
   const empty = !loading && ((graph && graph.nodes.length === 0) || loadError?.status === 404);
 
   let side: React.ReactNode = null;
@@ -292,7 +294,7 @@ export default function DagPanel() {
 
   return (
     <div ref={rootRef} className="panel dg-root" style={sideW.style}>
-      <PanelHead title={t('nav.dag')} subtitle={graph && graph.nodes.length ? t('dag.subtitle2', { n: live }) : t('dag.subtitleEmpty')}>
+      <PanelHead title={t('nav.dag')} subtitle={graph && graph.nodes.length ? t('dag.subtitle2', { n: live }) + (staged ? ` · ${t('dag.stage.hint')}` : '') : t('dag.subtitleEmpty')}>
         {loading && graph && <Spinner />}
         {graph && graph.nodes.length > 0 && (
           <>
@@ -341,6 +343,7 @@ export default function DagPanel() {
               {loadError && <div className="dg-float-note"><ErrorNote error={loadError.msg} onRetry={load} /></div>}
               {view === 'list' ? (
                 <ListView graph={graph} members={members} runNode={runNode} selected={selected} currentStep={step} missing={missing} readOnly={false}
+                  missingLabels={missingList.map(m => (lang === 'zh' && m.zh) || m.label)} stageMode={graph.stage_mode}
                   onSelect={select} onAccept={accept} onReject={id => setStatusFor({ id, action: 'abandon' })} onDetails={openDetails}
                   onAsk={id => ask(id, 'free', t('dag.list.askPrompt', { id }))} onChoose={choose} onNextStep={() => setNextStep(true)} />
               ) : (

@@ -190,3 +190,5 @@ button.ov-act-row:hover { background: var(--plate); }
 .td-check-items { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .td-check-items .chip { cursor: pointer; }
 .td-recent .card { border: 0; background: none; }
+.td-file { font-size: var(--fs-sm); margin-left: 2px; }
+.td-warn-text { color: var(--stale); }

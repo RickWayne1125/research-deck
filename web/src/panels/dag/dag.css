@@ -407,3 +407,16 @@
 .dl-link:hover { text-decoration: underline; }
 .dl-row-actions { gap: 6px; }
 .dl-hint { font-size: var(--fs-xs); }
+/* stage by stage (dag/stages.py): steps not started, drafts waiting for their step, what a row rests on */
+.dl-group.later .dl-group-title { color: var(--muted); }
+.dl-group-head .dl-stage-chip { margin-left: auto; }
+.dl-group-head .dl-group-gate + .dl-stage-chip { margin-left: 0; }
+.dl-stage-chip.is-passed { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, transparent); background: var(--ok-wash); }
+.dl-locked {
+  display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border: var(--line) dashed var(--rule-strong);
+  border-radius: var(--r-lg); color: var(--ink); font-size: var(--fs-sm); background: var(--plate);
+}
+.dl-locked > svg { margin-top: 2px; flex: none; color: var(--muted); }
+.dl-locked-hint { font-size: var(--fs-xs); }
+.dl-row-chip.is-waits { border-style: dashed; }
+.dl-row-from { padding: 0 14px 7px 38px; margin-top: -3px; font-size: var(--fs-xs); }

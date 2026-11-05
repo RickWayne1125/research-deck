@@ -16,6 +16,7 @@ def human(client):
 
 
 def set_settings(data):
+    data = {**data, "dag_defaults": {"stages": {"mode": "free"}, **(data.get("dag_defaults") or {})}}
     config.SETTINGS_FILE.write_text(json.dumps(data))
     config._SETTINGS_CACHE = (-1.0, {})
 

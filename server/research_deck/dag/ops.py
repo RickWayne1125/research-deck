@@ -22,6 +22,7 @@ from .model import (ABANDON_REASONS, DEAD, KIND_STAGE, PREVIEW_ONLY, PURPOSE_STA
                     parse_addr, ref_id, spec_of, validate_node)
 from .resolve import Resolver, check_rev, git_text, yaml_set_text
 from .store import DagStore, safe_name
+from . import stages
 
 
 class OpError(Exception):
@@ -124,6 +125,35 @@ class Txn:
         if not self.dry:
             raise OpError(409, f"{n['id']} is locked: unlock it first", requires=[f"unlock:{n['id']}"])
 
+    # stage-by-stage progression (stages.py) ----------------------------------
+    def stage_mode(self) -> str:
+        return stages.mode(self.state.cfg)
+
+    def check_stage(self, n: dict) -> None:
+        """A node may be written in its step only once the project has reached that step (strict)."""
+        if self.stage_mode() != "strict":
+            return
+        step, now = stages.node_step(n), stages.project_step(self.store)
+        if step > now:
+            raise OpError(409, f"{n['id']}: {stages.label(step)} has not started; draft it once {stages.label(step - 1)} "
+                               f"passes its checks", reason="stage_locked", step=stages.STEP_IDS[step])
+
+    def check_parent(self, n: dict, e: dict, *, confirmed: bool) -> None:
+        """A failed node grows no new branch; with `confirmed`, a parent from an earlier step must be confirmed."""
+        mode = self.stage_mode()
+        if mode == "free":
+            return
+        a = parse_addr(str(e.get("to") or ""))
+        t = self.nodes.get(a.id) if a.scheme == "node" else None
+        if t is None or t["id"] == n["id"]:
+            return
+        if t.get("status") in DEAD:
+            raise OpError(409, f"{t['id']} is {t.get('status')}: a failed node grows no new branch",
+                          reason="dead_parent", node=t["id"])
+        if confirmed and stages.node_step(t) < stages.node_step(n) and t.get("status") not in ("confirmed", "locked"):
+            raise OpError(409, f"{t['id']} is not confirmed: a node of {stages.label(stages.node_step(n))} rests only on "
+                               f"confirmed nodes of the steps before", reason="unconfirmed_parent", node=t["id"])
+
     def check_graph(self, n: dict) -> None:
         errs = validate_node(n)
         if errs:
@@ -169,6 +199,9 @@ class Txn:
         n.pop("lock", None)
         n["created"] = {"by": self.proposer or self.actor, "at": now_iso(), **({"via": self.via} if self.via else {})}
         self.check_graph(n)
+        self.check_stage(n)
+        for e in n["edges"]:
+            self.check_parent(n, e, confirmed=self.stage_mode() == "strict")
         self.nodes[nid] = n
         self._version += 1
         for e in n["edges"]:
@@ -195,6 +228,8 @@ class Txn:
             if meta in op:
                 n[meta] = {"en": op[meta]} if meta == "title" and isinstance(op[meta], str) else op[meta]
         self.check_graph(n)
+        if "stage" in op:
+            self.check_stage(n)
         if changed and not op.get("editorial") and n.get("status") == "confirmed" and is_privileged(self.actor):
             n["status"] = "active"                     # a real human edit demotes confirmed → active
         self.edited += [(n["id"], k, "edit") for k in changed]
@@ -235,6 +270,7 @@ class Txn:
         n = self.node(op.get("node"))
         e = dict(op.get("edge") or {})
         self.guard_locked(n, "edit_locked")
+        self.check_parent(n, e, confirmed=self.stage_mode() == "strict")
         n["edges"] = [x for x in edges(n) if edge_key(x) != edge_key(e)] + [e]
         self.check_graph(n)
         self._version += 1
@@ -280,6 +316,14 @@ class Txn:
         revive = frm in DEAD and to == "active"
         if (to in DEAD or revive) and not reason:
             raise OpError(400, f"{'revive' if revive else to} needs a reason")
+        if to in ("active", "confirmed") and self.stage_mode() != "free":
+            # A node takes effect only in a step that has started, on confirmed parents from the steps before.
+            step, now = stages.node_step(n), stages.project_step(self.store)
+            if step > now:
+                raise OpError(409, f"{n['id']} waits for {stages.label(step)} to start", reason="stage_locked",
+                              step=stages.STEP_IDS[step])
+            for e in edges(n):
+                self.check_parent(n, e, confirmed=True)
         verdict: dict[str, Any] = {"status": to, "reason": reason, "by": self.actor, "at": now_iso()}
         if to == "confirmed":
             problems = self.confirm_problems(n)

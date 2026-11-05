@@ -1,6 +1,7 @@
 // Impact-preview state for the panel: what-if edits recompute 300 ms after the last keystroke (§8), rollbacks and
 // relinks compute at once, and a proposal (snapshot restore) brings its own impact. Only the latest request's answer
 // is kept, so a slow preview never overwrites a newer one.
+import type { TFunc } from '../../i18n';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError } from '../../api/client';
 import { dagApi } from '../../dag/api';
@@ -21,10 +22,16 @@ export interface PreviewState extends PreviewReq { impact: Impact | null; loadin
 
 export const DEBOUNCE_MS = 300;
 
-export function errText(e: unknown): string {
+const STAGE_REASONS = new Set(['stage_locked', 'unconfirmed_parent', 'dead_parent']);
+
+/** The message of a failed request; with `t`, the stage rules' refusals (dag/stages.py) in the UI language. */
+export function errText(e: unknown, t?: TFunc): string {
   if (e instanceof ApiError) {
-    const d = e.detail as { message?: string; detail?: string } | string | null;
+    const d = e.detail as { message?: string; detail?: string; reason?: string; step?: string; node?: string } | string | null;
     if (typeof d === 'string') return d;
+    if (t && d?.reason && STAGE_REASONS.has(d.reason)) {
+      return t(`dag.refuse.${d.reason}`, { step: d.step ? t(`step.${d.step}`) : '', node: d.node ?? '' });
+    }
     return d?.message ?? d?.detail ?? e.message;
   }
   return String((e as Error)?.message ?? e);

@@ -64,6 +64,7 @@ export interface GraphResponse {
   lenses: Lenses;
   digest: string;
   at?: string | null;               // set when the graph is a past state (read-only)
+  stage_mode?: 'strict' | 'ahead' | 'free';   // how the map grows step by step (dag/stages.py)
 }
 
 export interface LensItem { id: string; cells?: string[]; note?: string }
@@ -138,7 +139,7 @@ export interface DagEvent {
   kind?: string; reason?: string; summary?: string; vid?: string; [k: string]: unknown;
 }
 
-export interface GateCheck { label: string; ok: boolean; value?: string | number | null; target?: string | number | null; items?: string[] }
+export interface GateCheck { key?: string; label: string; zh?: string; ok: boolean; value?: string | number | null; target?: string | number | null; items?: string[] }
 export interface GateStatus { gate: string; after: StageKey; title: { en: string; zh: string }; state: 'open' | 'passed' | 'passed_degraded' | 'failing'; checks: GateCheck[]; passed?: { by: string; at: string; snapshot: string } | null }
 
 export interface Snapshot { name: string; at: string; by: string; git: string | null; nodes: Record<string, string>; runs: Record<string, string>; note?: string }
