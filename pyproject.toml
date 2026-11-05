@@ -6,7 +6,7 @@ readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.12"
-dependencies = ["fastapi>=0.118", "uvicorn[standard]>=0.37", "pydantic>=2", "pyyaml", "httpx", "matplotlib", "numpy", "mcp>=1", "pypdf>=5"]
+dependencies = ["fastapi>=0.118", "uvicorn[standard]>=0.37", "pydantic>=2", "pyyaml", "httpx", "matplotlib", "numpy", "mcp>=1,<2", "pypdf>=5"]
 
 [project.optional-dependencies]
 test = ["pytest"]
