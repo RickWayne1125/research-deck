@@ -1,0 +1,97 @@
+/* Resource pools: Settings › Resource pools, the wizard, and the pool cards in Experiments › Resources.
+   Layout only; colors come from the tokens. */
+.pl { gap: 12px; }
+.pl-top { gap: 8px; }
+.pl-small { font-size: var(--fs-xs); line-height: 1.45; }
+.pl-p { margin: 0; line-height: 1.6; }
+.pl-bad { color: var(--accent); }
+.pl-good { color: var(--ok-ink, var(--ink)); }
+.pl-chips { gap: 6px; }
+.pl-chip-btn { cursor: pointer; }
+.pl-chip-btn:hover { border-color: var(--slate); color: var(--ink); }
+.pl-card { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border: var(--line) solid var(--rule); border-radius: var(--r-lg); background: var(--surface); min-width: 0; }
+.pl-empty { border-style: dashed; background: var(--plate); }
+.pl-code { font-size: 11.5px; padding: 1px 5px; border-radius: var(--r-xs); background: var(--plate); overflow-wrap: anywhere; }
+.pl-err { color: var(--accent); font-size: var(--fs-sm); white-space: pre-wrap; overflow-wrap: anywhere; }
+.pl-warn { color: var(--stale); font-size: var(--fs-sm); }
+.input.invalid { border-color: var(--accent-line); }
+
+/* the list */
+.pl-list { display: flex; flex-direction: column; border: var(--line) solid var(--rule); border-radius: var(--r-lg); background: var(--surface); }
+.pl-row { display: flex; gap: 14px; padding: 12px 14px; border-bottom: var(--line) solid var(--rule); min-width: 0; }
+.pl-row:last-child { border-bottom: 0; }
+.pl-row.dim .pl-row-main { opacity: .55; }
+.pl-row-main { flex: 1 1 auto; min-width: 0; gap: 8px; }
+.pl-row-head { gap: 8px; min-width: 0; }
+.pl-row-head .h3 { margin: 0; max-width: 260px; }
+.pl-id { font-size: 11.5px; }
+.pl-kv { grid-template-columns: minmax(64px, max-content) minmax(0, 1fr); gap: 4px 12px; font-size: var(--fs-sm); }
+.pl-kv dt { font-size: var(--fs-xs); }
+.pl-row-side { flex: none; align-items: flex-end; gap: 8px; }
+.pl-here { gap: 6px; font-size: var(--fs-sm); color: var(--muted); cursor: pointer; white-space: nowrap; }
+.pl-acts { gap: 6px; justify-content: flex-end; }
+
+/* prices and budgets */
+.pl-prices { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.pl-prices-main { gap: 14px; min-width: 0; }
+.pl-table-wrap { overflow-x: auto; }
+.pl-table td, .pl-table th { padding: 6px 8px; font-size: var(--fs-sm); }
+.pl-budgets { gap: 10px; }
+.pl-budget { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: var(--line) solid var(--rule); border-radius: var(--r-md); }
+.pl-meter { display: flex; flex-direction: column; gap: 3px; font-size: var(--fs-sm); }
+.pl-meter .ex-meter { width: 100%; }
+
+/* the wizard */
+.pl-w-title { gap: 10px; font-size: inherit; }
+.pl-steps { gap: 14px; font: 500 var(--fs-sm)/1 var(--sans); color: var(--faint); }
+.pl-step { display: inline-flex; align-items: center; gap: 6px; }
+.pl-step b { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 999px; border: var(--line) solid var(--rule-strong); font-size: 10.5px; }
+.pl-step.on { color: var(--ink-strong); }
+.pl-step.on b { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.pl-step.done { color: var(--muted); }
+.pl-w-error { margin-bottom: 10px; }
+.pl-w-grid { display: grid; grid-template-columns: 220px minmax(0, 1.1fr) minmax(0, 1fr); gap: 0; margin: -16px -18px; min-height: 420px; }
+.pl-w-col { gap: 8px; padding: 14px 16px; min-width: 0; }
+.pl-w-left, .pl-w-mid { border-right: var(--line) solid var(--rule); }
+.pl-w-presets { margin-top: 8px; }
+.pl-opt { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 8px 10px; border: var(--line) solid var(--rule); border-radius: var(--r-md); background: var(--surface); cursor: pointer; color: var(--ink); }
+.pl-opt:hover { border-color: var(--slate); }
+.pl-opt.on { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.pl-form { gap: 12px; }
+.pl-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.pl-w-test { gap: 10px; margin-top: auto; padding-top: 8px; }
+.pl-argv { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.pl-arg { display: inline-flex; align-items: center; border: var(--line) solid var(--rule-strong); border-radius: var(--r-md); background: var(--surface); }
+.pl-arg.todo { border-color: var(--stale); background: var(--stale-wash); }
+.pl-arg input { border: 0; background: none; font-size: 12px; padding: 4px 2px 4px 8px; color: var(--ink); min-width: 0; outline: none; }
+.pl-arg button { border: 0; background: none; padding: 4px 6px; color: var(--faint); cursor: pointer; display: inline-grid; place-items: center; }
+.pl-arg button:hover { color: var(--accent); }
+.pl-arg-add { display: inline-flex; align-items: center; gap: 4px; border: var(--line) dashed var(--rule-strong); border-radius: var(--r-md); background: none; color: var(--faint); padding: 4px 8px; font-size: 12px; cursor: pointer; }
+.pl-inv { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) 64px minmax(0, 1fr) 28px; gap: 6px; align-items: center; }
+.pl-test { gap: 8px; min-width: 0; }
+.pl-warns { gap: 4px; font-size: var(--fs-xs); }
+.pl-raw { margin: 6px 0 0; padding: 8px 10px; max-height: 260px; overflow: auto; background: var(--plate); border: var(--line) solid var(--rule); border-radius: var(--r-md); font-size: 11px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.pl-w-step3 { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 0; margin: -16px -18px; }
+.pl-w-step3 > .pl-w-col:first-child { border-right: var(--line) solid var(--rule); }
+.pl-rules { display: flex; flex-direction: column; gap: 6px; }
+.pl-rule { display: grid; grid-template-columns: 96px 112px minmax(0, 1fr) 84px 76px 28px; gap: 6px; align-items: center; }
+.pl-src-prices { gap: 2px; padding: 8px 10px; background: var(--plate); border-radius: var(--r-md); }
+.pl-confirm { gap: 4px; margin-top: 4px; }
+
+/* Experiments › Resources: pool cards */
+.pl-res-head { gap: 8px; }
+.pl-res-errbox { padding: 8px 10px; border-radius: var(--r-md); background: var(--accent-wash); color: var(--accent); font-size: var(--fs-sm); white-space: pre-wrap; overflow-wrap: anywhere; }
+.ex-plat.dim { opacity: .62; }
+.pl-chip-dash { border-style: dashed; }
+.pl-machines td, .pl-machines th { padding: 5px 8px; font-size: var(--fs-sm); }
+
+@media (max-width: 980px) {
+  .pl-w-grid, .pl-w-step3, .pl-prices { grid-template-columns: minmax(0, 1fr); }
+  .pl-w-left, .pl-w-mid, .pl-w-step3 > .pl-w-col:first-child { border-right: 0; border-bottom: var(--line) solid var(--rule); }
+}
+@media (max-width: 640px) {
+  .pl-row { flex-direction: column; }
+  .pl-row-side { align-items: flex-start; }
+  .pl-two { grid-template-columns: minmax(0, 1fr); }
+  .pl-rule { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}

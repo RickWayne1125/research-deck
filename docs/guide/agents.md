@@ -11,8 +11,10 @@ switch between them and the context is handed over. Model, effort and Fast mode 
 - Agents read the map, the outline and the brief, preview impacts and **propose**: new map nodes come in proposed,
   new outline items come in dashed, tasks they suggest wait for you to take them, and anything else becomes a proposal
   under **waiting for you**.
-- Agents may queue runs only on the platforms and within the daily GPU-hour budget of the project's policy
-  (`agent_auto_run` in `.research/dag/config.yaml`; none by default).
+- Agents may queue runs by themselves only within a budget: on a [resource pool](experiments.md#resource-pools) the
+  project uses whose budget gives agents GPU-hours a day, and on other platforms within the project's policy
+  (`agent_auto_run` in `.research/dag/config.yaml`). Neither allows anything by default. Agents read the pools and
+  their prices but cannot change them.
 
 ## The project brief
 
@@ -34,7 +36,8 @@ dashboard starts. Its tools:
 | `rd_lenses`, `rd_graph`, `rd_node`, `rd_explain` | read the map and why something is not fresh |
 | `rd_impact` | preview a change |
 | `rd_apply`, `rd_propose`, `rd_attest` | change the map within an agent's permissions, or propose |
-| `rd_plan_runs`, `rd_queue_runs`, `rd_experiments` | plan reruns, queue within the policy, list records |
+| `rd_plan_runs`, `rd_queue_runs`, `rd_experiments` | plan reruns (with their cost), queue within the budgets, list records |
+| `rd_pools` | the resource pools: machines, GPUs, quota, spend, prices and the agents' budget |
 | `rd_handoff_note` | leave a note for the other backend (Claude ↔ Codex) |
 
 To use it from your own Claude Code or Codex sessions, see

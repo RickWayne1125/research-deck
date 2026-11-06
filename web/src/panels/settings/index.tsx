@@ -1,4 +1,4 @@
-// Settings: how new projects start (folder, survey, stage rules), the outline templates, the integrations Research Deck found (Claude Code and
+// Settings: how new projects start (folder, survey, stage rules), the outline templates, the resource pools, the integrations Research Deck found (Claude Code and
 // Codex CLIs, the figure apps), appearance, and where things live. Model, effort and permission belong to the
 // conversation (its header).
 import { useEffect, type ReactNode } from 'react';
@@ -9,10 +9,11 @@ import { agentApi } from '../../agent/api';
 import { CopyButton, ProviderMark, providerLabel } from '../../agent/parts';
 import { NewProjectSettingsSection } from '../../start/NewProjectSettings';
 import { OutlineTemplatesSection } from '../outline/Templates';
+import { PoolsSection } from '../../pools/PoolsSection';
 import './settings.css';
 import './i18n';
 
-const SECTIONS = ['newProjects', 'templates', 'integrations', 'appearance', 'about'] as const;
+const SECTIONS = ['newProjects', 'templates', 'pools', 'integrations', 'appearance', 'about'] as const;
 type Section = (typeof SECTIONS)[number];
 
 export default function SettingsPanel() {
@@ -30,6 +31,7 @@ export default function SettingsPanel() {
         <div className="st-main">
           <Section id="newProjects" title={t('np.st.title')}><NewProjectSettingsSection /></Section>
           {project?.kind !== 'engineering' && <Section id="templates" title={t('ol.tpl.title')}><OutlineTemplatesSection /></Section>}
+          <Section id="pools" title={t('pl.title')}><PoolsSection /></Section>
           <Section id="integrations" title={t('st.sec.integrations')}><IntegrationsSection /></Section>
           <Section id="appearance" title={t('st.sec.appearance')}><AppearanceSection /></Section>
           <Section id="about" title={t('st.sec.about')}><AboutSection pid={pid} /></Section>

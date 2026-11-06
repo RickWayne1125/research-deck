@@ -75,7 +75,7 @@ registerStrings({
     'ex.r.asOf': '截至 {time}', 'ex.r.auto': '可见时每 15 秒刷新',
     'ex.r.demoNotice': '下面是示例数据，所有数值都是虚构的，用来展示资源页的样子。', 'ex.d.job': '外部任务 ID',
     
-    'ex.r.kind.home': '家用', 'ex.r.kind.lab': '实验室', 'ex.r.kind.cloud': '云', 'ex.r.kind.local': '本机',
+    'ex.r.kind.home': '家里', 'ex.r.kind.lab': '实验室', 'ex.r.kind.cloud': '云', 'ex.r.kind.local': '本机', 'ex.r.kind.cluster': '集群',
     'ex.r.ps.ok': '正常', 'ex.r.ps.degraded': '异常', 'ex.r.ps.disabled': '已停用', 'ex.r.ps.unknown': '未知',
     'ex.r.ns.online': '在线', 'ex.r.ns.offline': '离线', 'ex.r.ns.stale': '遥测过期', 'ex.r.ns.unknown': '未知',
     'ex.r.quota': '配额', 'ex.r.cost': '费用', 'ex.r.costUnknown': '未知', 'ex.r.costNone': '不计费',
@@ -193,7 +193,7 @@ registerStrings({
     'ex.r.asOf': 'as of {time}', 'ex.r.auto': 'refreshes every 15 s while visible',
     'ex.r.demoNotice': 'Below is demo data: every value is invented, to show what the Resources tab looks like.', 'ex.d.job': 'External job id',
     
-    'ex.r.kind.home': 'Home', 'ex.r.kind.lab': 'Lab', 'ex.r.kind.cloud': 'Cloud', 'ex.r.kind.local': 'Local',
+    'ex.r.kind.home': 'Home', 'ex.r.kind.lab': 'Lab', 'ex.r.kind.cloud': 'Cloud', 'ex.r.kind.local': 'This machine', 'ex.r.kind.cluster': 'Cluster',
     'ex.r.ps.ok': 'OK', 'ex.r.ps.degraded': 'Degraded', 'ex.r.ps.disabled': 'Disabled', 'ex.r.ps.unknown': 'Unknown',
     'ex.r.ns.online': 'Online', 'ex.r.ns.offline': 'Offline', 'ex.r.ns.stale': 'Stale telemetry', 'ex.r.ns.unknown': 'Unknown',
     'ex.r.quota': 'Quota', 'ex.r.cost': 'Cost', 'ex.r.costUnknown': 'unknown', 'ex.r.costNone': 'not billed',

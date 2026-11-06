@@ -131,7 +131,7 @@ export interface Experiment {
 }
 export interface GpuInfo { name: string; util: number | null; mem_used: number | null; mem_total: number | null; temp: number | null; power?: number | null }
 export interface ResourceNode { id: string; label: string; status: 'online' | 'offline' | 'stale' | 'unknown'; gpus: GpuInfo[]; cpu?: number | null; ram?: number | null; running?: string[]; note?: string }
-export interface Platform { id: string; label: string; kind: 'cloud' | 'lab' | 'home' | 'local'; status: 'ok' | 'degraded' | 'disabled' | 'unknown'; nodes: ResourceNode[]; quota?: Record<string, string | number>; cost?: { amount: number | null; currency: string; as_of: string | null; estimate: boolean } | null; note?: string }
+export interface Platform { id: string; label: string; kind: 'cloud' | 'cluster' | 'lab' | 'home' | 'local'; status: 'ok' | 'degraded' | 'disabled' | 'unknown'; nodes: ResourceNode[]; quota?: Record<string, string | number>; cost?: { amount: number | null; currency: string; as_of: string | null; estimate: boolean } | null; note?: string }
 export interface Resources { source: string; as_of: string; platforms: Platform[] }   // source 'demo' = made-up data
 
 // ------------------------------------------------------------------ visualization

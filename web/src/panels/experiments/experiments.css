@@ -113,6 +113,7 @@
 .ex-fieldset > legend { padding: 0 4px; }
 .ex-grid4 { display: grid; grid-template-columns: 1.3fr 1.3fr .6fr 1.3fr; gap: 8px; }
 @media (max-width: 640px) { .ex-grid4 { grid-template-columns: 1fr 1fr; } }
+.ex-estimate { gap: 14px; align-items: flex-end; margin-top: 8px; }
 
 /* ---------------------------------------------------------------- resources */
 .ex-plat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 12px; align-items: start; }

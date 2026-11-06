@@ -1,22 +1,36 @@
-// Resources tab: platforms, nodes, GPU telemetry, quota and cost from GET /api/resources (labeled demo data).
-// Unknown values stay "unknown" (never 0); telemetry older than 30 s is marked; refreshes every 15 s while visible.
+// Resources tab: the resource pools (GET /api/resources?project=) as platforms: machines, GPU telemetry, quota, spend,
+// price and the agents' budget; or, on request, the labeled example data. Unknown values stay "unknown" (never 0);
+// telemetry older than 30 s is marked; a pool whose last read failed shows that reading and why; refreshes every 15 s.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Button, ErrorNote, Spinner } from '../../components/ui';
+import { Badge, Button, Empty, ErrorNote, Segmented, Spinner } from '../../components/ui';
 import { Icon } from '../../components/icons';
 import { useI18n, useRelTime, useT } from '../../i18n';
+import { useApp } from '../../state/app';
+import { poolApi, thisComputer, type PoolInfo } from '../../pools/api';
+import { num, rateText, ruleText } from '../../pools/format';
+import { KIND_ICON, PoolStateBadge } from '../../pools/PoolsSection';
+import '../../pools/i18n';
+import '../../pools/pools.css';
 import { exApi, type ExCost, type ExGpu, type ExNode, type ExPlatform, type ExResources, type QuotaItem } from './api';
 import { formatValue, gib, Meter, parseTime, useNow } from './parts';
 
 const REFRESH_MS = 15_000;
 const STALE_MS = 30_000;
+const FILTER_KEY = 'rd.ex.poolFilter';
 
-export function ResourcesView() {
+export function ResourcesView({ pid }: { pid: string }) {
   const t = useT();
   const rel = useRelTime();
+  const { navigate } = useApp();
   const [data, setData] = useState<ExResources | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetchedAt, setFetchedAt] = useState(0);
+  const [example, setExample] = useState(false);
+  const [filter, setFilterState] = useState<'here' | 'all'>(() => {
+    try { return localStorage.getItem(FILTER_KEY) === 'all' ? 'all' : 'here'; } catch { return 'here'; }
+  });
+  const setFilter = (v: 'here' | 'all') => { setFilterState(v); try { localStorage.setItem(FILTER_KEY, v); } catch { /* storage unavailable */ } };
   const busy = useRef(false);
 
   const load = useCallback(async () => {
@@ -24,7 +38,7 @@ export function ResourcesView() {
     busy.current = true;
     setLoading(true);
     try {
-      const r = await exApi.resources();
+      const r = await exApi.resources(pid, example);
       setData(r);
       setFetchedAt(Date.now());
       setError(null);
@@ -34,7 +48,10 @@ export function ResourcesView() {
       busy.current = false;
       setLoading(false);
     }
-  }, []);
+  }, [pid, example]);
+  const addThisComputer = async () => {
+    try { await poolApi.save(thisComputer(t('pl.thisComputer')), pid); await load(); } catch (e) { setError(String((e as Error).message ?? e)); }
+  };
 
   useEffect(() => {
     load();
@@ -50,27 +67,50 @@ export function ResourcesView() {
     return <div className="empty"><Spinner /></div>;
   }
   const demo = data.source === 'demo';
-  const gpus = data.platforms.reduce((n, p) => n + p.nodes.reduce((m, nd) => m + nd.gpus.length, 0), 0);
+  const pools = data.source === 'pools';
+  const hereCount = data.platforms.filter(p => p.pool?.here !== false).length;
+  const shown = pools && filter === 'here' ? data.platforms.filter(p => p.pool?.here !== false) : data.platforms;
+  const gpus = shown.reduce((n, p) => n + p.nodes.reduce((m, nd) => m + nd.gpus.length, 0), 0);
   // The server's as-of plus how long ago we fetched it, so ages keep moving between refreshes.
   const skew = fetchedAt ? now - fetchedAt : 0;
+  const unmatched = data.unmatched ?? [];
 
   return (
     <div className="ex-res">
       <div className="ex-toolbar">
         {demo ? <span className="badge warn"><Icon name="info" size={11} />{t('ex.r.sourceDemo')}</span>
-          : <span className="badge data"><Icon name="server" size={11} />{data.source}</span>}
+          : pools ? (hereCount !== data.platforms.length && (
+            <Segmented ariaLabel={t('pl.title')} value={filter} onChange={setFilter} options={[
+              { value: 'here', label: t('pl.r.filterHere', { n: hereCount }) }, { value: 'all', label: t('pl.r.filterAll', { n: data.platforms.length }) }]} />
+          )) : <span className="badge data"><Icon name="server" size={11} />{data.source}</span>}
         <span className="muted ex-small" title={data.as_of}>{t('ex.r.asOf', { time: rel(data.as_of) })}</span>
-        <span className="faint ex-small">· {t('ex.r.platforms', { n: data.platforms.length, gpus })}</span>
+        <span className="faint ex-small">· {t('ex.r.platforms', { n: shown.length, gpus })}</span>
         <div className="grow" />
         <span className="faint ex-small">{t('ex.r.auto')}</span>
+        {!demo && <Button size="sm" icon="settings" onClick={() => navigate('settings', 'pools')}>{t('pl.r.manage')}</Button>}
         <Button size="sm" icon="refresh" onClick={load} disabled={loading}>{t('common.refresh')}</Button>
       </div>
       <div className="ex-pad">
-        {demo && <div className="notice warn"><Icon name="info" /> <span>{t('ex.r.demoNotice')}</span></div>}
+        {demo && (
+          <div className="notice warn"><Icon name="info" /> <span className="grow">{t('ex.r.demoNotice')}</span>
+            {example && <Button size="sm" onClick={() => { setData(null); setExample(false); }}>{t('pl.r.exampleBack')}</Button>}</div>
+        )}
+        {pools && data.platforms.length > 0 && <div className="faint ex-small">{t('pl.r.lead')}</div>}
+        {pools && unmatched.length > 0 && (
+          <div className="notice"><Icon name="info" /><span className="grow">{t('pl.r.unmatched', { n: unmatched.length, names: unmatched.join('、') })}</span>
+            <Button size="sm" onClick={() => navigate('settings', 'pools')}>{t('pl.r.register')}</Button></div>
+        )}
         {error && <ErrorNote error={error} onRetry={load} />}
-        {data.platforms.length === 0 ? <div className="empty">{t('ex.r.empty')}</div> : (
+        {data.platforms.length === 0 ? (pools ? (
+          <Empty icon="server" title={t('pl.empty.title')} action={
+            <div className="row wrap" style={{ justifyContent: 'center' }}>
+              <Button variant="primary" icon="terminal" onClick={addThisComputer}>{t('pl.empty.addLocal')}</Button>
+              <Button icon="plus" onClick={() => navigate('settings', 'pools')}>{t('pl.empty.add')}</Button>
+              <Button variant="ghost" onClick={() => { setData(null); setExample(true); }}>{t('pl.r.example')}</Button>
+            </div>}>{t('pl.empty.body')}</Empty>
+        ) : <div className="empty">{t('ex.r.empty')}</div>) : (
           <div className="ex-plat-grid">
-            {data.platforms.map(p => <PlatformCard key={p.id} p={p} skew={skew} demo={demo} />)}
+            {shown.map(p => <PlatformCard key={p.id} p={p} skew={skew} demo={demo} />)}
           </div>
         )}
       </div>
@@ -88,31 +128,109 @@ function useNote() {
 
 function PlatformCard({ p, skew, demo }: { p: ExPlatform; skew: number; demo: boolean }) {
   const t = useT();
+  const { lang } = useI18n();
+  const rel = useRelTime();
   const note = useNote()(p);
+  const pool = p.pool;
+  const inventoryOnly = p.nodes.length > 0 && p.nodes.every(n => n.inventory_only);
   return (
-    <article className={`card ex-plat ${p.status === 'disabled' ? 'disabled' : ''}`}>
+    <article className={`card ex-plat ${p.status === 'disabled' ? 'disabled' : ''} ${pool && !pool.here ? 'dim' : ''}`}>
       <div className="card-head">
         <div className="col grow" style={{ gap: 2, minWidth: 0 }}>
-          <div className="row" style={{ gap: 6, minWidth: 0 }}>
+          <div className="row wrap" style={{ gap: 6, minWidth: 0 }}>
+            {pool && <Icon name={KIND_ICON[p.kind] ?? 'server'} size={14} />}
             <h3 className="h3 ellipsis" title={p.label}>{p.label}</h3>
             <span className="chip">{t(`ex.r.kind.${p.kind}`)}</span>
+            {pool && <PoolStateBadge info={pool} manual={pool.source.type === 'manual'} short />}
             {(p.demo || demo) && <span className="badge warn">{t('ex.r.demoFlag')}</span>}
             {p.simulated && <span className="badge warn">{t('ex.r.simulated')}</span>}
           </div>
+          {pool && <div className="faint ex-small">{t(`pl.src.${pool.source.type}`)}{pool.read_at && pool.source.type !== 'manual'
+            ? ` · ${pool.state === 'failed' ? t('pl.r.showing', { rel: rel(pool.read_at) }) : rel(pool.read_at)}` : ''}</div>}
           {note && <div className="muted ex-small">{note}</div>}
         </div>
-        <span className="row ex-small ex-nowrap" style={{ gap: 5 }}>
-          <span className={`dot ${PLATFORM_DOT[p.status] ?? ''}`} />{t(`ex.r.ps.${p.status}`)}
-        </span>
+        {pool ? <PoolChips pool={pool} lang={lang} /> : (
+          <span className="row ex-small ex-nowrap" style={{ gap: 5 }}>
+            <span className={`dot ${PLATFORM_DOT[p.status] ?? ''}`} />{t(`ex.r.ps.${p.status}`)}
+          </span>
+        )}
       </div>
       <div className="card-body col ex-plat-body">
+        {pool?.error && <div className="pl-res-errbox">{pool.error}<div className="ex-small" style={{ marginTop: 4 }}>{t('pl.r.errorFix')}</div></div>}
         {(p.quota_items?.length || p.quota || p.quota_note) ? <Quota p={p} /> : null}
-        <Cost cost={p.cost} />
-        {p.nodes.length ? (
+        {(!pool || p.cost) && <Cost cost={p.cost} />}
+        {p.nodes.length ? (pool && inventoryOnly && p.nodes.length > 4 ? <MachineTable p={p} /> : (
           <div className="ex-nodes">{p.nodes.map(n => <NodeRow key={n.id} n={n} skew={skew} />)}</div>
-        ) : p.status !== 'disabled' ? <div className="faint ex-small">{t('ex.r.noNodes')}</div> : null}
+        )) : p.status !== 'disabled' && pool?.state !== 'reading' ? <div className="faint ex-small">{t('ex.r.noNodes')}</div> : null}
+        {pool && <AgentBudget pool={pool} />}
+        {pool && (inventoryOnly || p.cost?.estimate) && (
+          <div className="faint ex-small">{[inventoryOnly ? t('pl.r.inventoryOnly') : null, p.cost?.estimate ? t('pl.r.spendQuota') : null].filter(Boolean).join(' ')}</div>
+        )}
       </div>
     </article>
+  );
+}
+
+/** The price, credential and "not used here" chips of a pool card. */
+function PoolChips({ pool, lang }: { pool: PoolInfo; lang: string }) {
+  const t = useT();
+  return (
+    <span className="row wrap ex-small" style={{ gap: 5, justifyContent: 'flex-end' }}>
+      {!pool.here && <span className="chip pl-chip-dash">{t('pl.r.notHere')}</span>}
+      {pool.credential?.state === 'expired' ? <Badge tone="accent">{t('pl.r.credExpired')}</Badge>
+        : pool.credential?.state === 'soon' ? <Badge tone="warn">{t('pl.r.credSoon', { n: Math.max(0, Math.floor(pool.credential.days_left ?? 0)) })}</Badge> : null}
+      <span className="chip">{rateText(pool.rate, t, lang)}</span>
+    </span>
+  );
+}
+
+function AgentBudget({ pool }: { pool: PoolInfo }) {
+  const t = useT();
+  const { lang } = useI18n();
+  const day = pool.budget.agent_gpu_hours_per_day ?? 0;
+  if (day <= 0) return null;
+  const used = pool.budget.agent_used_today ?? 0;
+  return (
+    <div className="pl-meter">
+      <div className="row"><span className="faint grow">{t('pl.r.agentToday')}</span><span className="num">{t('pl.b.gpuh', { used: num(used, lang), n: num(day, lang) })}</span></div>
+      <Meter value={used} max={day} tone={used >= day ? 'warn' : 'process'} />
+    </div>
+  );
+}
+
+/** Many machines with no telemetry (a cloud allocation, a cluster): grouped by flavor, GPU, state and price. */
+function MachineTable({ p }: { p: ExPlatform }) {
+  const t = useT();
+  const { lang } = useI18n();
+  const vmState = (s: string) => { const k = `ex.r.vm.${s}`; const v = t(k); return v === k ? s : v; };
+  const groups = new Map<string, { ids: string[]; flavor: string; gpu: string; state: string; tone: string; price: string }>();
+  for (const n of p.nodes) {
+    const models = new Map<string, number>();
+    for (const g of n.gpus) models.set(g.name, (models.get(g.name) ?? 0) + 1);
+    const gpu = models.size ? [...models].map(([m, c]) => `${m} × ${c}`).join(', ') : t('pl.r.noGpu');
+    const state = n.state ? vmState(n.state) : t(`ex.r.ns.${n.status}`);
+    const pr = n.price;
+    const price = !pr ? '' : pr.state === 'free' ? t('pl.free') : pr.rule_amount != null && pr.unit && pr.item
+      ? ruleText({ item: pr.item, amount: pr.rule_amount, unit: pr.unit }, t, lang) : t('pl.unknownPrice');
+    const key = [n.flavor ?? '', gpu, state, price].join('\u0000');
+    const g = groups.get(key) ?? { ids: [], flavor: n.flavor ?? '—', gpu, state, tone: n.status === 'online' ? 'ok' : '', price };
+    g.ids.push(n.label || n.id);
+    groups.set(key, g);
+  }
+  return (
+    <div className="pl-table-wrap">
+      <table className="table pl-machines">
+        <thead><tr><th>{t('pl.r.machines')}</th><th>{t('pl.r.flavor')}</th><th>{t('pl.r.gpu')}</th><th>{t('pl.r.status')}</th><th>{t('pl.r.price')}</th></tr></thead>
+        <tbody>{[...groups.values()].map(g => (
+          <tr key={g.ids[0]}>
+            <td className="mono" title={g.ids.join(', ')}>{g.ids.length === 1 ? g.ids[0] : `${g.ids[0]} … ${g.ids[g.ids.length - 1]}`}</td>
+            <td>{g.flavor}</td><td>{g.gpu}</td>
+            <td><Badge tone={g.tone === 'ok' ? 'ok' : undefined}>{g.state} {g.ids.length}</Badge></td>
+            <td>{g.price}</td>
+          </tr>
+        ))}</tbody>
+      </table>
+    </div>
   );
 }
 
@@ -157,7 +275,7 @@ function Cost({ cost }: { cost: ExCost | null | undefined }) {
   else body = (
     <span className="row wrap" style={{ gap: 6 }}>
       <span className="num ex-amount">{formatValue(cost.amount, lang)} {cost.currency}</span>
-      {cost.metric && <span className="faint ex-small">{t(`ex.metric.${cost.metric}`)}</span>}
+      {cost.metric && <span className="faint ex-small">{t(`ex.metric.${cost.metric}`)}{cost.since ? ` · ${t('pl.r.since', { date: cost.since })}` : ''}</span>}
       <span className={`badge ${cost.estimate ? 'warn' : ''}`}>{cost.estimate ? t('ex.r.estimate') : t('ex.r.reported')}</span>
       <span className="faint ex-small" title={cost.as_of ?? undefined}>{cost.as_of ? t('ex.r.costAsOf', { time: rel(cost.as_of) }) : t('ex.r.noAsOf')}</span>
     </span>

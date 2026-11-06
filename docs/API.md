@@ -145,7 +145,34 @@ Every finding quotes the exact text to change (`quote` + `before` disambiguate t
 | GET | /experiments/{eid}/logs | `?offset=` (byte offset; < 0 = tail) | `{lines, next, size, eof, source, …}` complete lines, ANSI stripped (for agents and summaries) |
 | GET | /experiments/{eid}/logs/stream | `?offset=` (< 0 = last 256 KB); `Last-Event-ID` resumes | SSE: `meta`, `data {data, offset}` (raw text: ANSI, `\r` redraws), `reset`, `notice`, `eof` — the panel's terminal |
 | GET | /experiments/{eid}/logs/raw | | the log as a text/plain attachment (last 20 MB) |
-| GET | /api/resources | | `Resources` (platforms, nodes, GPU telemetry, quota and cost; `source: "demo"` = labeled demo data) |
+| GET | /api/resources | `?project=&demo=` | `Resources`: every [resource pool](#resource-pools-pools) as a platform (`source: "pools"`), with `selection` and `unmatched` for the project; `?demo=1` = the labeled example data (`source: "demo"`) |
+
+## Resource pools (pools/)
+
+Pools belong to the machine (`~/.research-deck/pools/<id>.yaml`). Every write, test and read-now is the researcher's
+(403 for agents): a pool's source runs a command or calls an address with the researcher's credentials.
+
+| Method | Path | Body / query | Response |
+|---|---|---|---|
+| GET | /api/pools | `?project=` | `{pools: [{def, platform}], selection, unmatched, broken: [{file, error}], dir, adapters, python}` |
+| GET | /api/pools/{id} | `?project=` | `{def, platform, yaml}` (the file as written) |
+| PUT | /api/pools/{id} | a definition (the YAML's fields; `id` must match) | `{def, platform}`; starts a first read |
+| DELETE | /api/pools/{id} | | `{trashed}` (the file moved to `pools/.trash/`) |
+| POST | /api/pools/{id}/refresh | `?project=` | `{def, platform}` after reading now |
+| POST | /api/pools/test | a definition | `{ok, duration_s, error?, warnings, doc, raw, platform}`: one read, nothing saved |
+| POST | /api/pools/parse | `{text}` (a pool file) | `{def, exists}` (validated, not saved) |
+| PUT | /api/projects/{pid}/pools | `{pools: [ids] \| null}` | `{selection}` (project.yaml `resources.pools`; null = all) |
+
+A platform from a pool carries, besides the `Platform` fields, `pool`: `{state: ok | stale | failed | reading, here,
+source, read_at, age_s, error, warnings, capabilities, credential: {ref, expires_at, days_left, state}, billed,
+prices: [{item, match, amount, unit, from}], rate: {state: known | free | unknown | varies, amount, unit, item},
+budget: {agent_gpu_hours_per_day, agent_used_today, month}}`; each node carries `flavor` and `price`. The document a
+source returns is [rd-pool/1](examples/pool-adapter.md#the-document).
+
+`POST /dag/runs/plan` prices each cell (`cost: {state, amount, unit, rate, item, pool, why}`) and returns `cost`
+(per unit, never summed across units), `unpriced: {cells, gpu_h}` and `limits` (where the plan would go past a pool's
+quota or monthly budget); `usd` stays the USD total. The impact preview's summary carries `cost.rerun` and
+`unpriced.rerun` the same way.
 
 ## Visualization (viz/)
 

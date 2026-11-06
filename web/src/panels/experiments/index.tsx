@@ -104,7 +104,7 @@ export default function ExperimentsPanel() {
           <RunsView records={records} loading={list.loading} error={list.error} onRetry={list.reload}
             onOpen={open} onNew={() => setCreating(true)} selected={openId} />
         )}
-        {!plan && tab === 'resources' && <ResourcesView />}
+        {!plan && tab === 'resources' && <ResourcesView pid={pid} />}
         {!plan && tab === 'runs' && openId && <RunDrawer key={openId} pid={pid} id={openId} summary={summary} onClose={close} />}
       </div>
       {creating && (

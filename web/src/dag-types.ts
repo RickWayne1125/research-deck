@@ -116,6 +116,8 @@ export interface Impact {
     rerun: number; conditional: number; reused: number; revived: number; review: number; orphaned: number; broken: number; lock: number;
     gpu_h: { rerun: number; conditional_worst: number; reused: number; full_campaign: number };
     usd?: { rerun: number };
+    cost?: { rerun: Record<string, number> };
+    unpriced?: { rerun: { cells: number; gpu_h: number } };
   };
   rerun: ImpactItem[]; conditional: ImpactItem[]; reused: ImpactItem[]; revived: ImpactItem[];
   review: ImpactItem[]; orphaned: ImpactItem[]; broken: ImpactItem[]; lock: ImpactItem[];
@@ -144,4 +146,16 @@ export interface GateStatus { gate: string; after: StageKey; title: { en: string
 
 export interface Snapshot { name: string; at: string; by: string; git: string | null; nodes: Record<string, string>; runs: Record<string, string>; note?: string }
 
-export interface RunPlan { waves: { node: string; cell: string; est_gpu_h: number | null; platform: string | null; blocked?: string | null }[][]; gpu_h: number; usd: number }
+/** What rerunning a cell costs (pools/service.py): state free = not billed; unknown and varies have no amount. */
+export interface CellCost {
+  state: 'known' | 'free' | 'unknown' | 'varies'; amount: number | null; unit: string | null; rate: number | null;
+  item: 'gpu_hour' | 'node_hour' | null; rule_amount: number | null; pool: string | null; why: string | null;
+}
+/** A plan that would go past what a pool has left in that unit: a quota the source reads, or the month's budget. */
+export interface LimitWarning { pool: string; unit: string; need: number; left: number; what: 'quota' | 'month'; name: string | null; spent_known?: boolean }
+export interface RunPlan {
+  waves: { node: string; cell: string; est_gpu_h: number | null; platform: string | null; blocked?: string | null; cost?: CellCost }[][];
+  gpu_h: number; usd: number;
+  /** per unit (units are never added together); cells with an unknown price are counted in unpriced, never as 0 */
+  cost?: Record<string, number>; unpriced?: { cells: number; gpu_h: number }; limits?: LimitWarning[];
+}

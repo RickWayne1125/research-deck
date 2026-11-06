@@ -10,8 +10,10 @@ from collections import defaultdict
 from datetime import UTC, datetime
 from typing import Any
 
-from .evaluate import NodeE, State, build, current, pred_text
+from ..pools.service import Pricer, totals
+from .evaluate import NodeE, build, current, pred_text
 from .fp import MISSING, UNKNOWN, fp_json, glob_match, show
+from .gates import cell_estimate
 from .model import DEAD, SOFT, agent_mode, edge_key, edges, facet_value, parse_addr, rank, ref_id, spec_of
 from .ops import OpError, Txn, bound_nodes, is_privileged
 from .resolve import code_patch, flatten, load_yaml
@@ -32,11 +34,6 @@ def _age(run: dict) -> str | None:
     except (TypeError, ValueError):
         return None
     return f"{days}d"
-
-
-def _usd(st: State, platform: str | None, gpu_h: float) -> float:
-    probe = st.store.env_probe(platform) if platform else None
-    return round(gpu_h * float((probe or {}).get("usd_per_gpu_hour") or 0), 2)
 
 
 def _margin(pred: dict | None, value: float | None) -> float | None:
@@ -133,7 +130,7 @@ def impact(store, body: dict, actor: str = "human:preview") -> dict:
     E0, E1 = s0e.E, s1.E
     out: dict[str, Any] = {c: [] for c in CATEGORIES}
     gpu = {"rerun": 0.0, "conditional_worst": 0.0, "reused": 0.0, "full_campaign": 0.0}
-    usd = 0.0
+    pricer, priced = Pricer(), []
     why_paths: dict[str, list[str]] = {}
     code_paths = [p["addr"][5:] for p in patched if p["addr"].startswith("code:")]
     code_fams = {family(p.rstrip("*").rstrip("/") or p) for p in code_paths}
@@ -182,7 +179,7 @@ def impact(store, body: dict, actor: str = "human:preview") -> dict:
                 groups["rerun"]["why"] += [w for w in c1.why if w.get("addr")]
                 groups["rerun"]["lag"].append(c1.impl_lag)
                 gpu["rerun"] += c1.gpu_h or 0
-                usd += _usd(s0, platform, c1.gpu_h or 0)
+                priced.append((cell_estimate(pricer, s0, platform, spec_of(n), c1.gpu_h), c1.gpu_h))
                 first = next((w["addr"] for w in c1.why if w.get("addr")), None)
                 if first:
                     why_paths[f"{nid}[{cid}]"] = why_path(first)
@@ -303,12 +300,15 @@ def impact(store, body: dict, actor: str = "human:preview") -> dict:
         gates = []
 
     distinct = lambda cat: len({i["node"] for i in out[cat]})   # noqa: E731
+    cost = totals(priced)
     summary = {"rerun": sum(len(i["cells"]) for i in out["rerun"]),
                "conditional": sum(len(i.get("cells") or [1]) for i in out["conditional"]),
                "reused": sum(len(i["cells"]) for i in out["reused"]),
                "revived": sum(len(i.get("cells") or [1]) for i in out["revived"]),
                "review": distinct("review"), "orphaned": distinct("orphaned"), "broken": distinct("broken"),
-               "lock": len(out["lock"]), "gpu_h": {k: round(v, 4) for k, v in gpu.items()}, "usd": {"rerun": round(usd, 2)}}
+               "lock": len(out["lock"]), "gpu_h": {k: round(v, 4) for k, v in gpu.items()},
+               "usd": {"rerun": round(cost["cost"].get("USD", 0.0), 2)}, "cost": {"rerun": cost["cost"]},
+               "unpriced": {"rerun": cost["unpriced"]}}
     requires += [f"{h['kind'].replace('_', ' ')} {h['node']}" for h in out["lock"] if h["kind"] == "level_rise"]
     return {"base_digest": s0.digest, "precision": "predicted" if predicted else "exact",
             "patched": [{k: show(v) for k, v in p.items()} for p in patched], "ignored": ignored, "summary": summary,

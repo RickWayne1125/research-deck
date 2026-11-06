@@ -120,6 +120,40 @@ def compact_experiments(items: Any) -> Any:
     return out
 
 
+def compact_pools(snap: Any) -> Any:
+    """GET /api/resources for an agent: per pool its machines, quota, spend, price and the agents' budget."""
+    if not isinstance(snap, dict):
+        return snap
+    pools = []
+    for p in snap.get("platforms") or []:
+        info = p.get("pool") or {}
+        nodes = p.get("nodes") or []
+        gpus: dict[str, int] = {}
+        for n in nodes:
+            for g in n.get("gpus") or []:
+                gpus[g.get("name") or "?"] = gpus.get(g.get("name") or "?", 0) + 1
+        machines: dict[str, Any] = {"total": len(nodes), "online": sum(1 for n in nodes if n.get("status") == "online"), "gpus": gpus}
+        if len(nodes) <= 20:
+            machines["list"] = [{k: v for k, v in {
+                "id": n.get("id"), "status": n.get("status"), "flavor": n.get("flavor"),
+                "gpus": ", ".join(f"{g.get('name')} util {g.get('util')}%" if g.get("util") is not None else str(g.get("name"))
+                                  for g in n.get("gpus") or []),
+                "running": n.get("running") or None, "queued": n.get("queued"),
+                "price": n.get("price") if (n.get("price") or {}).get("state") != "free" else "not billed"}.items()
+                if v not in (None, "", [])} for n in nodes]
+        rate = info.get("rate") or {}
+        budget = info.get("budget") or {}
+        pools.append({k: v for k, v in {
+            "id": p.get("id"), "label": p.get("label"), "kind": p.get("kind"), "used_by_this_project": info.get("here"),
+            "state": info.get("state"), "error": info.get("error"), "read_age_s": info.get("age_s"), "machines": machines,
+            "quota": p.get("quota_items") or None, "spend": p.get("cost"),
+            "price_per_gpu_hour": {k: rate.get(k) for k in ("state", "amount", "unit", "why", "options") if rate.get(k) is not None},
+            "price_rules": [{k: r.get(k) for k in ("item", "match", "amount", "unit", "from")} for r in info.get("prices") or []] or None,
+            "agents": {"gpu_hours_per_day": budget.get("agent_gpu_hours_per_day") or 0, "used_today": budget.get("agent_used_today")},
+            "month_budget": budget.get("month")}.items() if v not in (None, [], {})})
+    return {"pools": pools, "platform_names_without_a_pool": snap.get("unmatched") or []}
+
+
 HINTS = {
     403: "This operation is the researcher's. Open a proposal with rd_propose (or rd_apply, which turns an unsafe "
          "batch into a proposal) and say why.",
@@ -314,12 +348,21 @@ def build_server(project: str | None = None, http: httpx.Client | None = None, *
         return _compact(await call("POST", "/dag/runs/plan", body={"targets": targets} if targets else {}))
 
     @mcp.tool(structured_output=False, description=(
-        "Queue reruns of DAG action cells (from rd_plan_runs) as experiment records. Allowed for agents only on the "
-        "platforms and within the daily GPU-hour budget of the project's policy (agent_auto_run), and never for cells "
-        "blocked by 'implement first'; otherwise the answer says why and the researcher has to queue them. Pass cells "
-        "as [{node, cell}] and the platform id."))
+        "Queue reruns of DAG action cells (from rd_plan_runs) as experiment records. Allowed for agents only within a "
+        "budget: on a resource pool (rd_pools) that this project uses and whose budget gives agents GPU-hours a day; on "
+        "any other platform, the platforms and daily budget of the project's policy (agent_auto_run). Never for cells "
+        "blocked by 'implement first'. Otherwise the answer says why and the researcher has to queue them. Pass cells "
+        "as [{node, cell}] and the platform id (a pool's id)."))
     async def rd_queue_runs(cells: list[dict], platform: str) -> str:
         return _compact(await call("POST", "/dag/runs/queue", body={"cells": cells, "platform": platform}))
+
+    @mcp.tool(structured_output=False, description=(
+        "The resource pools (the compute this project can run on): each pool's machines and GPUs, quota, spend, "
+        "price per GPU-hour or per machine-hour with its unit (null = unknown, never 0; own machines are not billed), "
+        "and the agents' daily GPU-hour budget there with what agents used today (0: agents may not queue there). "
+        "Read-only: the researcher adds and changes pools. A pool's id is the platform name for rd_queue_runs."))
+    async def rd_pools() -> str:
+        return _compact(compact_pools(await call("GET", "/api/resources", params={"project": api.project})))
 
     @mcp.tool(structured_output=False, description=(
         "The project's experiment records with their DAG freshness (fresh, reusable, stale, unknown), status, "

@@ -1,5 +1,5 @@
 // Rerun plan tab: what the DAG says must run again after the change — stale/unbuilt cells in waves with their reasons,
-// GPU-h per platform, conditional cells (best/worst case), "implement first" (impl_lag), and what is reused and why.
+// GPU-h and cost per platform (resource pool prices, per unit), conditional cells (best/worst case), "implement first" (impl_lag), and what is reused and why.
 // Queueing creates experiment records; nothing dispatches them to compute (the researcher runs them).
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Empty, Spinner } from '../../components/ui';
@@ -8,6 +8,8 @@ import { dagApi } from '../../dag/api';
 import { FreshBadge, useDagLabels } from '../../dag/encoding';
 import { useI18n, useT } from '../../i18n';
 import { useApp, useLiveReload } from '../../state/app';
+import { cellCostText, costs, sumCosts } from '../../pools/format';
+import '../../pools/i18n';
 import type { GraphResponse, Lenses, RunPlan } from '../../types';
 import type { ExRecord } from './api';
 import { dagReasonText, formatValue } from './parts';
@@ -54,11 +56,12 @@ export function RerunPlanView({ pid, records }: { pid: string; records: ExRecord
     const bestKeys = new Set(all.map(key));
     const conditional = (data.worst?.waves.flat() ?? []).filter(i => !bestKeys.has(key(i)) && !i.blocked);
     const runnable = waves.flat();
-    const byPlatform = new Map<string, { cells: number; gpu_h: number; unknown: number }>();
+    const byPlatform = new Map<string, { cells: number; gpu_h: number; unknown: number; items: PlanItem[] }>();
     for (const i of runnable) {
       const p = i.platform ?? '';
-      const row = byPlatform.get(p) ?? { cells: 0, gpu_h: 0, unknown: 0 };
+      const row = byPlatform.get(p) ?? { cells: 0, gpu_h: 0, unknown: 0, items: [] };
       row.cells += 1;
+      row.items.push(i);
       if (i.est_gpu_h == null) row.unknown += 1; else row.gpu_h += i.est_gpu_h;
       byPlatform.set(p, row);
     }
@@ -80,6 +83,15 @@ export function RerunPlanView({ pid, records }: { pid: string; records: ExRecord
   const bestH = sumGpuH(derived.runnable);
   const condH = sumGpuH(derived.conditional);
   const nothing = !derived.runnable.length && !derived.blocked.length && !derived.conditional.length;
+  // Costs per unit from the plan's prices (resource pools); different units are listed, never added.
+  const costCell = (items: PlanItem[]) => {
+    const sum = sumCosts(items.map(i => i.cost));
+    const text = costs(sum.cost, lang);
+    const parts = [text || (sum.free === items.length ? t('pl.free') : ''), sum.unknown ? t('pl.plan.unpriced', { n: sum.unknown }) : ''].filter(Boolean);
+    return parts.length ? parts.join(' · ') : '—';
+  };
+  const total = sumCosts(derived.runnable.map(i => i.cost));
+  const limits = data.best?.limits ?? [];
 
   return (
     <div className="ex-plan">
@@ -94,6 +106,10 @@ export function RerunPlanView({ pid, records }: { pid: string; records: ExRecord
       </div>
       <div className="ex-pad">
         <div className="notice"><Icon name="lock" /> <span>{t('ex.p.queueDisabled')}</span></div>
+        {limits.map((l, i) => (
+          <div key={i} className="notice warn"><Icon name="warn" /> <span>{t(l.what === 'quota' ? 'pl.plan.quota' : l.spent_known === false ? 'pl.plan.monthNoSpend' : 'pl.plan.month', {
+            pool: l.pool, need: `${formatValue(Math.round(l.need * 100) / 100, lang)} ${l.unit}`, left: `${formatValue(Math.round(l.left * 100) / 100, lang)} ${l.unit}`, name: l.name ?? '' })}</span></div>
+        ))}
 
         {nothing ? <Empty icon="check" title={t('ex.p.empty')}>{t('ex.p.emptyBody')}</Empty> : (
           <>
@@ -101,23 +117,26 @@ export function RerunPlanView({ pid, records }: { pid: string; records: ExRecord
               <section className="ex-sec">
                 <span className="label">{t('ex.p.perPlatform')}</span>
                 <table className="table ex-mini">
-                  <thead><tr><th>{t('ex.p.platform')}</th><th>{t('ex.p.cells')}</th><th>GPU·h</th></tr></thead>
+                  <thead><tr><th>{t('ex.p.platform')}</th><th>{t('ex.p.cells')}</th><th>GPU·h</th><th>{t('pl.plan.cost')}</th></tr></thead>
                   <tbody>
                     {derived.byPlatform.map(([p, row]) => (
                       <tr key={p}><td>{p || <span className="faint">{t('ex.p.noPlatform')}</span>}</td><td className="num">{row.cells}</td>
                         <td className="num">{row.unknown === row.cells ? <span className="faint">{t('ex.p.estUnknown')}</span>
-                          : <>{h(row.gpu_h)}{row.unknown > 0 && <span className="faint ex-small"> · {t('ex.p.unknownEst', { n: row.unknown })}</span>}</>}</td></tr>
+                          : <>{h(row.gpu_h)}{row.unknown > 0 && <span className="faint ex-small"> · {t('ex.p.unknownEst', { n: row.unknown })}</span>}</>}</td>
+                        <td>{costCell(row.items)}</td></tr>
                     ))}
-                    <tr className="ex-total"><td>{t('ex.p.total')}</td><td className="num">{derived.runnable.length}</td><td className="num">{h(bestH)}</td></tr>
+                    <tr className="ex-total"><td>{t('ex.p.total')}</td><td className="num">{derived.runnable.length}</td><td className="num">{h(bestH)}</td>
+                      <td>{costCell(derived.runnable)}</td></tr>
                   </tbody>
                 </table>
+                {Object.keys(total.cost).length > 1 && <div className="faint ex-small">{t('pl.plan.apart')}</div>}
               </section>
             )}
 
             {derived.waves.map((wave, wi) => (
               <section key={wi} className="ex-sec">
                 <div className="row"><span className="label grow">{t('ex.p.wave', { n: wi + 1 })} · {wave.every(i => i.est_gpu_h == null)
-                  ? t('ex.p.estUnknown') : t('ex.p.gpuh', { h: h(sumGpuH(wave)) })}</span></div>
+                  ? t('ex.p.estUnknown') : t('ex.p.gpuh', { h: h(sumGpuH(wave)) })}{costs(sumCosts(wave.map(i => i.cost)).cost, lang) ? ` · ≈ ${costs(sumCosts(wave.map(i => i.cost)).cost, lang)}` : ''}</span></div>
                 {wi === 0 && derived.waves.length > 1 && <div className="faint ex-small">{t('ex.p.waveHint')}</div>}
                 <ul className="ex-cells">{wave.map(i => <CellRow key={key(i)} item={i} title={title(i.node)} level={level(i)} reasons={reasons(i)} h={h} />)}</ul>
               </section>
@@ -172,6 +191,7 @@ export function RerunPlanView({ pid, records }: { pid: string; records: ExRecord
 
 function CellRow({ item, title, level, reasons, h }: { item: PlanItem; title: string; level: string | null; reasons: string[]; h: (v: number) => string }) {
   const t = useT();
+  const { lang } = useI18n();
   const { navigate } = useApp();
   return (
     <li className="ex-cellrow">
@@ -183,6 +203,7 @@ function CellRow({ item, title, level, reasons, h }: { item: PlanItem; title: st
         <span className="grow" />
         {item.platform && <span className="chip">{item.platform}</span>}
         <span className="num ex-small">{item.est_gpu_h == null ? <span className="faint">{t('ex.p.estUnknown')}</span> : t('ex.p.gpuh', { h: h(item.est_gpu_h) })}</span>
+        {item.cost && <span className="faint ex-small" title={item.cost.why ?? undefined}>{cellCostText(item.cost, t, lang)}</span>}
       </div>
       {reasons.length ? <ul className="ex-reasons">{reasons.map((r, i) => <li key={i}>{r}</li>)}</ul>
         : item.blocked && item.blocked !== 'impl_lag' ? <div className="faint ex-small">{item.blocked}</div> : null}

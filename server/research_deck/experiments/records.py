@@ -291,6 +291,11 @@ def list_records(pid: str) -> list[dict]:
     return sorted(recs, key=lambda r: (_sort_key(r), r["id"]), reverse=True)
 
 
+def target_platforms(pid: str) -> set[str]:
+    """Every platform name the project's records run on (target.platform), read from the stored records only."""
+    return {p for r in _all_raw(pid) if (p := str(((r.get("target") or {}).get("platform")) or "").strip())}
+
+
 def get_state(pid: str, eid: str) -> dict:
     """The stored record without the DAG-derived fields: cheap enough to poll (the log stream reads it every poll to
     know whether the run is still live)."""

@@ -1,7 +1,8 @@
 """Experiments and resources routes (docs/API.md § Experiments and resources).
 
 Records are read and written here. Nothing in this package submits, cancels or dispatches a run: a queued run waits
-as a record until something outside Research Deck runs it. Resources are labeled demo data (demo.py).
+as a record until something outside Research Deck runs it. Resources come from the resource pools (pools/);
+the labeled example data (demo.py) only on request.
 
 Besides the documented routes, a run's log is served for the terminal view (logstream.py):
   GET …/experiments/{eid}/logs/stream?offset=   SSE of the raw log text as it grows (events meta, data {data, offset},
@@ -58,6 +59,10 @@ def experiment_log_raw(pid: str, eid: str):
 
 
 @router.get("/api/resources")
-def get_resources():
-    """The compute the Experiments view shows: labeled demo data (source "demo"); see demo.py for the shape."""
-    return demo.resources()
+def get_resources(project: str | None = None, example: bool = Query(False, alias="demo")):
+    """The compute the Experiments view shows: the resource pools (pools/service.py snapshot), for a project when
+    given; ?demo=1 is the labeled example data instead (demo.py)."""
+    if example:
+        return demo.resources()
+    from ..pools import service
+    return service.snapshot(project)

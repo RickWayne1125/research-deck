@@ -5,7 +5,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Icon } from '../components/icons';
 import { Button, Dialog, Spinner } from '../components/ui';
-import { registerStrings, useT } from '../i18n';
+import { registerStrings, useI18n, useT } from '../i18n';
+import { costs } from '../pools/format';
 import { parseAddr } from './api';
 import type { Impact, ImpactItem } from '../dag-types';
 import './impact.css';
@@ -127,12 +128,14 @@ const TONE: Record<ImpactCategory | 'gates' | 'suggest_restore', string> = {
 export function ImpactView(props: { impact: Impact; compact?: boolean; onHoverNodes?: (ids: string[]) => void }): JSX.Element {
   const { impact, compact, onHoverNodes } = props;
   const t = useT();
+  const { lang } = useI18n();
   const s = impact.summary;
+  const rerunCost = costs(s.cost?.rerun, lang);
   const total = LIST_KEYS.reduce((n, k) => n + (impact[k]?.length ?? 0), 0) + (impact.gates?.length ?? 0) + (impact.suggest_restore?.length ?? 0);
   const hover = (ids: string[]) => onHoverNodes?.(ids);
 
   const chips: { key: ImpactCategory; n: number; extra?: string }[] = [
-    { key: 'rerun', n: s.rerun, extra: s.gpu_h?.rerun ? t('dagx.impact.gpuh', { h: gpu(s.gpu_h.rerun) }) : undefined },
+    { key: 'rerun', n: s.rerun, extra: s.gpu_h?.rerun ? t('dagx.impact.gpuh', { h: gpu(s.gpu_h.rerun) }) + (rerunCost ? ` · ≈ ${rerunCost}` : '') : undefined },
     { key: 'reused', n: s.reused, extra: s.gpu_h?.reused ? t('dagx.impact.gpuh', { h: gpu(s.gpu_h.reused) }) : undefined },
     { key: 'review', n: s.review },
     { key: 'conditional', n: s.conditional },

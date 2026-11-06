@@ -23,7 +23,10 @@ research-deck/
     dag/      the research DAG engine (docs/DAG.md)
     writing/  documents, the fixed AI proofreading passes, glossary, learned rules, snapshots
     coding/   git status/log/diff, architecture extraction (context for explanations), code review / explanation
-    experiments/  experiment records + freshness from the DAG, their logs, demo resources
+    experiments/  experiment records + freshness from the DAG, their logs; /api/resources (the pools, or example data)
+    pools/    resource pools: protocol.py (rd-pool/1), store.py (~/.research-deck/pools/<id>.yaml), sources.py (manual,
+              this machine, command, http), service.py (background reads, platform views, prices, budgets), api.py,
+              __main__.py (python -m research_deck.pools check)
     viz/      figure registry, matplotlib renderer, draw.io files, OmniGraffle/DataGraph adapters, the house style
     start/    new projects from an idea (folder, notes/idea.md, git init) and Settings → New projects
     survey/   the early survey: search arXiv / Semantic Scholar / OpenAlex, download open-access PDFs, BibTeX, draft nodes
@@ -37,11 +40,13 @@ research-deck/
                                task being worked on), stages.ts, views.ts
     agent/                     AgentDock (the project conversation), useAgentRun (core hook), parts
     start/                     the new-project dialog, the survey card (on the outline page), Settings → New projects
+    pools/                     Settings → Resource pools, the add/edit wizard, price and cost formatting
     panels/<view>/index.tsx    one folder per view: outline (a research project's home), overview (Today; its list
                                shows on the outline page), dag (Map), experiments, writing (Paper), coding (Code),
                                settings; visualization holds the figures half of Paper
     demo.py                    materializes the demo project from demo/minimal into ~/.research-deck/demo/toycache on first start
   demo/minimal/                the demo's source files only (a toy synthetic project); history and DAG are built by demo.py
+  scripts/pools/               example pool adapters: rd_pool_ssh.py (one machine over ssh), rd_pool_slurm.py (Slurm)
   tests/                       pytest (backend); RD_FAKE_AGENT=1 replaces the CLIs
   docs/                        ARCHITECTURE.md, API.md, DAG.md
 ```
@@ -132,6 +137,20 @@ research-deck/
     most 60 MB is written, through a temporary file next to the target. The agent requests of the survey are
     one-shot and tool-less (they read abstracts from the prompt); the agent never reaches the network itself.
   - known limit: agent identities are self-asserted once the shared agent token matches (per-run tokens are a v2 item).
+
+## Resource pools
+
+The compute a researcher runs on is a set of **resource pools** (`server/research_deck/pools/`), owned by the machine
+rather than a project: `~/.research-deck/pools/<id>.yaml`, whose id is the platform name records and the map already
+use. Every source (manual, this machine, a command, an HTTP endpoint) returns one **rd-pool/1** document, so the core
+holds no vendor logic: Slurm, OpenStack or a lab's own tooling is an adapter outside it (`scripts/pools/` has two
+examples). Reads run in the background when due; a failed read keeps the last good one with the reason. The pools are
+read-only: nothing dispatches work. Prices (the definition's first, then the source's; own machines not billed,
+otherwise unknown, never 0) feed the run plan, the impact preview and the new-experiment dialog through
+`service.Pricer`; a pool's `budget.agent_gpu_hours_per_day` bounds what agents may queue there (`dag/queue.py`). All
+writes, tests and read-nows are the researcher's; agents read pools through `GET /api/resources` and MCP `rd_pools`.
+Credentials are names (`keychain:` / `env:`); a secret goes only to the command (`RD_POOL_SECRET`) or address
+(`Authorization: Bearer`) that reads the pool and is never stored.
 
 ## Agents and context sharing
 

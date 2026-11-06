@@ -227,8 +227,10 @@ def test_large_log_tail_starts_on_a_line_boundary(client, project):
 
 # ------------------------------------------------------------------ resources
 
-def test_resources_are_labeled_demo_data(client):
+def test_resources_come_from_pools_and_the_example_only_on_request(client):
     r = client.get("/api/resources").json()
+    assert r["source"] == "pools" and r["platforms"] == [] and r["unmatched"] == []     # a new user has no pools
+    r = client.get("/api/resources", params={"demo": 1}).json()
     assert r["source"] == "demo" and r["demo"] is True
     assert [p["id"] for p in r["platforms"]] == ["workstation", "lab", "cloud"]
     assert all(p["demo"] for p in r["platforms"]) and all(n["demo"] for p in r["platforms"] for n in p["nodes"])

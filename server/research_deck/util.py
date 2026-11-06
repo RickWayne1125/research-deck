@@ -92,9 +92,13 @@ class _NoAliasLoader(yaml.SafeLoader):
 
 def read_yaml(path: Path, default: Any = None) -> Any:
     try:
-        return yaml.load(path.read_text(encoding="utf-8"), Loader=_NoAliasLoader)
+        return loads_yaml(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
         return default
+
+
+def loads_yaml(text: str) -> Any:
+    return yaml.load(text, Loader=_NoAliasLoader)
 
 
 class _NoAliasDumper(yaml.SafeDumper):

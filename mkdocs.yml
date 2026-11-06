@@ -75,6 +75,7 @@ nav:
       - An outline template of your own: examples/template.md
       - The MCP server in your own terminal: examples/mcp-terminal.md
       - Why a result goes stale: examples/stale-result.md
+      - A resource pool of your own: examples/pool-adapter.md
   - Reference:
       - Architecture: ARCHITECTURE.md
       - HTTP API: API.md

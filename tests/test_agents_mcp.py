@@ -11,7 +11,7 @@ from mcp.server.fastmcp.exceptions import ToolError
 
 from research_deck import actors, mcp_server
 
-EXPECTED_TOOLS = {"rd_brief", "rd_lenses", "rd_graph", "rd_node", "rd_explain", "rd_impact", "rd_apply", "rd_propose",
+EXPECTED_TOOLS = {"rd_pools", "rd_brief", "rd_lenses", "rd_graph", "rd_node", "rd_explain", "rd_impact", "rd_apply", "rd_propose",
                   "rd_attest", "rd_plan_runs", "rd_queue_runs", "rd_experiments", "rd_handoff_note",
                   "rd_outline", "rd_outline_ops", "rd_suggest_task"}
 

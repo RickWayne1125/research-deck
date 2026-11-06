@@ -3,7 +3,7 @@ import { registerStrings } from '../../i18n';
 
 registerStrings({
   zh: {
-    'st.subtitle': '本机集成、外观和文件位置',
+    'st.subtitle': '新项目、资源池、本机集成、外观和文件位置',
     
     'st.sec.integrations': '集成',
     'st.sec.appearance': '外观',
@@ -50,7 +50,7 @@ registerStrings({
     'st.about.docsHint': '架构约定、HTTP 接口与磁盘格式、研究 DAG 规范',
   },
   en: {
-    'st.subtitle': 'Local integrations, appearance and where files live',
+    'st.subtitle': 'New projects, resource pools, local integrations, appearance and where files live',
     
     'st.sec.integrations': 'Integrations',
     'st.sec.appearance': 'Appearance',

@@ -14,7 +14,7 @@ project**, backed by the [Claude Code](https://docs.claude.com/en/docs/claude-co
 | View | What it is for |
 |---|---|
 | **Outline** (home) | The paper's sections as chains of numbered items (2.1, 2.2; sub-items 3.1.1 at any depth), grouped by phase: idea → motivation & insight → system design → evaluation. Each item gets tasks (literature, code, figure, experiment), and what they produce becomes its evidence. Design directions branch into forks; the research tree keeps the abandoned ones with why they were given up. At the top: what waits for you. |
-| **Experiments** | Run records with their freshness from the map, live logs, and the plan of what must be rerun. |
+| **Experiments** | Run records with their freshness from the map, live logs, the plan of what must be rerun and what it costs, and the resource pools you run on. |
 | **Paper** | `.tex` / `.md` editing beside the outline of the section at the cursor, AI proofreading, and figures (draw.io, matplotlib, OmniGraffle, DataGraph). |
 | **Code** | Git history and diffs of the project's repositories, AI review and explanations. |
 | **Map** | The research DAG behind it all: nodes, their edges, freshness, the impact of a change before it is applied. |

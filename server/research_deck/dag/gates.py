@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..actors import is_human
+from ..pools.service import Pricer, limit_warnings, totals
 from .evaluate import State, current
 from .model import DEAD, edges, facet_value, is_action, rank, ref_id, spec_of, title_of
 from .ops import OpError, make_snapshot
@@ -269,19 +270,32 @@ def plan(st: State, targets: list[str] | None = None, conditional: bool = False)
         return depth[nid]
 
     waves: list[list[dict]] = []
-    gpu = usd = 0.0
+    gpu = 0.0
+    pricer, priced = Pricer(), []
     for nid in sorted(needing, key=lambda i: (d(i), i)):
-        ev, platform = st.E[nid], spec_of(st.nodes[nid]).get("platform")
-        probe = st.store.env_probe(platform) if platform else None
+        ev, spec = st.E[nid], spec_of(st.nodes[nid])
+        platform = spec.get("platform")
         while len(waves) <= d(nid):
             waves.append([])
         for cid in needing[nid]:
             c = ev.cells[cid]
+            est = cell_estimate(pricer, st, platform, spec, c.gpu_h)
             waves[d(nid)].append({"node": nid, "cell": cid, "est_gpu_h": c.gpu_h, "platform": platform,
-                                  "blocked": "impl_lag" if c.impl_lag else None, "title": title_of(st.nodes[nid])})
+                                  "blocked": "impl_lag" if c.impl_lag else None, "title": title_of(st.nodes[nid]),
+                                  "cost": {k: est[k] for k in ("state", "amount", "unit", "rate", "item", "rule_amount", "pool", "why")}})
             gpu += c.gpu_h or 0
-            usd += (c.gpu_h or 0) * float((probe or {}).get("usd_per_gpu_hour") or 0)
-    return {"waves": waves, "gpu_h": round(gpu, 4), "usd": round(usd, 2)}
+            priced.append((est, c.gpu_h))
+    t = totals(priced)
+    return {"waves": waves, "gpu_h": round(gpu, 4), "usd": round(t["cost"].get("USD", 0.0), 2), "cost": t["cost"],
+            "unpriced": t["unpriced"], "limits": limit_warnings(pricer, priced)}
+
+
+def cell_estimate(pricer: Pricer, st: State, platform: str | None, spec: dict, gpu_h: float | None) -> dict:
+    """What rerunning a cell costs: the platform's resource pool prices it (pools/service.py), the map's env probe for
+    the platform (usd_per_gpu_hour) when no pool does. The GPU model, when known, picks the price."""
+    probe = st.store.env_probe(platform) if (st.store and platform) else None
+    gpu = spec.get("gpu_type") or ((probe or {}).get("key") or {}).get("gpu_model")
+    return pricer.estimate(platform, gpu_h, gpu=str(gpu) if gpu else None, probe=probe)
 
 
 # The project's coarse stage (project.yaml `stage`) and the gates that close each one (docs/DAG.md §1).
