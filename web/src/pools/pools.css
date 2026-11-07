@@ -7,8 +7,10 @@
 .pl-bad { color: var(--accent); }
 .pl-good { color: var(--ok-ink, var(--ink)); }
 .pl-chips { gap: 6px; }
-.pl-chip-btn { cursor: pointer; }
+.pl-chip-btn { cursor: pointer; max-width: 100%; }
 .pl-chip-btn:hover { border-color: var(--slate); color: var(--ink); }
+.pl-chip-btn:disabled { cursor: progress; opacity: .6; }
+.pl-chip-text { min-width: 0; max-width: 420px; overflow: hidden; text-overflow: ellipsis; }
 .pl-card { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border: var(--line) solid var(--rule); border-radius: var(--r-lg); background: var(--surface); min-width: 0; }
 .pl-empty { border-style: dashed; background: var(--plate); }
 .pl-code { font-size: 11.5px; padding: 1px 5px; border-radius: var(--r-xs); background: var(--plate); overflow-wrap: anywhere; }
@@ -30,6 +32,13 @@
 .pl-row-side { flex: none; align-items: flex-end; gap: 8px; }
 .pl-here { gap: 6px; font-size: var(--fs-sm); color: var(--muted); cursor: pointer; white-space: nowrap; }
 .pl-acts { gap: 6px; justify-content: flex-end; }
+.pl-row-names { gap: 2px; overflow-wrap: anywhere; }
+
+/* a platform name no pool answers to: its menu */
+.pl-menu { min-width: 260px; max-width: 440px; }
+.pl-menu-name { padding: 6px 9px 8px; font-size: var(--fs-sm); color: var(--ink-strong); overflow-wrap: anywhere; border-bottom: var(--line) solid var(--rule); margin-bottom: 4px; }
+.pl-menu-head { padding: 8px 9px 4px; }
+.pl-menu .menu-item { min-width: 0; }
 
 /* prices and budgets */
 .pl-prices { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 14px; align-items: start; }
@@ -67,6 +76,13 @@
 .pl-arg button { border: 0; background: none; padding: 4px 6px; color: var(--faint); cursor: pointer; display: inline-grid; place-items: center; }
 .pl-arg button:hover { color: var(--accent); }
 .pl-arg-add { display: inline-flex; align-items: center; gap: 4px; border: var(--line) dashed var(--rule-strong); border-radius: var(--r-md); background: none; color: var(--faint); padding: 4px 8px; font-size: 12px; cursor: pointer; }
+.pl-names { gap: 4px; }
+.pl-name { display: flex; align-items: center; gap: 6px; padding: 4px 4px 4px 8px; border: var(--line) solid var(--rule-strong); border-radius: var(--r-md); background: var(--surface); font-size: var(--fs-sm); min-width: 0; }
+.pl-name.clash { border-color: var(--accent-line); }
+.pl-name-text { min-width: 0; overflow-wrap: anywhere; }
+.pl-name button { border: 0; background: none; padding: 3px 5px; color: var(--faint); cursor: pointer; display: inline-grid; place-items: center; }
+.pl-name button:hover { color: var(--accent); }
+.pl-name-add { gap: 6px; }
 .pl-inv { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) 64px minmax(0, 1fr) 28px; gap: 6px; align-items: center; }
 .pl-test { gap: 8px; min-width: 0; }
 .pl-warns { gap: 4px; font-size: var(--fs-xs); }
@@ -83,6 +99,7 @@
 .pl-res-errbox { padding: 8px 10px; border-radius: var(--r-md); background: var(--accent-wash); color: var(--accent); font-size: var(--fs-sm); white-space: pre-wrap; overflow-wrap: anywhere; }
 .ex-plat.dim { opacity: .62; }
 .pl-chip-dash { border-style: dashed; }
+.pl-res-names { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pl-machines td, .pl-machines th { padding: 5px 8px; font-size: var(--fs-sm); }
 
 @media (max-width: 980px) {

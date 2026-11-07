@@ -142,7 +142,8 @@ research-deck/
 
 The compute a researcher runs on is a set of **resource pools** (`server/research_deck/pools/`), owned by the machine
 rather than a project: `~/.research-deck/pools/<id>.yaml`, whose id is the platform name records and the map already
-use. Every source (manual, this machine, a command, an HTTP endpoint) returns one **rd-pool/1** document, so the core
+use; a pool may also answer to other names (records that describe the machine), and each name belongs to one pool
+(`service.owners`, `store.settle_names`). Every source (manual, this machine, a command, an HTTP endpoint) returns one **rd-pool/1** document, so the core
 holds no vendor logic: Slurm, OpenStack or a lab's own tooling is an adapter outside it (`scripts/pools/` has two
 examples). Reads run in the background when due; a failed read keeps the last good one with the reason. The pools are
 read-only: nothing dispatches work. Prices (the definition's first, then the source's; own machines not billed,

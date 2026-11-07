@@ -1,11 +1,11 @@
 // Resource pools: prices and costs as text (units never added, unknown never 0), the client-side rate for a machine,
-// and the wizard's draft checks.
+// the wizard's draft checks, and platform names (a pool's id or one of its other names).
 import { describe, expect, it } from 'vitest';
 import type { CellCost } from '../types';
 import type { ExPlatform } from '../panels/experiments/api';
 import type { PoolDef, PoolInfo, Rate } from './api';
-import { blank, problems, slugId } from './draft';
-import { amount, cellCostText, commandLine, costs, isMoney, platformRate, rateText, sumCosts } from './format';
+import { blank, fromName, headOf, idFor, isIdLike, nameKey, problems, slugId } from './draft';
+import { amount, answersTo, cellCostText, commandLine, costs, isMoney, nameList, platformRate, rateText, sumCosts } from './format';
 
 // A t() that shows the key and its variables, so the tests read the choice made, not the wording.
 const t = (key: string, vars?: Record<string, string | number>) => (vars ? `${key}(${Object.values(vars).join('|')})` : key);
@@ -77,5 +77,35 @@ describe('the wizard draft', () => {
     expect(problems({ ...d, source: { type: 'http', url: 'http://127.0.0.1:9000/pools/box' }, credential: 'hunter2' })).toEqual(['credential']);
     expect(problems({ ...d, source: { type: 'local' }, prices: [{ item: 'gpu_hour', match: {}, amount: NaN, unit: 'USD' }] })).toEqual(['prices']);
     expect(problems({ ...d, source: { type: 'local' }, credential: 'keychain:box-reader' })).toEqual([]);
+    expect(problems({ ...d, source: { type: 'local' }, names: ['8× RTX A6000', ' '] })).toEqual(['names']);
+  });
+});
+
+describe('platform names', () => {
+  const A6000 = '8× RTX A6000 (lab node, GPUs 0-3)';
+
+  it('compares them as the server does: case and extra spaces aside', () => {
+    expect(nameKey('  8×  RTX\tA6000 ')).toBe('8× rtx a6000');
+    expect(isIdLike('Workstation')).toBe(true);
+    expect(isIdLike(A6000)).toBe(false);
+    expect(headOf(A6000)).toBe('8× RTX A6000');
+    expect(headOf('RTX 5090 32 GiB；A100')).toBe('RTX 5090 32 GiB');
+  });
+
+  it('makes a pool for a name: the name is its id when it can be, else one of its names', () => {
+    expect(fromName('Workstation', [])).toMatchObject({ id: 'workstation', label: 'Workstation' });
+    expect(fromName('Workstation', []).names).toBeUndefined();
+    expect(fromName(A6000, [])).toMatchObject({ id: '8-rtx-a6000', label: '8× RTX A6000', names: [A6000] });
+    expect(idFor(A6000, ['8-rtx-a6000', '8-rtx-a6000-2'])).toBe('8-rtx-a6000-3');
+    expect(idFor('(GPU smoke)', [])).toBe('gpu-smoke');                  // nothing before the bracket: the whole name
+  });
+
+  it('finds the pool a name belongs to', () => {
+    const p = { id: 'lab', label: 'Lab', nodes: [], pool: { names: [A6000] } } as unknown as ExPlatform;
+    expect(answersTo(p, 'LAB')).toBe(true);
+    expect(answersTo(p, '8× rtx a6000  (lab node, GPUs 0-3)')).toBe(true);
+    expect(answersTo(p, '8× RTX A6000')).toBe(false);
+    expect(answersTo(p, ' ')).toBe(false);
+    expect(nameList(['a, b', 'c'], 'en')).toBe('a, b; c');
   });
 });

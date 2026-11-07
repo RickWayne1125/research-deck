@@ -154,17 +154,18 @@ Pools belong to the machine (`~/.research-deck/pools/<id>.yaml`). Every write, t
 
 | Method | Path | Body / query | Response |
 |---|---|---|---|
-| GET | /api/pools | `?project=` | `{pools: [{def, platform}], selection, unmatched, broken: [{file, error}], dir, adapters, python}` |
+| GET | /api/pools | `?project=` | `{pools: [{def, platform}], selection, unmatched, broken: [{file, error}], clashes: [{name, pool, owner}], dir, adapters, python}`; `clashes`: a name two pool files list, kept by `owner` |
 | GET | /api/pools/{id} | `?project=` | `{def, platform, yaml}` (the file as written) |
-| PUT | /api/pools/{id} | a definition (the YAML's fields; `id` must match) | `{def, platform}`; starts a first read |
+| PUT | /api/pools/{id} | a definition (the YAML's fields; `id` must match) | `{def, platform}`; starts a first read. 409 when its id or one of its `names` is already another pool's |
 | DELETE | /api/pools/{id} | | `{trashed}` (the file moved to `pools/.trash/`) |
 | POST | /api/pools/{id}/refresh | `?project=` | `{def, platform}` after reading now |
 | POST | /api/pools/test | a definition | `{ok, duration_s, error?, warnings, doc, raw, platform}`: one read, nothing saved |
 | POST | /api/pools/parse | `{text}` (a pool file) | `{def, exists}` (validated, not saved) |
 | PUT | /api/projects/{pid}/pools | `{pools: [ids] \| null}` | `{selection}` (project.yaml `resources.pools`; null = all) |
 
-A platform from a pool carries, besides the `Platform` fields, `pool`: `{state: ok | stale | failed | reading, here,
-source, read_at, age_s, error, warnings, capabilities, credential: {ref, expires_at, days_left, state}, billed,
+A platform name (`target.platform`, `spec.platform`) belongs to the pool whose id or one of whose `names` it is,
+ignoring case and extra spaces; `unmatched` lists the project's names no pool answers to. A platform from a pool
+carries, besides the `Platform` fields, `pool`: `{state: ok | stale | failed | reading, here, names, source, read_at, age_s, error, warnings, capabilities, credential: {ref, expires_at, days_left, state}, billed,
 prices: [{item, match, amount, unit, from}], rate: {state: known | free | unknown | varies, amount, unit, item},
 budget: {agent_gpu_hours_per_day, agent_used_today, month}}`; each node carries `flavor` and `price`. The document a
 source returns is [rd-pool/1](examples/pool-adapter.md#the-document).

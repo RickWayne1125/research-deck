@@ -18,6 +18,8 @@ export interface InventoryNode { id: string; label?: string; status?: string; fl
 
 export interface PoolDef {
   id: string; label: string; kind: PoolKind;
+  /** Other platform names the pool answers to (records that describe the machine instead of naming it). */
+  names?: string[];
   source: { type: SourceType; run?: string[]; url?: string; every?: number; timeout?: number; inventory?: { nodes: InventoryNode[] } };
   credential: string | null;
   prices: PriceRule[];
@@ -34,7 +36,7 @@ export type NodePrice = Pick<Rate, 'state' | 'amount' | 'unit' | 'item' | 'rule_
 
 export interface PoolCredential { ref: string | null; expires_at: string | null; days_left: number | null; state: 'ok' | 'soon' | 'expired' | null }
 export interface PoolInfo {
-  state: 'ok' | 'stale' | 'failed' | 'reading'; here: boolean; source: PoolDef['source'];
+  state: 'ok' | 'stale' | 'failed' | 'reading'; here: boolean; names?: string[]; source: PoolDef['source'];
   read_at: string | null; age_s: number | null; tried_at: string | null; error: string | null; warnings: string[];
   duration_s: number | null; reading: boolean; capabilities: string[]; credential: PoolCredential | null; billed: boolean;
   prices: PriceRule[]; rate: Rate;
@@ -44,6 +46,8 @@ export type PoolPlatform = ExPlatform & { pool: PoolInfo };
 export interface PoolView { def: PoolDef; platform: PoolPlatform }
 export interface PoolList {
   pools: PoolView[]; selection: string[] | null; unmatched: string[]; broken: { file: string; error: string }[];
+  /** a name two pool files both list: it counts for owner, and pool should drop it */
+  clashes?: { name: string; pool: string; owner: string }[];
   dir: string; adapters: string; python: string;
 }
 

@@ -3,6 +3,7 @@ import type { TFunc } from '../i18n';
 import type { CellCost } from '../types';
 import type { ExPlatform } from '../panels/experiments/api';
 import type { PoolDef, PoolInfo, PriceRule, Rate } from './api';
+import { nameKey } from './draft';
 
 /** A currency code (USD, CNY, EUR) as opposed to a quota unit (SU, credits). */
 export const isMoney = (unit: string | null | undefined) => !!unit && /^[A-Z]{3}$/.test(unit);
@@ -130,3 +131,12 @@ export function platformRate(p: ExPlatform | undefined, host?: string, gpu?: str
   const same = prices.every(x => x.state === prices[0].state && x.unit === prices[0].unit && eq(x.amount, prices[0].amount));
   return same ? { state: prices[0].state, amount: prices[0].amount, unit: prices[0].unit } : { state: 'varies', amount: null, unit: null };
 }
+
+/** Whether a platform answers to a platform name: its id, or one of a pool's other names (ignoring case and spaces). */
+export function answersTo(p: ExPlatform, name: string): boolean {
+  const k = nameKey(name);
+  return !!k && (nameKey(p.id) === k || (p.pool?.names ?? []).some(n => nameKey(n) === k));
+}
+
+/** Platform names in a sentence: 、 in Chinese; ; in English, since a description may hold commas. */
+export const nameList = (names: string[], lang: string) => names.join(lang === 'zh' ? '、' : '; ');

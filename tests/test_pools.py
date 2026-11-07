@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 
 from research_deck.pools import protocol, service, sources, store
 from research_deck.pools.__main__ import main as pools_cli
+from research_deck.util import write_yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -127,6 +128,35 @@ def test_the_resources_snapshot_the_project_selection_and_unmatched_names(client
     assert client.put(f"/api/projects/{pid}/pools", json={"pools": None}).json()["selection"] is None
 
 
+A6000 = "8× RTX A6000 (lab node, GPUs 0-3)"      # how records describe a machine instead of naming it
+
+
+def test_a_pool_answers_to_other_names_and_each_name_belongs_to_one_pool(client, project):
+    pid, _ = project
+    human(client)
+    names = store.validate({**MANUAL_HOME, "names": ["  8×  RTX A6000 ", "8× rtx a6000", "BOX", 5090]})["names"]
+    assert names == ["8× RTX A6000", "5090"]                           # tidied; repeats and the id itself dropped
+    with pytest.raises(ValueError, match="names"):
+        store.validate({**MANUAL_HOME, "names": A6000})
+    assert "names" not in store.validate(MANUAL_HOME)                  # none: the file stays as it was
+    for platform in (A6000, "workstation"):
+        assert client.post(f"/api/projects/{pid}/experiments", json={"title": "t", "target": {"platform": platform}}).status_code == 200
+    assert client.put("/api/pools/box", json={**MANUAL_HOME, "names": ["8× rtx a6000  (lab node, GPUs 0-3)"]}).status_code == 200
+    snap = client.get("/api/resources", params={"project": pid}).json()
+    assert snap["unmatched"] == ["workstation"]                        # matched ignoring case and extra spaces
+    assert snap["platforms"][0]["pool"]["names"] == ["8× rtx a6000 (lab node, GPUs 0-3)"]
+    assert service.Pricer().pool(A6000)["id"] == "box"
+    r = client.put("/api/pools/js2", json={**MANUAL_CLOUD, "names": [A6000]})
+    assert r.status_code == 409 and "the pool box" in r.text           # a name belongs to one pool
+    assert client.put("/api/pools/js2", json={**MANUAL_CLOUD, "names": ["Box"]}).status_code == 409    # nor is another's id
+    assert client.put("/api/pools/8x", json={**MANUAL_HOME, "id": "8x"}).status_code == 200
+    assert client.put("/api/pools/box", json={**MANUAL_HOME, "names": [A6000, "8X"]}).status_code == 409
+    write_yaml(store.pools_dir() / "js2.yaml", {**store.validate(MANUAL_CLOUD), "names": [A6000, "Jetstream2 g3.large"]})
+    listing = client.get("/api/pools").json()                          # a clash written by hand: the first by id keeps it
+    assert listing["clashes"] == [{"name": A6000, "pool": "js2", "owner": "box"}]
+    assert {v["def"]["id"]: v["def"].get("names") for v in listing["pools"]}["js2"] == ["Jetstream2 g3.large"]
+
+
 ADAPTER = '''
 import json, os, sys
 from datetime import datetime, timezone
@@ -231,6 +261,31 @@ def test_the_run_plan_prices_cells_and_agents_queue_only_within_a_pools_budget(c
     assert client.put(f"/api/projects/{pid}/pools", json={"pools": []}).status_code == 200
     r = agent.post(f"{dag}/runs/queue", json={"cells": cells, "platform": "box"})
     assert r.status_code == 403 and "does not use the resource pool box" in r.text
+
+
+def test_runs_on_a_pools_other_name_are_priced_there_and_count_against_its_budget(client, project):
+    pid, _ = project
+    human(client)
+    dag = f"/api/projects/{pid}/dag"
+    spec = {**EXP["node"]["facets"]["spec"], "platform": "8× RTX A6000"}
+    exp = {**EXP, "node": {**EXP["node"], "facets": {**EXP["node"]["facets"], "spec": spec}}}
+    assert client.post(f"{dag}/ops", json={"ops": [exp]}).status_code == 200
+    box = {**MANUAL_HOME, "names": ["8× RTX A6000"], "prices": [{"item": "gpu_hour", "amount": 2, "unit": "USD"}],
+           "budget": {"agent_gpu_hours_per_day": 0.6}}
+    assert client.put("/api/pools/box", json=box).status_code == 200
+    plan = client.post(f"{dag}/runs/plan", json={}).json()
+    assert plan["waves"][0][0]["cost"]["pool"] == "box" and plan["cost"] == {"USD": 1.0}
+    agent, cells = agent_client(), [{"node": "exp.bench", "cell": "_"}]
+    assert agent.post(f"{dag}/runs/queue", json={"cells": cells}).status_code == 200          # on the node's platform: the name
+    snap = client.get("/api/resources", params={"project": pid}).json()
+    assert snap["platforms"][0]["pool"]["budget"]["agent_used_today"] == pytest.approx(0.5)
+    from research_deck.mcp_server import compact_pools
+    assert compact_pools(snap)["pools"][0]["answers_to"] == ["8× RTX A6000"]
+    r = agent.post(f"{dag}/runs/queue", json={"cells": cells, "platform": "box"})             # under the id: the same budget
+    assert r.status_code == 403 and "over box's daily budget" in r.text
+    assert client.put(f"/api/projects/{pid}/pools", json={"pools": []}).status_code == 200
+    r = agent.post(f"{dag}/runs/queue", json={"cells": cells})
+    assert r.status_code == 403 and "does not use the resource pool box (asked as 8× RTX A6000)" in r.text
 
 
 # ------------------------------------------------------------------ the check command and the adapters

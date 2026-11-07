@@ -2,9 +2,12 @@
 ~/.research-deck/pools/.cache/<id>.json. A removed pool's file moves to pools/.trash/.
 
 id: jetstream2                 the platform name experiment records (target.platform) and the map (spec.platform) use
-                               (lowercase letters, digits, - _ and .; names are matched ignoring case)
+                               (lowercase letters, digits, - _ and .)
 label: Jetstream2
 kind: cloud                    local | home | lab | cluster | cloud
+names: [Jetstream2 g3.large]   other platform names it answers to: records that describe the machine instead of naming
+                               it. Every name, and the id, is matched ignoring case and extra spaces (name_key), and
+                               belongs to one pool (settle_names).
 source:
   type: command                manual | local | command | http
   run: [rd-pool-openstack, --cloud, js2]       command: an argument list, run without a shell
@@ -41,6 +44,13 @@ CRED_RE = re.compile(r"^(keychain|env):[A-Za-z0-9._-]{1,100}$")
 SOURCE_TYPES = ("manual", "local", "command", "http")
 DEFAULT_EVERY = {"local": 10, "command": 600, "http": 60}
 LOOPBACK = {"127.0.0.1", "localhost", "::1"}
+NAME_MAX = 300
+NAMES_MAX = 100
+
+
+def name_key(name: Any) -> str:
+    """How platform names are compared: ignoring case and extra spaces ("8× RTX A6000" is "8×  rtx a6000")."""
+    return " ".join(str(name or "").split()).lower()
 
 
 def pools_dir() -> Path:
@@ -62,6 +72,25 @@ def check_url(url: str) -> str:
     if u.scheme == "http" and host in LOOPBACK:
         return url
     raise ValueError("source.url must be https://…, or http:// on 127.0.0.1, localhost or [::1]")
+
+
+def _names(raw: Any, pid: str) -> list[str]:
+    """The other platform names a pool answers to, spaces tidied; a repeat, or the id itself, is dropped."""
+    if raw is None:
+        return []
+    if not isinstance(raw, list):
+        raise ValueError("names: a list of the other platform names this pool answers to")
+    out, seen = [], {name_key(pid)}
+    for n in raw:
+        s = " ".join(str(n).split()) if isinstance(n, (str, int, float)) and not isinstance(n, bool) else ""
+        if not s or len(s) > NAME_MAX:
+            raise ValueError(f"names: each one a platform name of 1–{NAME_MAX} characters")
+        if name_key(s) not in seen:
+            seen.add(name_key(s))
+            out.append(s)
+    if len(out) > NAMES_MAX:
+        raise ValueError(f"names: at most {NAMES_MAX}")
+    return out
 
 
 def validate(data: Any) -> dict:
@@ -123,14 +152,17 @@ def validate(data: Any) -> dict:
     if kind not in protocol.KINDS:
         raise ValueError(f"kind must be one of {', '.join(protocol.KINDS)}")
     label = str(data.get("label") or pid).strip()[:80] or pid
-    out = {"id": pid, "label": label, "kind": kind, "source": source, "credential": cred, "prices": prices, "budget": budget}
+    names = _names(data.get("names"), pid)
+    out = {"id": pid, "label": label, "kind": kind, **({"names": names} if names else {}), "source": source,
+           "credential": cred, "prices": prices, "budget": budget}
     if str(data.get("note") or "").strip():
         out["note"] = str(data["note"]).strip()[:300]
     return out
 
 
-def load_all(errors: list[dict] | None = None) -> list[dict]:
-    """Every pool that validates, by label. A broken file is skipped (and listed in errors, when given), not fatal."""
+def load_all(errors: list[dict] | None = None, clashes: list[dict] | None = None) -> list[dict]:
+    """Every pool that validates, by label. A broken file is skipped (and listed in errors, when given), not fatal; a
+    platform name two pools claim is kept by one of them (settle_names; listed in clashes, when given)."""
     d = pools_dir()
     out = []
     for p in sorted(d.glob("*.yaml")) if d.is_dir() else []:
@@ -144,7 +176,30 @@ def load_all(errors: list[dict] | None = None) -> list[dict]:
                 errors.append({"file": p.name, "error": str(e)[:300]})
             continue
         out.append(pool)
+    settle_names(out, clashes)
     return sorted(out, key=lambda x: (x["label"].lower(), x["id"]))
+
+
+def settle_names(pools: list[dict], clashes: list[dict] | None = None) -> None:
+    """A platform name belongs to one pool: a pool's id beats another pool's name for it, and of two pools that list
+    the same name, the first by id keeps it. The other copy is dropped (and listed in clashes, when given). Saving
+    refuses a clash (save); this settles files written by hand."""
+    ids = {name_key(p["id"]): p["id"] for p in pools}
+    claimed: dict[str, str] = {}
+    for p in sorted(pools, key=lambda x: x["id"]):
+        keep = []
+        for n in p.get("names") or []:
+            owner = ids.get(name_key(n)) or claimed.get(name_key(n))
+            if owner and owner != p["id"]:
+                if clashes is not None:
+                    clashes.append({"name": n, "pool": p["id"], "owner": owner})
+                continue
+            claimed[name_key(n)] = p["id"]
+            keep.append(n)
+        if keep:
+            p["names"] = keep
+        else:
+            p.pop("names", None)
 
 
 def exists(pid: str) -> bool:
@@ -181,10 +236,20 @@ def get(pid: str) -> dict:
 
 
 def save(data: dict) -> dict:
+    """Write a definition (create or replace). 409 when its id or one of its names is already another pool's."""
     try:
         pool = validate(data)
     except ValueError as e:
         raise HTTPException(400, str(e)) from e
+    taken: dict[str, str] = {}
+    for p in load_all():
+        if p["id"] != pool["id"]:
+            for n in [p["id"], *p.get("names", [])]:
+                taken.setdefault(name_key(n), p["id"])
+    for n in [pool["id"], *pool.get("names", [])]:
+        if name_key(n) in taken:
+            raise HTTPException(409, f"the platform name «{n}» already belongs to the pool {taken[name_key(n)]}; "
+                                     "take it out there first")
     pools_dir().mkdir(parents=True, exist_ok=True)
     write_yaml(_path(pool["id"]), pool)
     return pool

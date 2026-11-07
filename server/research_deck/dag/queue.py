@@ -4,9 +4,9 @@ The researcher queues any cells (cloud or not) with an explicit confirmation. An
 the node kind is allowed (policy.agent_auto_run.kinds), no cell is blocked by "implement first" (impl_lag), and every
 platform allows it:
 
-- a platform that is a resource pool (pools/): the project uses the pool, and the pool's budget gives agents GPU-hours
-  (budget.agent_gpu_hours_per_day, per project and day; 0 or unset: never), which the agents' estimated GPU-hours
-  queued there today (UTC) stay within;
+- a platform that is a resource pool (pools/: the pool's id or one of its names): the project uses the pool, and the
+  pool's budget gives agents GPU-hours (budget.agent_gpu_hours_per_day, per project and day; 0 or unset: never),
+  which the agents' estimated GPU-hours queued there today (UTC), under any of its names, stay within;
 - any other platform: the project's policy lists it, within its daily budget —
 
     policy:
@@ -43,8 +43,10 @@ def agent_gpu_hours_today(store: DagStore) -> float:
 
 
 def agent_gpu_hours_by_platform_today(store: DagStore) -> dict[str, float]:
-    """The agents' GPU-hours queued today (UTC) by platform (lowercase). An older event that queued on several
-    platforms at once, without a breakdown, counts in full against each (over-counting is the safe side of a budget)."""
+    """The agents' GPU-hours queued today (UTC) by platform name (pools/store.py name_key: case and extra spaces
+    aside). An older event that queued on several platforms at once, without a breakdown, counts in full against each
+    (over-counting is the safe side of a budget)."""
+    from ..pools.store import name_key
     out: dict[str, float] = {}
     for e in _agent_queued_today(store):
         by = e.get("gpu_h_by_platform")
@@ -55,7 +57,7 @@ def agent_gpu_hours_by_platform_today(store: DagStore) -> dict[str, float]:
             names = [p] if isinstance(p, str) else [str(x) for x in p] if isinstance(p, list) else []
             items = [(n, float(e.get("gpu_h") or 0)) for n in names]
         for name, h in items:
-            out[name.lower()] = out.get(name.lower(), 0.0) + h
+            out[name_key(name)] = out.get(name_key(name), 0.0) + h
     return out
 
 
@@ -63,29 +65,35 @@ def agent_problems(store: DagStore, pid: str, wanted: list[dict], kinds: set, po
     """Why an agent may not queue these cells by itself (empty: it may)."""
     from ..pools import service as pool_service
     from ..pools import store as pool_store
-    pools = {p["id"]: p for p in pool_store.load_all()}
+    own = pool_service.owners(pool_store.load_all())
     sel = pool_service.selection(pid)
-    want: dict[str, float] = {}
+    on_pool: dict[str, tuple[dict, float, set[str]]] = {}     # pool id → (pool, GPU-h asked, the names asked by)
+    want: dict[str, float] = {}                                # any other platform → GPU-h asked
     for w in wanted:
-        want[w["platform"]] = want.get(w["platform"], 0.0) + w["est_gpu_h"]
+        pool = own.get(pool_store.name_key(w["platform"]))
+        if pool:
+            _p, h, names = on_pool.get(pool["id"], (pool, 0.0, set()))
+            on_pool[pool["id"]] = (pool, h + w["est_gpu_h"], names | {w["platform"]})
+        else:
+            want[w["platform"]] = want.get(w["platform"], 0.0) + w["est_gpu_h"]
     used = agent_gpu_hours_by_platform_today(store)
     problems = []
-    others = sorted(p for p in want if p.lower() not in pools)
-    for name in sorted(p for p in want if p.lower() in pools):
-        pool = pools[name.lower()]
+    for pool_id, (pool, asked, names) in sorted(on_pool.items()):
+        name = pool_id if {pool_store.name_key(n) for n in names} == {pool_id} else f"{pool_id} (asked as {', '.join(sorted(names))})"
         limit = float(pool["budget"].get("agent_gpu_hours_per_day") or 0)
-        have = used.get(pool["id"], 0.0)
-        if sel is not None and pool["id"] not in sel:
+        have = pool_service.pool_usage(pool, used)
+        if sel is not None and pool_id not in sel:
             problems.append(f"this project does not use the resource pool {name}")
         elif limit <= 0:
             problems.append(f"agents may not queue on {name}: its budget gives agents no GPU-hours")
-        elif have + want[name] > limit + 1e-9:
-            problems.append(f"over {name}'s daily budget for agents: {have:.2f} + {want[name]:.2f} > {limit:.2f} GPU-h")
+        elif have + asked > limit + 1e-9:
+            problems.append(f"over {name}'s daily budget for agents: {have:.2f} + {asked:.2f} > {limit:.2f} GPU-h")
+    others = sorted(want)
     if others:
         allowed = set(policy.get("platforms") or [])
         budget = float(policy.get("max_gpu_hours_per_day") or 0)
-        have = sum(h for p, h in used.items() if p not in pools)
-        asked = sum(want[p] for p in others)
+        have = sum(h for p, h in used.items() if p not in own)
+        asked = sum(want.values())
         if not set(others) <= allowed:
             problems.append(f"agents may queue only on {sorted(allowed) or 'no platform'} (asked: {others})")
         if have + asked > budget + 1e-9:

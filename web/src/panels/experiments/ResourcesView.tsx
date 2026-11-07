@@ -7,7 +7,7 @@ import { Icon } from '../../components/icons';
 import { useI18n, useRelTime, useT } from '../../i18n';
 import { useApp } from '../../state/app';
 import { poolApi, thisComputer, type PoolInfo } from '../../pools/api';
-import { num, rateText, ruleText } from '../../pools/format';
+import { nameList, num, rateText, ruleText } from '../../pools/format';
 import { KIND_ICON, PoolStateBadge } from '../../pools/PoolsSection';
 import '../../pools/i18n';
 import '../../pools/pools.css';
@@ -20,6 +20,7 @@ const FILTER_KEY = 'rd.ex.poolFilter';
 
 export function ResourcesView({ pid }: { pid: string }) {
   const t = useT();
+  const { lang } = useI18n();
   const rel = useRelTime();
   const { navigate } = useApp();
   const [data, setData] = useState<ExResources | null>(null);
@@ -97,7 +98,7 @@ export function ResourcesView({ pid }: { pid: string }) {
         )}
         {pools && data.platforms.length > 0 && <div className="faint ex-small">{t('pl.r.lead')}</div>}
         {pools && unmatched.length > 0 && (
-          <div className="notice"><Icon name="info" /><span className="grow">{t('pl.r.unmatched', { n: unmatched.length, names: unmatched.join('、') })}</span>
+          <div className="notice"><Icon name="info" /><span className="grow">{t('pl.r.unmatched', { n: unmatched.length, names: nameList(unmatched, lang) })}</span>
             <Button size="sm" onClick={() => navigate('settings', 'pools')}>{t('pl.r.register')}</Button></div>
         )}
         {error && <ErrorNote error={error} onRetry={load} />}
@@ -147,6 +148,7 @@ function PlatformCard({ p, skew, demo }: { p: ExPlatform; skew: number; demo: bo
           </div>
           {pool && <div className="faint ex-small">{t(`pl.src.${pool.source.type}`)}{pool.read_at && pool.source.type !== 'manual'
             ? ` · ${pool.state === 'failed' ? t('pl.r.showing', { rel: rel(pool.read_at) }) : rel(pool.read_at)}` : ''}</div>}
+          {pool?.names?.length ? <div className="faint ex-small pl-res-names" title={pool.names.join('\n')}>{t('pl.r.alsoNamed', { names: nameList(pool.names, lang) })}</div> : null}
           {note && <div className="muted ex-small">{note}</div>}
         </div>
         {pool ? <PoolChips pool={pool} lang={lang} /> : (

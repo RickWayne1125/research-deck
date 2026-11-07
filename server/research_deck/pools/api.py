@@ -1,10 +1,11 @@
 """Resource pool routes (docs/API.md § Resource pools).
 
 GET    /api/pools?project=                 every pool (definition + platform view), the project's selection, the
-                                           platform names no pool answers to, pool files that do not validate, and
-                                           where the example adapters are
+                                           platform names no pool answers to, pool files that do not validate, names
+                                           two pool files both claim, and where the example adapters are
 GET    /api/pools/{id}?project=            one pool, with its file as written
-PUT    /api/pools/{id}?project=            create or replace (the researcher only)
+PUT    /api/pools/{id}?project=            create or replace (the researcher only; 409 when its id or one of its
+                                           names is already another pool's)
 DELETE /api/pools/{id}                     move the file to pools/.trash/ (the researcher only; credentials stay)
 POST   /api/pools/{id}/refresh?project=    read now (the researcher only)
 POST   /api/pools/test                     read an unsaved definition once (the researcher only)
@@ -36,12 +37,13 @@ def _human(request: Request) -> None:
 @router.get("/api/pools")
 def list_pools(project: str | None = None):
     errors: list[dict] = []
-    pools = store.load_all(errors)
+    clashes: list[dict] = []
+    pools = store.load_all(errors, clashes)
     service.refresh_due(pools)
     sel = service.selection(project) if project else None
     usage = service.agent_usage_today(project) if project else {}
     return {"pools": [service.view(p, project, sel=sel, usage=usage) for p in pools], "selection": sel,
-            "unmatched": service.unmatched(project, pools) if project else [], "broken": errors,
+            "unmatched": service.unmatched(project, pools) if project else [], "broken": errors, "clashes": clashes,
             "dir": str(store.pools_dir()),
             # for the wizard's presets: the example adapters (scripts/pools) and a Python that can run them
             "adapters": str(config.APP_ROOT / "scripts" / "pools"), "python": sys.executable}

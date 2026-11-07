@@ -112,5 +112,8 @@ prices: [{item: gpu_hour, match: {}, amount: 0.08, unit: USD}]    # electricity;
 budget: {agent_gpu_hours_per_day: 8}
 ```
 
+If your experiment records already describe this machine in their own words (`target.platform: RTX 5090 at home`),
+add those under `names:` and they count as this pool too.
+
 If the adapter needs a token, keep it in the keychain (`security add-generic-password -s gpu-box-reader -a $USER -w`),
 set `credential: keychain:gpu-box-reader`, and read `RD_POOL_SECRET` in the adapter.

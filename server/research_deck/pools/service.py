@@ -8,6 +8,9 @@ views     platform_view() is one pool in the Experiments › Resources shape (Ex
           api.ts) with the pool's own facts under "pool": state, source, error, capabilities, prices, budget,
           credential. snapshot(pid) is GET /api/resources: every pool, whether this project uses it, and the platform
           names the project's records and map use that no pool answers to.
+names     A platform name (target.platform, spec.platform) is a pool's when it is the pool's id or one of its names,
+          ignoring case and extra spaces (owners; store.settle_names keeps each name with one pool). Prices, the
+          agents' budgets and the unmatched names all go through owners().
 prices    The definition's prices (what the researcher wrote) first, then the source's; the most specific match wins.
           A machine of one's own (local, home, lab) with no price is not billed. A cluster or cloud with no price is
           unknown (None), never 0. Pricer estimates many cells at once (run plan, impact preview); a platform with no
@@ -50,6 +53,21 @@ def _time(iso: Any) -> datetime | None:
 def age_s(iso: Any) -> float | None:
     dt = _time(iso) if iso else None
     return None if dt is None else max(0.0, (datetime.now(UTC) - dt).total_seconds())
+
+
+def owners(pools: list[dict]) -> dict[str, dict]:
+    """Every platform name a pool answers to (store.name_key of its id and of each of its names) → that pool."""
+    out = {store.name_key(p["id"]): p for p in pools}
+    for p in pools:
+        for n in p.get("names") or []:
+            out.setdefault(store.name_key(n), p)
+    return out
+
+
+def pool_usage(pool: dict, usage: dict[str, float]) -> float:
+    """The agents' GPU-hours today on a pool (usage by name_key, agent_usage_today): under its id and its names."""
+    keys = {store.name_key(pool["id"]), *(store.name_key(n) for n in pool.get("names") or [])}
+    return round(sum(usage.get(k, 0.0) for k in keys), 4)
 
 
 def signature(pool: dict) -> str:
@@ -212,11 +230,13 @@ class Pricer:
     """Estimates for many cells at once: each pool and its last read are loaded once."""
 
     def __init__(self) -> None:
-        self.pools = {p["id"]: p for p in store.load_all()}
+        pools = store.load_all()
+        self.pools = {p["id"]: p for p in pools}
+        self.by_name = owners(pools)
         self._docs: dict[str, dict | None] = {}
 
     def pool(self, platform: str | None) -> dict | None:
-        return self.pools.get(str(platform or "").strip().lower())
+        return self.by_name.get(store.name_key(platform))
 
     def doc(self, pool: dict) -> dict | None:
         if pool["id"] not in self._docs:
@@ -344,12 +364,13 @@ def platform_names(pid: str) -> list[str]:
 
 
 def unmatched(pid: str, pools: list[dict]) -> list[str]:
-    ids = {p["id"] for p in pools}
-    return [n for n in platform_names(pid) if n.lower() not in ids]
+    """The project's platform names that no pool answers to, by its id or by one of its names."""
+    own = owners(pools)
+    return [n for n in platform_names(pid) if store.name_key(n) not in own]
 
 
 def agent_usage_today(pid: str) -> dict[str, float]:
-    """GPU-hours the agents queued today (UTC) in this project, by platform (lowercase)."""
+    """GPU-hours the agents queued today (UTC) in this project, by platform name (store.name_key)."""
     try:
         from ..dag.queue import agent_gpu_hours_by_platform_today
         from ..dag.service import store_for
@@ -422,7 +443,8 @@ def platform_view(pool: dict, rec: dict, *, here: bool = True, agent_used: float
         "nodes": nodes, "quota": {q["name"]: _quota_text(q) for q in quota_items} or None, "quota_items": quota_items,
         "cost": cost, "note": pool.get("note"), "checked_at": rec.get("read_at"), "provider_kind": src["type"],
         "pool": {
-            "state": state, "here": here, "source": {k: v for k, v in src.items() if k != "inventory"},
+            "state": state, "here": here, "names": pool.get("names") or [],
+            "source": {k: v for k, v in src.items() if k != "inventory"},
             "read_at": rec.get("read_at"), "age_s": None if age is None else round(age), "tried_at": rec.get("tried_at"),
             "error": rec.get("error"), "warnings": rec.get("warnings") or [], "duration_s": rec.get("duration_s"),
             "reading": reading(pool["id"]), "capabilities": (doc or {}).get("capabilities") or [],
@@ -441,7 +463,7 @@ def view(pool: dict, pid: str | None = None, *, sel: list[str] | None = None, us
         sel = selection(pid)
     here = sel is None or pool["id"] in sel
     return {"def": pool, "platform": platform_view(pool, record(pool), here=here,
-                                                   agent_used=(usage or {}).get(pool["id"], 0.0) if pid else None)}
+                                                   agent_used=pool_usage(pool, usage or {}) if pid else None)}
 
 
 def snapshot(pid: str | None = None) -> dict:

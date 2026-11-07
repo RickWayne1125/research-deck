@@ -63,13 +63,18 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "list":
         errors: list[dict] = []
-        for p in store.load_all(errors):
+        clashes: list[dict] = []
+        for p in store.load_all(errors, clashes):
             rec = service.cached(p)
             last = rec.get("read_at") or "never read"
             err = f" · last read failed: {rec['error']}" if rec.get("error") else ""
             print(f"{p['id']:<20} {p['label']:<24} {p['kind']:<8} {p['source']['type']:<8} {last}{err}")
+            for n in p.get("names") or []:
+                print(f"{'':<20} also: {n}")
         for e in errors:
             print(f"{e['file']}: does not validate: {e['error']}")
+        for c in clashes:
+            print(f"{c['pool']}.yaml: «{c['name']}» is already {c['owner']}'s, so it is ignored there")
         print(f"({store.pools_dir()})")
         return 0
 

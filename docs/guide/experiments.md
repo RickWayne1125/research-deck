@@ -44,8 +44,8 @@ Research Deck only reads pools: nothing here starts, stops or dispatches work.
 
 Pools belong to the computer, not to a project: one file each in `~/.research-deck/pools/<id>.yaml`, which you can copy
 to someone else (it holds no secrets). A pool's **id is the platform name** that experiment records (`target.platform`)
-and the map's experiment nodes (`spec.platform`) already use, so names you wrote before match by themselves; names no
-pool answers to are listed with a button to register them.
+and the map's experiment nodes (`spec.platform`) already use, so names you wrote before match by themselves. A pool can
+also answer to [other names](#platform-names), for records that describe the machine instead of naming it.
 
 ### Adding, changing and removing a pool
 
@@ -76,6 +76,22 @@ reads this machine (not billed; agents may not queue there), and **Add a pool** 
 **Import a pool file** reads a pool file someone gave you and opens it in the wizard, to review and test before saving.
 
 Only you add, change, test or refresh pools. Agents see them (`rd_pools`) and cannot change them.
+
+### Platform names
+
+A platform name in a record or on the map belongs to a pool when it is the pool's id or one of the pool's **other
+names**, ignoring case and extra spaces. Other names are for records that describe the machine rather than name it,
+such as `8× RTX A6000 (lab node, GPUs 0-3)`: list them under **Other names** in the wizard (or `names:` in the
+file), and those records are priced on that pool and count against its budget, without rewriting them.
+
+**Settings › Resource pools** lists the names in this project's records and map that no pool answers to. Click one to
+make a new pool for it (a name that can be an id becomes the id; a description becomes one of the new pool's other
+names, with an id made from its start), or to add it to a pool you have. The wizard also offers the rest of the
+project's unmatched names as one-click additions.
+
+A name belongs to one pool. Saving a pool whose id or other name is already another pool's is refused, with the pool
+that has it. When two pool files written by hand list the same name, the pool first by id keeps it, and Settings says
+which file to fix.
 
 ### Credentials
 

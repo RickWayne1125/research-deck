@@ -12,7 +12,8 @@ switch between them and the context is handed over. Model, effort and Fast mode 
   new outline items come in dashed, tasks they suggest wait for you to take them, and anything else becomes a proposal
   under **waiting for you**.
 - Agents may queue runs by themselves only within a budget: on a [resource pool](experiments.md#resource-pools) the
-  project uses whose budget gives agents GPU-hours a day, and on other platforms within the project's policy
+  project uses whose budget gives agents GPU-hours a day (whichever of the pool's [names](experiments.md#platform-names)
+  the run uses, it counts against the same budget), and on other platforms within the project's policy
   (`agent_auto_run` in `.research/dag/config.yaml`). Neither allows anything by default. Agents read the pools and
   their prices but cannot change them.
 

@@ -8,10 +8,11 @@ import {
   EVERY_CHOICES, MATCH_KEYS, POOL_KINDS, poolApi, type InventoryNode, type MatchKey, type PoolDef, type PoolKind, type PoolList,
   type PriceRule, type SourceType, type TestResult,
 } from './api';
-import { blank, DEFAULT_EVERY, problems, slugId } from './draft';
+import { blank, DEFAULT_EVERY, fromName, isIdLike, NAME_MAX, nameKey, problems, slugId, tidyName } from './draft';
 import { amount, commandLine, everyText, matchText, num, ruleText } from './format';
 
-export type WizardStart = { mode: 'add'; id?: string } | { mode: 'edit'; def: PoolDef } | { mode: 'import'; def: PoolDef; exists: boolean };
+/** add: name = a platform name the records use, to make the pool for (its id, or one of its names). */
+export type WizardStart = { mode: 'add'; name?: string } | { mode: 'edit'; def: PoolDef } | { mode: 'import'; def: PoolDef; exists: boolean };
 
 const UNITS = ['USD', 'CNY', 'EUR', 'SU', 'credits'];
 
@@ -20,15 +21,24 @@ export function PoolWizard({ start, list, pid, onClose, onSaved }: {
 }) {
   const t = useT();
   const editing = start.mode === 'edit';
-  const [def, setDef] = useState<PoolDef>(() => (start.mode === 'add' ? blank(start.id ? slugId(start.id) || start.id.toLowerCase() : '') : structuredClone(start.def)));
+  const [def, setDef] = useState<PoolDef>(() => (start.mode !== 'add' ? structuredClone(start.def)
+    : start.name ? fromName(start.name, list.pools.map(p => p.def.id)) : blank()));
   const [step, setStep] = useState<1 | 2 | 3>(start.mode === 'add' ? 1 : 2);
-  const [idTouched, setIdTouched] = useState(start.mode !== 'add' || !!start.id);
+  // A name that is the id stays the id; one kept among the names lets the id follow the label.
+  const [idTouched, setIdTouched] = useState(start.mode !== 'add' || (!!start.name && isIdLike(start.name)));
   const [test, setTest] = useState<TestResult | null>(null);
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bad = problems(def);
-  const taken = !editing && list.pools.some(p => p.def.id === def.id);
+  // An imported file with the id of a pool there is replaces it (said above the form, and on the save button).
+  const replacing = start.mode === 'import' && start.exists && def.id === start.def.id;
+  const taken = !editing && !replacing && list.pools.some(p => p.def.id === def.id);
+  // A platform name belongs to one pool (the server refuses a clash too): which other pool has this one already?
+  const ownerOf = (name: string) => list.pools.find(p => p.def.id !== def.id
+    && [p.def.id, ...(p.def.names ?? [])].some(n => nameKey(n) === nameKey(name)))?.def;
+  const clash = !!ownerOf(def.id) || (def.names ?? []).some(n => !!ownerOf(n));
+  const blocked = bad.length > 0 || taken || clash;
 
   const set = (patch: Partial<PoolDef>) => { setDef(d => ({ ...d, ...patch })); setTest(null); };
   const setSource = (patch: Partial<PoolDef['source']>) => { setDef(d => ({ ...d, source: { ...d.source, ...patch } })); setTest(null); };
@@ -66,9 +76,9 @@ export function PoolWizard({ start, list, pid, onClose, onSaved }: {
     <>
       <span className="faint pl-small grow">{t('pl.w.only')}</span>
       {step > 1 && !(editing && step === 2) && <Button onClick={() => setStep(s => (s - 1) as 1 | 2)}>{t('pl.w.back')}</Button>}
-      {step === 2 && <Button variant="primary" disabled={bad.length > 0 || taken} onClick={() => setStep(3)}>{t('pl.w.next')}</Button>}
-      {step === 3 && <Button variant="primary" disabled={saving || bad.length > 0 || taken} onClick={save}>
-        {start.mode === 'import' && start.exists && def.id === start.def.id ? t('pl.w.saveReplace') : t('pl.w.save')}</Button>}
+      {step === 2 && <Button variant="primary" disabled={blocked} onClick={() => setStep(3)}>{t('pl.w.next')}</Button>}
+      {step === 3 && <Button variant="primary" disabled={saving || blocked} onClick={save}>
+        {replacing ? t('pl.w.saveReplace') : t('pl.w.save')}</Button>}
     </>
   );
 
@@ -78,7 +88,7 @@ export function PoolWizard({ start, list, pid, onClose, onSaved }: {
         <span key={s} className={`pl-step ${i + 1 < step ? 'done' : i + 1 === step ? 'on' : ''}`}><b>{i + 1 < step ? '✓' : i + 1}</b>{s}</span>
       ))}</span></span>} onClose={onClose} width={1120} footer={footer}>
       {error && <div className="notice accent pl-w-error">{error}</div>}
-      {start.mode === 'import' && start.exists && def.id === start.def.id && <div className="notice warn pl-w-error">{t('pl.w.exists', { id: def.id })}</div>}
+      {replacing && <div className="notice warn pl-w-error">{t('pl.w.exists', { id: def.id })}</div>}
       {step === 3 ? <PricesStep def={def} set={set} test={test} /> : (
         <div className="pl-w-grid">
           <div className="col pl-w-col pl-w-left">
@@ -98,7 +108,7 @@ export function PoolWizard({ start, list, pid, onClose, onSaved }: {
           <div className="col pl-w-col pl-w-mid">
             {step === 1 ? <div className="empty"><Icon name="server" size={22} /><span>{t('pl.w.pickSource')}</span></div> : (
               <FormStep def={def} set={set} setSource={setSource} editing={editing} taken={taken} bad={bad}
-                idTouched={idTouched} touchId={() => setIdTouched(true)} />
+                idTouched={idTouched} touchId={() => setIdTouched(true)} ownerOf={ownerOf} suggest={list.unmatched} />
             )}
             {step === 2 && (
               <div className="row pl-w-test">
@@ -119,13 +129,14 @@ export function PoolWizard({ start, list, pid, onClose, onSaved }: {
 
 // ------------------------------------------------------------------ step 2: fill in
 
-function FormStep({ def, set, setSource, editing, taken, bad, idTouched, touchId }: {
+function FormStep({ def, set, setSource, editing, taken, bad, idTouched, touchId, ownerOf, suggest }: {
   def: PoolDef; set: (p: Partial<PoolDef>) => void; setSource: (p: Partial<PoolDef['source']>) => void; editing: boolean; taken: boolean;
-  bad: string[]; idTouched: boolean; touchId: () => void;
+  bad: string[]; idTouched: boolean; touchId: () => void; ownerOf: (name: string) => PoolDef | undefined; suggest: string[];
 }) {
   const t = useT();
   const s = def.source;
   const credName = def.credential?.split(':')[1] || 'my-pool-reader';
+  const idOwner = taken ? undefined : ownerOf(def.id);
   return (
     <div className="col pl-form">
       <div className="pl-two">
@@ -133,10 +144,14 @@ function FormStep({ def, set, setSource, editing, taken, bad, idTouched, touchId
           <input className="input" value={def.label} autoFocus
             onChange={e => set({ label: e.target.value, ...(idTouched ? {} : { id: slugId(e.target.value) }) })} /></label>
         <label className="field"><span className="label">{t('pl.w.id')}</span>
-          <input className={`input mono ${bad.includes('id') || taken ? 'invalid' : ''}`} value={def.id} disabled={editing}
+          <input className={`input mono ${bad.includes('id') || taken || idOwner ? 'invalid' : ''}`} value={def.id} disabled={editing}
             onChange={e => { touchId(); set({ id: e.target.value.trim().toLowerCase() }); }} />
-          {taken ? <span className="pl-small pl-bad">{t('pl.w.idTaken')}</span> : <span className="faint pl-small">{t('pl.w.idHint')}</span>}</label>
+          {taken ? <span className="pl-small pl-bad">{t('pl.w.idTaken')}</span>
+            : idOwner ? <span className="pl-small pl-bad">{t('pl.w.nameOwned', { pool: idOwner.label })}</span>
+            : <span className="faint pl-small">{t('pl.w.idHint')}</span>}</label>
       </div>
+      <NamesEditor id={def.id} names={def.names ?? []} suggest={suggest} ownerOf={ownerOf}
+        onChange={names => set({ names: names.length ? names : undefined })} />
       <label className="field"><span className="label">{t('pl.w.kind')}</span>
         <select className="select" value={def.kind} onChange={e => set({ kind: e.target.value as PoolKind })}>
           {POOL_KINDS.map(k => <option key={k} value={k}>{t(`pl.kind.${k}`)}{['local', 'home', 'lab'].includes(k) ? ` · ${t('pl.w.unbilled')}` : ''}</option>)}
@@ -174,6 +189,53 @@ function FormStep({ def, set, setSource, editing, taken, bad, idTouched, touchId
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/** The other platform names the pool answers to: typed, or picked from the names this project has no pool for. */
+function NamesEditor({ id, names, suggest, ownerOf, onChange }: {
+  id: string; names: string[]; suggest: string[]; ownerOf: (name: string) => PoolDef | undefined; onChange: (n: string[]) => void;
+}) {
+  const t = useT();
+  const [draft, setDraft] = useState('');
+  const has = (n: string) => nameKey(n) === nameKey(id) || names.some(x => nameKey(x) === nameKey(n));
+  const add = (n: string) => {
+    const s = tidyName(n).slice(0, NAME_MAX);
+    if (s && !has(s)) onChange([...names, s]);
+  };
+  const typed = () => { add(draft); setDraft(''); };
+  const left = suggest.filter(n => !has(n));
+  return (
+    <div className="field"><span className="label">{t('pl.w.names')}</span>
+      {names.length > 0 && (
+        <div className="col pl-names">
+          {names.map((n, i) => {
+            const owner = ownerOf(n);
+            return (
+              <div key={nameKey(n)} className={`pl-name ${owner ? 'clash' : ''}`}>
+                <span className="grow pl-name-text">{n}{owner && <span className="pl-small pl-bad"> · {t('pl.w.nameOwned', { pool: owner.label })}</span>}</span>
+                <button type="button" aria-label={t('pl.w.removeName', { name: n })} onClick={() => onChange(names.filter((_, j) => j !== i))}><Icon name="close" size={10} /></button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <div className="row pl-name-add">
+        <input className="input grow" value={draft} placeholder={t('pl.w.namePlaceholder')} aria-label={t('pl.w.names')}
+          onChange={e => setDraft(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && draft.trim()) { e.preventDefault(); typed(); } }} />
+        <Button size="sm" icon="plus" disabled={!draft.trim()} onClick={typed}>{t('pl.w.addName')}</Button>
+      </div>
+      {left.length > 0 && (
+        <div className="row wrap pl-chips">
+          <span className="faint pl-small">{t('pl.w.nameSuggest')}</span>
+          {left.map(n => (
+            <button key={n} type="button" className="chip pl-chip-btn" title={n} onClick={() => add(n)}>
+              <Icon name="plus" size={11} /><span className="pl-chip-text">{n}</span></button>
+          ))}
+        </div>
+      )}
+      <span className="faint pl-small">{t('pl.w.namesHint')}</span>
     </div>
   );
 }

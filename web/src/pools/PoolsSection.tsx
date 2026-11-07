@@ -1,7 +1,8 @@
 // Settings › Resource pools: the pools on this computer (add, edit, test, refresh, remove to the trash), which of them
-// this project uses, the platform names no pool answers to, and one table of prices and budgets.
+// this project uses, the platform names no pool answers to (a new pool for one, or one more name for a pool), and one
+// table of prices and budgets.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Badge, Button, Dialog, ErrorNote, Segmented, Spinner, useLoad } from '../components/ui';
+import { Badge, Button, Dialog, ErrorNote, Menu, Segmented, Spinner, useLoad } from '../components/ui';
 import { Icon } from '../components/icons';
 import { useI18n, useRelTime, useT } from '../i18n';
 import { useApp } from '../state/app';
@@ -75,18 +76,25 @@ export function PoolsSection() {
       {data.broken.map(b => (
         <div key={b.file} className="notice warn"><Icon name="warn" /><span><span className="mono">{b.file}</span> · {t('pl.broken', { error: b.error })}</span></div>
       ))}
+      {(data.clashes ?? []).map(c => (
+        <div key={`${c.pool}:${c.name}`} className="notice warn"><Icon name="warn" /><span>{t('pl.clash', c)}</span></div>
+      ))}
 
       {view === 'pools' ? (
         <>
           {data.unmatched.length > 0 && (
             <section className="pl-card">
               <div className="h3">{t('pl.unmatched.title')}</div>
-              <span className="st-hint">{t('pl.unmatched.body')}</span>
+              <span className="st-hint">{t(data.pools.length ? 'pl.unmatched.body' : 'pl.unmatched.bodyNew')}</span>
               <div className="row wrap pl-chips">
-                {data.unmatched.map(name => (
-                  <button key={name} type="button" className="chip mono pl-chip-btn" title={t('pl.unmatched.register')}
-                    onClick={() => setWizard({ mode: 'add', id: name })}><Icon name="plus" size={11} />{name}</button>
-                ))}
+                {data.unmatched.map(name => (data.pools.length ? (
+                  <UnmatchedName key={name} name={name} pools={data.pools} busy={busy === `name:${name}`}
+                    onNew={() => setWizard({ mode: 'add', name })}
+                    onAdd={v => act(`name:${name}`, () => poolApi.save({ ...v.def, names: [...(v.def.names ?? []), name] }, pid))} />
+                ) : (
+                  <button key={name} type="button" className="chip pl-chip-btn" title={name} onClick={() => setWizard({ mode: 'add', name })}>
+                    <Icon name="plus" size={11} /><span className="pl-chip-text">{name}</span></button>
+                )))}
               </div>
             </section>
           )}
@@ -132,6 +140,32 @@ export function PoolsSection() {
   );
 }
 
+/** A platform name no pool answers to: a new pool for it, or one more name for a pool there is. */
+function UnmatchedName({ name, pools, busy, onNew, onAdd }: {
+  name: string; pools: PoolView[]; busy: boolean; onNew: () => void; onAdd: (v: PoolView) => void;
+}) {
+  const t = useT();
+  return (
+    <Menu align="left" portal button={(open, toggle) => (
+      <button type="button" className="chip pl-chip-btn" title={name} aria-expanded={open} disabled={busy} onClick={toggle}>
+        <Icon name="plus" size={11} /><span className="pl-chip-text">{name}</span></button>
+    )}>
+      {close => (
+        <div className="col pl-menu">
+          <div className="pl-menu-name">{name}</div>
+          <button type="button" className="menu-item" onClick={() => { close(); onNew(); }}><Icon name="plus" size={13} />{t('pl.unmatched.new')}</button>
+          <div className="label pl-menu-head">{t('pl.unmatched.addTo')}</div>
+          {pools.map(v => (
+            <button key={v.def.id} type="button" className="menu-item" onClick={() => { close(); onAdd(v); }}>
+              <Icon name={KIND_ICON[v.def.kind] ?? 'server'} size={13} /><span className="grow ellipsis">{v.def.label}</span>
+              <span className="mono faint pl-id">{v.def.id}</span></button>
+          ))}
+        </div>
+      )}
+    </Menu>
+  );
+}
+
 // ------------------------------------------------------------------ one pool
 
 /** A pool's state; short leaves out when (the Experiments card says it on the source line). */
@@ -173,6 +207,10 @@ function PoolRow({ v, here, busy, onToggle, onEdit, onRefresh, onDelete }: {
           <PoolStateBadge info={info} manual={def.source.type === 'manual'} />
         </div>
         <dl className="kv pl-kv">
+          {def.names?.length ? <>
+            <dt>{t('pl.k.names')}</dt>
+            <dd className="col pl-row-names">{def.names.map(n => <span key={n}>{n}</span>)}</dd>
+          </> : null}
           <dt>{t('pl.k.source')}</dt>
           <dd>{src.kind}{src.detail && <> <code className="mono pl-code">{src.detail}</code></>}{src.every && <span className="faint"> · {src.every}</span>}</dd>
           <dt>{t('pl.k.reads')}</dt>

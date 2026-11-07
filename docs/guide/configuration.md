@@ -33,6 +33,7 @@ them; you may also write or copy one by hand (it holds no secrets).
 id: jetstream2                  # the platform name experiment records and the map use
 label: Jetstream2
 kind: cloud                     # local | home | lab | cluster | cloud
+names: [Jetstream2 g3.large]    # other platform names it answers to (optional)
 source:
   type: command                 # manual | local | command | http
   run: [rd-pool-openstack, --cloud, js2]    # command: an argument list, no shell
@@ -49,6 +50,7 @@ budget:
 | Key | What |
 |---|---|
 | `id` | lowercase letters, digits and `- _ .`; matched against platform names ignoring case |
+| `names` | other platform names the pool answers to, such as a record's description of the machine; matched ignoring case and extra spaces, and each name belongs to one pool ([Platform names](experiments.md#platform-names)) |
 | `source.type` | `manual` (with `source.inventory.nodes`), `local`, `command` (with `source.run`) or `http` (with `source.url`: https, or http on 127.0.0.1 / localhost) |
 | `source.every`, `source.timeout` | seconds between reads (10–86400; default 10 local, 600 command, 60 http) and per read (1–120, default 30) |
 | `credential` | `keychain:<service>` or `env:<VARIABLE>` |

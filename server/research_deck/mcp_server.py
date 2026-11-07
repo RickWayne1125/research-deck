@@ -144,7 +144,8 @@ def compact_pools(snap: Any) -> Any:
         rate = info.get("rate") or {}
         budget = info.get("budget") or {}
         pools.append({k: v for k, v in {
-            "id": p.get("id"), "label": p.get("label"), "kind": p.get("kind"), "used_by_this_project": info.get("here"),
+            "id": p.get("id"), "label": p.get("label"), "kind": p.get("kind"), "answers_to": info.get("names") or None,
+            "used_by_this_project": info.get("here"),
             "state": info.get("state"), "error": info.get("error"), "read_age_s": info.get("age_s"), "machines": machines,
             "quota": p.get("quota_items") or None, "spend": p.get("cost"),
             "price_per_gpu_hour": {k: rate.get(k) for k in ("state", "amount", "unit", "why", "options") if rate.get(k) is not None},
@@ -360,7 +361,8 @@ def build_server(project: str | None = None, http: httpx.Client | None = None, *
         "The resource pools (the compute this project can run on): each pool's machines and GPUs, quota, spend, "
         "price per GPU-hour or per machine-hour with its unit (null = unknown, never 0; own machines are not billed), "
         "and the agents' daily GPU-hour budget there with what agents used today (0: agents may not queue there). "
-        "Read-only: the researcher adds and changes pools. A pool's id is the platform name for rd_queue_runs."))
+        "Read-only: the researcher adds and changes pools. A pool's id, or one of its other names (answers_to, for "
+        "records that describe the machine), is the platform name for rd_queue_runs."))
     async def rd_pools() -> str:
         return _compact(compact_pools(await call("GET", "/api/resources", params={"project": api.project})))
 

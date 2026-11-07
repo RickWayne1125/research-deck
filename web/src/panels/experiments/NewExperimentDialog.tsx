@@ -5,7 +5,7 @@ import { Button, Dialog } from '../../components/ui';
 import { dagApi } from '../../dag/api';
 import { useDagLabels } from '../../dag/encoding';
 import { useI18n, useT } from '../../i18n';
-import { amount, num, platformRate, rateText } from '../../pools/format';
+import { amount, answersTo, num, platformRate, rateText } from '../../pools/format';
 import '../../pools/i18n';
 import type { DagNode } from '../../types';
 import { exApi, type ExRecord, type ExResources } from './api';
@@ -37,7 +37,7 @@ export function NewExperimentDialog({ pid, initialNode, initialTitle, onClose, o
     exApi.resources(pid).then(r => { if (alive) setResources(r); }).catch(() => {});
     return () => { alive = false; };
   }, [pid]);
-  const plat = resources?.platforms.find(p => p.id === platform.trim().toLowerCase() || p.id === platform || p.label === platform);
+  const plat = resources?.platforms.find(p => answersTo(p, platform) || p.label === platform);    // its id or one of its names
   const hosts = useMemo(() => (plat ? plat.nodes : resources?.platforms.flatMap(p => p.nodes) ?? []), [plat, resources]);
   const gpuNames = useMemo(() => [...new Set(hosts.flatMap(n => n.gpus.map(g => g.name)))], [hosts]);
   // The chosen DAG node's spec fills in what is still empty: its platform and estimated hours.
