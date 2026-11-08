@@ -59,6 +59,10 @@ case "${1:-status}" in
 EOF
     plutil -lint "$PLIST" >/dev/null
     launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
+    # bootout returns while the old server may still be closing open connections (up to 5 s); bootstrap fails until it
+    # has gone ("5: Input/output error"), which would leave no server running. So wait for it first.
+    for i in {1..60}; do launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1 || break; sleep 0.5; done
+    if launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1; then echo "the old agent has not stopped yet; run install again"; exit 1; fi
     launchctl bootstrap "$DOMAIN" "$PLIST"
     launchctl enable "$DOMAIN/$LABEL"
     for i in {1..40}; do [[ "$(health)" == "200" ]] && break; sleep 0.5; done
