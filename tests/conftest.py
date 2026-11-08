@@ -13,6 +13,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from research_deck import config
+from research_deck.agents import runner as agent_runner
 from research_deck.dag import resolve
 from research_deck.docmost import sync as docmost_sync
 from research_deck.pools import service as pool_service
@@ -40,6 +41,7 @@ def isolated(tmp_path_factory, monkeypatch):
     monkeypatch.setattr(pool_service, "BACKGROUND", False)          # resource pools are read on the spot, not in threads
     pool_service._NAMES.clear()
     monkeypatch.setattr(docmost_sync, "BACKGROUND", False)          # no background note sync; tests call sync() themselves
+    agent_runner._RUNS.clear()                                      # every test starts with no agent runs
     yield
 
 

@@ -16,6 +16,16 @@ export interface AgentRunState {
 
 const IDLE: AgentRunState = { runId: null, status: 'idle', text: '', events: [], error: null, meta: null, sessionId: null };
 
+function apply(s: AgentRunState, e: AgentEvent): AgentRunState {
+  if (e.type === 'reset') return { ...s, events: [], text: '', error: null };      // the server restarted; it replays
+  const next: AgentRunState = { ...s, events: [...s.events, e] };
+  if (e.type === 'text') next.text = s.text + e.delta;
+  if (e.type === 'session') next.sessionId = e.session_id;
+  if (e.type === 'error') next.error = e.message;
+  if (e.type === 'done') { next.text = e.text || next.text; next.status = e.cancelled ? 'cancelled' : e.ok ? 'done' : 'error'; }
+  return next;
+}
+
 export function useAgentRun(projectId: string | null) {
   const [state, setState] = useState<AgentRunState>(IDLE);
   const off = useRef<(() => void) | null>(null);
@@ -30,17 +40,7 @@ export function useAgentRun(projectId: string | null) {
       setState(s => ({ ...s, runId: meta.run_id, meta, sessionId: meta.session_id }));
       off.current = streamRun(meta.run_id, (e) => {
         onEvent?.(e);
-        setState(s => {
-          const next: AgentRunState = { ...s, events: [...s.events, e] };
-          if (e.type === 'text') next.text = s.text + e.delta;
-          if (e.type === 'session') next.sessionId = e.session_id;
-          if (e.type === 'error') next.error = e.message;
-          if (e.type === 'done') {
-            next.text = e.text || next.text;
-            next.status = e.cancelled ? 'cancelled' : e.ok ? 'done' : 'error';
-          }
-          return next;
-        });
+        setState(s => apply(s, e));
         if (e.type === 'done') (e.ok ? resolve(e.text) : reject(new Error(e.cancelled ? 'cancelled' : 'agent failed')));
       });
     }), (err) => { setState(s => ({ ...s, status: 'error', error: String(err.message || err) })); throw err; });
@@ -53,14 +53,7 @@ export function useAgentRun(projectId: string | null) {
     return new Promise<string>((resolve, reject) => {
       off.current = streamRun(meta.run_id, (e) => {
         onEvent?.(e);
-        setState(s => {
-          const next: AgentRunState = { ...s, events: [...s.events, e] };
-          if (e.type === 'text') next.text = s.text + e.delta;
-          if (e.type === 'session') next.sessionId = e.session_id;
-          if (e.type === 'error') next.error = e.message;
-          if (e.type === 'done') { next.text = e.text || next.text; next.status = e.cancelled ? 'cancelled' : e.ok ? 'done' : 'error'; }
-          return next;
-        });
+        setState(s => apply(s, e));
         if (e.type === 'done') (e.ok ? resolve(e.text) : reject(new Error(e.cancelled ? 'cancelled' : 'agent failed')));
       });
     });

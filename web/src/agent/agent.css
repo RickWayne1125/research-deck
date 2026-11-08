@@ -72,8 +72,17 @@
 .ag-tools > summary::-webkit-details-marker { display: none; }
 .ag-tools > summary::before { content: "▸ "; }
 .ag-tools[open] > summary::before { content: "▾ "; }
+.ag-tools > summary:hover { color: var(--muted); }
+.ag-tools-latest { color: var(--muted); }
 .ag-usage { font-size: 10.5px; color: var(--faint); }
 .ag-thinking { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: var(--fs-sm); }
+/* messages steered into a running answer: read (in place) and not read yet (at the bottom) */
+.ag-msg.user.steered .ag-bubble { border-color: var(--accent-line); }
+.ag-msg.user.pending { opacity: .62; }
+.ag-msg.user.pending .ag-bubble { border-style: dashed; background: transparent; }
+.ag-msg.user.pending .ag-meta { gap: 4px; }
+.ag-cut { color: var(--muted); }
+.ag-cut.error { color: var(--warn); }
 .ag-error { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
 .ag-error .notice { align-self: stretch; }
 
@@ -96,6 +105,14 @@
 .ag-ctx-x:hover { background: var(--wash); color: var(--ink); }
 .ag-input { width: 100%; min-height: 64px; max-height: 40vh; }
 .ag-compose-foot { gap: 6px; }
+
+/* messages waiting for the answer in progress to end */
+.ag-queue { display: flex; flex-direction: column; gap: 1px; border: var(--line) solid var(--rule); border-radius: var(--r-md); padding: 4px 4px 4px 8px; background: var(--paper); max-height: 30vh; overflow: auto; }
+.ag-queue-head { font: 500 9.5px/1.8 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--slate); }
+.ag-queue-item { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: var(--fs-sm); color: var(--faint); }
+.ag-queue-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); min-width: 0; }
+.ag-queue-btn { border: 0; background: none; padding: 2px 5px; border-radius: var(--r-xs); font-size: var(--fs-xs); color: var(--accent); cursor: pointer; flex: none; }
+.ag-queue-btn:hover { background: var(--wash); }
 
 /* ---------------------------------------------------------------- bind dialog */
 .ag-bind-list { border: var(--line) solid var(--rule); border-radius: var(--r-md); max-height: 52vh; overflow: auto; }

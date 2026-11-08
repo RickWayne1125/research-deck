@@ -72,14 +72,20 @@ export interface RunRequest {
   ephemeral?: boolean;                                    // one-shot: no session created or resumed
   provider?: ProviderId; model?: string; effort?: string; fast?: boolean; permission?: Permission;  // overrides
 }
-export interface RunStarted { run_id: string; provider: ProviderId | 'fake'; model: string; effort: string; fast: boolean; session_id: string | null }
+export interface RunStarted {
+  run_id: string; provider: ProviderId | 'fake'; model: string; effort: string; fast: boolean; session_id: string | null;
+  steerable?: boolean;                                    // a message can reach the running turn (Claude); else steering restarts it
+}
 
 export type AgentEvent =
-  | { type: 'start'; provider: string; model: string; effort: string; fast: boolean; session_id: string | null; purpose: string }
+  | { type: 'start'; provider: string; model: string; effort: string; fast: boolean; session_id: string | null; purpose: string; steerable?: boolean }
   | { type: 'session'; session_id: string }
   | { type: 'text'; delta: string }
   | { type: 'thinking'; text?: string }
   | { type: 'tool'; name: string; detail?: string }
+  | { type: 'steer'; id: string; text: string; at?: string }   // a message sent into the running turn, handed to the agent
+  | { type: 'user'; id?: string; text: string }          // the agent read it
+  | { type: 'reset' }                                    // the server restarted: drop what came before (the stream replays)
   | { type: 'usage'; input: number; output: number; cache_read?: number; cost?: number | null }
   | { type: 'error'; message: string }
   | { type: 'done'; ok: boolean; text: string; session_id: string | null; duration_ms: number; cancelled?: boolean };
@@ -87,6 +93,8 @@ export type AgentEvent =
 export interface TranscriptEntry {
   ts: string; panel: PanelId; provider: ProviderId | 'fake'; session_id: string | null; role: 'user' | 'assistant' | 'handoff';
   text: string; run_id?: string; purpose?: string;
+  status?: 'cancelled' | 'error';                         // an answer cut short
+  steer?: boolean;                                        // a message the agent read while it answered
 }
 
 // ------------------------------------------------------------------ writing

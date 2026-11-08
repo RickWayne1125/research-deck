@@ -4,6 +4,17 @@ Each project has **one conversation** (⌘J), whichever view you ask from; what 
 and selection, the run) is attached. It is backed by the Claude Code or the Codex CLI, signed in on your machine;
 switch between them and the context is handed over. Model, effort and Fast mode sit behind one button.
 
+## While it answers
+
+- An answer runs on its own: reload the page, close it, or restart Research Deck, and it goes on; the conversation
+  picks it up again when you come back.
+- Keep typing while it works. **Steer** (⌘↵) sends the message into the answer: Claude Code reads it as soon as the
+  step it is in (a tool call) finishes. Codex cannot read a message mid-answer, so for Codex the button says **Interrupt
+  & send**: it stops and continues the same session with your message. **Queue** (⇧⌘↵) holds the message until the
+  answer ends, then sends it; queued messages can be sent now, edited or removed.
+- **Stop** ends the answer where it is; **Resume** then continues in the same session. After a stop, queued messages
+  wait for you, and a message you steered in that Claude had not read yet goes back to the queue.
+
 ## What agents can and cannot do
 
 - Runs are headless in the project folder. Claude Code runs restricted to the project, with only Research Deck's MCP

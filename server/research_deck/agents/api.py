@@ -14,7 +14,7 @@ from pydantic import BaseModel
 
 from .. import actors, config
 from ..projects import project_root, research_dir
-from . import brief, catalog, context, discover, handoff, runner, sessions, transcript
+from . import brief, catalog, context, discover, handoff, queue, runner, sessions, transcript
 
 log = logging.getLogger("research_deck.agents")
 router = APIRouter(tags=["agents"])
@@ -94,12 +94,137 @@ def spec_for(pid: str, body: RunBody, *, system: str | None = None, tools: bool 
     )
 
 
+def _running_chat(pid: str, panel: str) -> runner.Run | None:
+    """The conversation's answer in progress, if any (one at a time: more messages are steered in or queued)."""
+    return next((r for r in runner.all_runs() if r.status == "running" and r.spec.project_id == pid
+                 and r.spec.panel == panel and r.spec.purpose == "chat" and not r.spec.ephemeral), None)
+
+
+def _started(run: runner.Run) -> dict:
+    s = run.spec
+    return {"run_id": run.id, "provider": s.provider, "model": s.model, "effort": s.effort, "fast": s.fast,
+            "session_id": s.session_id, "steerable": run.steerable}
+
+
+def _start(pid: str, spec: runner.RunSpec, *, queued: str | None = None) -> runner.Run:
+    run = runner.start(spec)
+    transcript.record_run_meta(pid, run)
+    if spec.purpose == "chat" and not spec.ephemeral:
+        # Every open page follows the conversation's answer, wherever it started (another tab, the queue).
+        from ..events import hub
+        hub.publish(pid, "agent", {"run_id": run.id, "status": "running", "purpose": "chat",
+                                   **({"queued": queued} if queued else {})})
+    return run
+
+
+def _start_chat(pid: str, body: RunBody, *, queued: str | None = None) -> runner.Run:
+    return _start(pid, spec_for(pid, body), queued=queued)
+
+
 @router.post("/api/projects/{pid}/agent/run")
 def start_run(pid: str, body: RunBody):
-    run = runner.start(spec_for(pid, body))
-    transcript.record_run_meta(pid, run)
+    spec = spec_for(pid, body)
+    if body.purpose == "chat" and not body.ephemeral:
+        busy = _running_chat(pid, spec.panel)
+        if busy:
+            raise HTTPException(409, {"message": "the agent is still answering: steer your message in or queue it",
+                                      "run_id": busy.id})
+    return _started(_start(pid, spec))
+
+
+# ---------------------------------------------------------------- steering and the queue
+
+class TextBody(BaseModel):
+    text: str
+    context: dict | None = None
+    panel: str = "project"
+
+
+def _human(request: Request) -> None:
+    if not actors.is_human(actors.actor_of(request)):
+        raise HTTPException(403, "only the researcher steers, queues or resumes the conversation")
+
+
+@router.post("/api/agent/runs/{run_id}/steer")
+def steer_run(run_id: str, body: TextBody, request: Request):
+    """Send a message into a running answer: Claude reads it as soon as the tools it is running finish ("steered");
+    Codex stops its turn and continues the session with it ("restart")."""
+    _human(request)
+    try:
+        mode, msg_id = runner.steer(run_id, body.text)
+    except ValueError as e:
+        raise HTTPException(409, str(e)) from e
+    return {"run_id": run_id, "mode": mode, "id": msg_id}
+
+
+def _panel(pid: str, panel: str) -> str:
+    return sessions.get_binding(pid, panel)["panel"]
+
+
+@router.get("/api/projects/{pid}/agent/queue")
+def get_queue(pid: str, panel: str = "project"):
+    return {"items": queue.items(pid, _panel(pid, panel))}
+
+
+@router.post("/api/projects/{pid}/agent/queue")
+def add_to_queue(pid: str, body: TextBody, request: Request):
+    """Hold a message until the answer in progress ends; with none in progress it starts at once."""
+    _human(request)
+    panel = _panel(pid, body.panel)
+    if not _running_chat(pid, panel):
+        run = _start_chat(pid, RunBody(panel=body.panel, prompt=body.text, context=body.context))
+        return {"items": queue.items(pid, panel), "started": _started(run)}
+    try:
+        queue.add(pid, panel, body.text, body.context)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    return {"items": queue.items(pid, panel), "started": None}
+
+
+@router.delete("/api/projects/{pid}/agent/queue/{item_id}")
+def remove_from_queue(pid: str, item_id: str, request: Request, panel: str = "project"):
+    _human(request)
+    p = _panel(pid, panel)
+    if not queue.remove(pid, p, item_id):
+        raise HTTPException(404, "no such queued message")
+    return {"items": queue.items(pid, p)}
+
+
+@router.post("/api/projects/{pid}/agent/queue/{item_id}/send")
+def send_queued_now(pid: str, item_id: str, request: Request, panel: str = "project"):
+    """A queued message, now: steered into the answer in progress, or started when there is none."""
+    _human(request)
+    p = _panel(pid, panel)
+    item = queue.remove(pid, p, item_id)
+    if not item:
+        raise HTTPException(404, "no such queued message")
+    busy = _running_chat(pid, p)
+    if busy:
+        try:
+            mode, msg_id = runner.steer(busy.id, item["text"])
+            return {"items": queue.items(pid, p), "mode": mode, "id": msg_id, "run_id": busy.id, "started": None}
+        except ValueError:
+            pass                                     # it ended meanwhile: start the message instead
+    run = _start_chat(pid, RunBody(panel=panel, prompt=item["text"], context=item.get("context")))
+    return {"items": queue.items(pid, p), "mode": "started", "run_id": run.id, "started": _started(run)}
+
+
+def _after_run(run: runner.Run) -> None:
+    """A chat answer ended: start the conversation's next queued message (see queue.py for which)."""
     s = run.spec
-    return {"run_id": run.id, "provider": s.provider, "model": s.model, "effort": s.effort, "fast": s.fast, "session_id": s.session_id}
+    if s.ephemeral or s.purpose != "chat" or run.status == "error":
+        return
+    item = queue.pop_first(s.project_id, s.panel, now_only=run.status != "done")
+    if not item:
+        return
+    try:
+        _start_chat(s.project_id, RunBody(panel=s.panel, prompt=item["text"], context=item.get("context")), queued=item["id"])
+    except Exception:  # noqa: BLE001 — put it back rather than lose it
+        log.exception("the queued message could not start")
+        queue.add(s.project_id, s.panel, item["text"], item.get("context"), front=True)
+
+
+runner.FINISH_HOOKS.append(_after_run)
 
 
 @router.get("/api/agent/runs")
@@ -126,23 +251,32 @@ async def stream_run(run_id: str, request: Request):
     run = runner.get(run_id)
     if not run:
         raise HTTPException(404, "unknown run")
-    # EventSource reconnects with Last-Event-ID; continue after it instead of replaying the text twice.
+    # EventSource reconnects with Last-Event-ID ("<server>:<index>"; a page that opens a new EventSource itself passes
+    # it as ?last=); continue after it instead of replaying the text twice. An id from another server process (a restart: the run was picked up and replayed) starts over, after a
+    # "reset" that tells the page to drop what it had.
+    last = request.headers.get("last-event-id") or request.query_params.get("last", "")   # ?last=: a page's own retry
+    boot, _, num = last.rpartition(":")
+    reset = bool(last) and boot != runner.BOOT
     try:
-        index = int(request.headers.get("last-event-id", "-1")) + 1
+        index = int(num) + 1 if last and not reset else 0
     except ValueError:
-        index = 0
+        index, reset = 0, True
 
     async def gen():
         nonlocal index
+        if reset:
+            yield f"id: {runner.BOOT}:-1\nevent: agent\ndata: {json.dumps({'type': 'reset'})}\n\n"
         while True:
             if await request.is_disconnected():
                 return
             batch = await asyncio.to_thread(run.events_from, index, 15.0)
             if not batch:
-                yield ": keep-alive\n\n"
+                # A named event (no id), not a comment: the page sees it, and reopens a stream that goes quiet for
+                # long (a half-open connection: a proxy that outlived a restart, a laptop that slept).
+                yield "event: ping\ndata: {}\n\n"
                 continue
             for event in batch:
-                yield f"id: {index}\nevent: agent\ndata: {json.dumps(event, ensure_ascii=False)}\n\n"
+                yield f"id: {runner.BOOT}:{index}\nevent: agent\ndata: {json.dumps(event, ensure_ascii=False)}\n\n"
                 index += 1
                 if event.get("type") == "done":
                     return

@@ -29,10 +29,18 @@ async def lifespan(app: FastAPI):
         docmost_sync.start_scanner()           # bound projects' notes go to Docmost while a sign-in is saved
     except Exception:  # noqa: BLE001 — the dashboard starts without it
         log.exception("the Docmost sync did not start")
+    try:
+        from .agents import api as _agents_api  # noqa: F401 — registers the finish hook that starts queued messages
+        from .agents import runner
+        found = runner.recover()               # answers a previous server left running (a restart, a redeploy)
+        if found:
+            log.info("following %d agent run(s) a previous server started", found)
+    except Exception:  # noqa: BLE001 — the dashboard starts without it
+        log.exception("agent runs left by a previous server were not picked up")
     yield
     try:
         from .agents import runner
-        runner.stop_all()
+        runner.stop_all()                      # CLI runs keep going (their supervisors); the next server follows them
     except Exception:  # noqa: BLE001 — shutdown must not fail on a missing package
         pass
 

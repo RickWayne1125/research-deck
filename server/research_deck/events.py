@@ -63,7 +63,7 @@ async def events(request: Request, project: str = Query("*")):
                     msg = await asyncio.wait_for(q.get(), timeout=15)
                     yield sse(msg["topic"], msg)
                 except TimeoutError:
-                    yield ": keep-alive\n\n"
+                    yield sse("ping", {})       # seen by the page, which reopens a stream that goes quiet for long
         finally:
             hub.close(project, q)
     return StreamingResponse(gen(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})

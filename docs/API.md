@@ -10,7 +10,7 @@ The research DAG's routes are in docs/DAG.md (§ HTTP API).
 | Method | Path | Body / query | Response |
 |---|---|---|---|
 | GET | /api/system/health | | `Health` |
-| GET | /api/events?project=pid | SSE; events named by topic (`dag`, `outline` (the outline or its tasks changed), `file`, `sessions`, `agent` (a conversation run finished), `experiments`, `figures`, `writing`, `project`, `survey` (the survey's state)) | `ProjectEvent` |
+| GET | /api/events?project=pid | SSE; events named by topic (`dag`, `outline` (the outline or its tasks changed), `file`, `sessions`, `agent` (a run ended; or a conversation answer started: `{run_id, status: "running", purpose: "chat", queued?}`), `queue` (`{panel, items}`: the conversation's queue changed), `experiments`, `figures`, `writing`, `project`, `survey` (the survey's state)); `hello` on every connection and `ping` at least every 15 s (a page reopens a stream quiet for longer) | `ProjectEvent` |
 | GET | /api/projects | | `ProjectSummary[]` |
 | POST | /api/projects | `{root, name?, kind?: research\|engineering, state?: ".research-<slug>"}` | `ProjectSummary` (creates the state folder; `state` lets a second project share the folder) |
 | DELETE | /api/projects/{pid} | | `{ok}` (forgets it; files untouched) |
@@ -90,16 +90,31 @@ A project has one conversation; `{panel}` in the routes below is `project` (the 
 | GET | /api/agents/catalog | | `AgentCatalog` |
 | GET | /api/projects/{pid}/sessions | | `SessionsDoc` |
 | PUT | /api/projects/{pid}/sessions/{panel} | `{provider?, model?, effort?, fast?, permission?, session_id?, new_session?, title?}` | `PanelBinding` |
-| POST | /api/projects/{pid}/agent/run | `RunRequest` | `RunStarted` |
-| GET | /api/agent/runs?project= | | run summaries |
+| POST | /api/projects/{pid}/agent/run | `RunRequest` | `RunStarted` (`steerable`: a message can reach the running turn); a `chat` run while the conversation's answer is in progress: 409 `{message, run_id}` (steer or queue instead) |
+| GET | /api/agent/runs?project= | | run summaries (`steerable` too) |
 | GET | /api/agent/runs/{run_id} | | summary + `text` |
-| GET | /api/agent/runs/{run_id}/stream | SSE, event name `agent`, `id` = index (Last-Event-ID resumes) | `AgentEvent` … `done` |
-| POST | /api/agent/runs/{run_id}/cancel | | `{ok}` |
+| GET | /api/agent/runs/{run_id}/stream | SSE, event name `agent`, `id` = `<server>:<index>`; `Last-Event-ID` (or `?last=` for a page that reopens the stream itself) resumes after it; an id from another server process (a restart) gets `{"type": "reset"}` and the run from the start; `ping` at least every 15 s | `AgentEvent` … `done` |
+| POST | /api/agent/runs/{run_id}/cancel | | `{ok}` (stops the answer; the next message, or Resume, continues the same session) |
+| POST | /api/agent/runs/{run_id}/steer | `{text}` (researcher only) | `{run_id, mode: steered\|restart, id}`: Claude reads it once the tool call it is in finishes (its `steer` and `user` events carry `id`); Codex cannot, so its turn stops and the session continues with the message (`restart`). 409 if the run has ended |
+| GET | /api/projects/{pid}/agent/queue | `?panel=` | `{items: QueueItem[]}` (`{id, text, context, at, now}`) |
+| POST | /api/projects/{pid}/agent/queue | `{text, context?, panel?}` (researcher only) | `{items, started}`: held until the answer in progress ends; with none in progress it starts at once (`started`: `RunStarted`) |
+| DELETE | /api/projects/{pid}/agent/queue/{item_id} | `?panel=` (researcher only) | `{items}` |
+| POST | /api/projects/{pid}/agent/queue/{item_id}/send | `?panel=` (researcher only) | `{items, mode: steered\|restart\|started, id?, run_id, started}`: steered into the answer in progress, or started |
 | GET | /api/projects/{pid}/sessions/discover | `?provider=claude|codex` | `DiscoveredSession[]` (existing sessions whose cwd is the project root) |
 | GET | /api/projects/{pid}/transcript/{panel} | `?limit=` | `TranscriptEntry[]` (dashboard record; plus imported tail of a bound session when available) |
 | POST | /api/projects/{pid}/handoff | `{panel, to, smart?: bool}` | `{file, summary, pending: true}`; switches the conversation's active backend to `to` |
 | GET | /api/projects/{pid}/brief | | `{markdown, generated_at}` (regenerates `.research/context/BRIEF.md`) |
 | GET | /api/mcp/config | `?project=` | `{claude: {...}, codex: {...}, commands: {claude: "claude mcp add …", codex: "codex mcp add …"}}` (to register the MCP server in your own CLI; never registers by itself) |
+
+A conversation answer outlives the page and the server. Each CLI run has a supervisor of its own
+(`agents/supervise.py`) that keeps the CLI's stdin and writes its output to `~/.research-deck/runs/<id>/`; the server
+follows that folder, so a reload reconnects to the stream and a restart (a redeploy) picks every unfinished run up
+again (`runner.recover()`). One answer runs at a time per conversation: while it runs, a message is steered into it or
+queued (`~/.research-deck/queues/`). When an answer finishes, the first queued message starts; when it was stopped,
+the queue waits for the researcher (except a message steered into a Codex run, which stops to take it). A steered
+message Claude never read (handed over too late, or dropped by Stop) goes back to the front of the queue. The
+transcript records a steered message (`steer: true`) once Claude has read it, and a cut-short answer with `status`
+(`cancelled` | `error`).
 
 ## Writing (writing/)
 

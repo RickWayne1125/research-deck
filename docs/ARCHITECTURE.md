@@ -21,6 +21,7 @@ research-deck/
     config.py util.py events.py projects.py system.py      core (do not change interfaces without updating docs/API.md)
     __main__.py offloaded.py   python -m research_deck; on macOS it first has files iCloud offloaded downloaded on read
     agents/   catalog.py sessions.py runner.py context.py api.py  + discover.py handoff.py brief.py transcript.py
+              supervise.py (a CLI run's own process) queue.py (messages held until the answer in progress ends)
     dag/      the research DAG engine (docs/DAG.md)
     writing/  documents, the fixed AI proofreading passes, glossary, learned rules, snapshots
     coding/   git status/log/diff, architecture extraction (context for explanations), code review / explanation
@@ -189,5 +190,17 @@ Credentials are names (`keychain:` / `env:`); a secret goes only to the command 
   impact preview, record experiment results and propose node changes through the same API the UI uses. To use it from
   your own CLI sessions, `GET /api/mcp/config?project=<pid>` returns the `claude mcp add` / `codex mcp add` commands;
   nothing registers it by itself.
+- **Runs outlive the page and the server.** `runner.start` hands each CLI run to a supervisor
+  (`python -m research_deck.agents.supervise <folder>`, a session of its own) that starts the CLI, keeps its stdin and
+  writes everything into `~/.research-deck/runs/<id>/` (`spec.json`, `out.jsonl`, `err.log`, `inbox/`, `stop`,
+  `exit.json`); the server only follows the folder, so a redeploy leaves the run going and `runner.recover()` picks it
+  up at the next start (the stream's ids carry the server's boot id: a page that reconnects gets `reset` and the
+  replay). Claude takes its prompt as stream-json, so a **steered** message goes into `inbox/` and the supervisor writes
+  it to the running turn (Claude reads it once the tool call it is in finishes; the supervisor marks the hand-over in
+  `out.jsonl`, and Claude's echo says it was read). Codex cannot take one: steering stops its turn and continues the
+  session with the message. **Stop** is an interrupt (Claude) or SIGINT (Codex), then signals if the CLI lingers. The
+  conversation's **queue** (`agents/queue.py`) holds messages until the answer ends; a finish hook starts the next. The
+  fake agent (RD_FAKE_AGENT=1) still runs in the server's process; tests drive the real supervisor with stand-in CLIs
+  (`tests/fake_claude.py`, `tests/fake_codex.py`).
 - Existing sessions are discovered from `~/.claude/projects/<cwd-slug>/*.jsonl` and `~/.codex/sessions/**/rollout-*.jsonl`
   (`session_meta.cwd`), so the conversation can continue a session the user already has (⋯ → Bind an existing session).

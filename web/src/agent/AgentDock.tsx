@@ -1,17 +1,23 @@
 // The project conversation: one thread per project, whichever view asks. The header holds the backend, model, effort
 // and Fast behind one button (switching backend hands the context off), the session tools behind "⋯"; then the
-// conversation (the dashboard transcript, handoff lines, optionally the session's own log, and the live run) and the
+// conversation (the dashboard transcript, handoff lines, optionally the session's own log, and the live answer) and the
 // composer, whose chips carry what the researcher is looking at.
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+//
+// An answer runs on the server, apart from this page (agents/runner.py): a reload or a redeploy leaves it going and
+// the dock picks it up again, wherever it started (here, another tab, the queue). While it runs the composer stays
+// open: a message is steered into the answer (Claude reads it once its current tool call finishes; Codex stops and
+// continues with it) or queued until the answer ends (the queue lives on the server). Stop ends the answer; Resume
+// continues the same session.
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { FIGURES, useApp } from '../state/app';
 import { useRelTime, useT } from '../i18n';
 import { Icon } from '../components/icons';
 import { Button, Dialog, ErrorNote, IconButton, Menu, Spinner, useLoad } from '../components/ui';
 import { Markdown } from '../components/Markdown';
-import { streamRun } from '../api/client';
+import { ApiError, streamRun } from '../api/client';
 import type { AgentEvent, PanelId, ProviderId, RunContext, RunStarted } from '../types';
-import { useAgentRun } from './useAgentRun';
-import { agentApi, type BindingChange, type DockEntry } from './api';
+import { agentApi, type BindingChange, type DockEntry, type QueueItem } from './api';
+import { applyEvent, isDone, isTool, isUsage, pendingSteers, segmentsOf, type Live, type RunExtras, type SentSteer, type ToolCall } from './live';
 import {
   PROVIDERS, ProviderMark, copyText, markRunning, modelInfo, modelLabel, modelsOf, providerLabel, resolveBinding,
   shortId, useSessions, type ResolvedBinding,
@@ -23,18 +29,11 @@ const PANEL: PanelId = 'project';
 const TRANSCRIPT_LIMIT = 200;
 let consumedAsk = 0;        // the last askAgent() request (pendingAsk.n) already put into the composer
 
+const errText = (e: unknown) => String((e as Error)?.message ?? e);
+
 export function AgentDock() {
   const { projectId } = useApp();
   return <DockBody key={projectId} pid={projectId!} />;
-}
-
-interface RunExtras { tools: { name: string; detail?: string }[]; usage?: Extract<AgentEvent, { type: 'usage' }>; duration?: number }
-
-/** What the live area shows: a run started here (useAgentRun) or one already going when the dock opened. */
-interface Live {
-  runId: string | null; prompt: string | null; ctx?: RunContext; status: 'running' | 'done' | 'error' | 'cancelled';
-  text: string; events: AgentEvent[]; error: string | null;
-  meta: Pick<RunStarted, 'provider' | 'model' | 'effort' | 'fast'> | null;
 }
 
 function DockBody({ pid }: { pid: string }) {
@@ -42,7 +41,6 @@ function DockBody({ pid }: { pid: string }) {
   const { health, pendingAsk, view, sub, setDockOpen, dockFocus, onEvent } = useApp();
   const sessions = useSessions(pid);
   const b = resolveBinding(sessions.doc, PANEL);
-  const run = useAgentRun(pid);
 
   // ---------------------------------------------------------------- transcript
   const [entries, setEntries] = useState<DockEntry[]>([]);
@@ -52,12 +50,10 @@ function DockBody({ pid }: { pid: string }) {
     try {
       setEntries(await agentApi.transcript(pid, PANEL, { limit: TRANSCRIPT_LIMIT, imported: showImported }));
       setLogError(null);
-    } catch (e) { setLogError(String((e as Error).message ?? e)); }
+    } catch (e) { setLogError(errText(e)); }
   }, [pid, showImported]);
   const bindingKey = b ? `${b.provider}:${b.session.session_id ?? ''}` : '';
   useEffect(() => { loadTranscript(); }, [loadTranscript, bindingKey]);
-  // A run that finished anywhere in this project (another view, another tab) is part of the conversation.
-  useEffect(() => onEvent('agent', () => { loadTranscript(); }), [onEvent, loadTranscript]);
   const toggleImported = () => {
     setShowImported(v => {
       try { localStorage.setItem('rd.ag.imported', v ? '0' : '1'); } catch { /* ignore */ }
@@ -65,84 +61,173 @@ function DockBody({ pid }: { pid: string }) {
     });
   };
 
-  // ---------------------------------------------------------------- live run
-  const [sent, setSent] = useState<{ prompt: string; ctx?: RunContext } | null>(null);
+  // ---------------------------------------------------------------- scrolling
+  const logRef = useRef<HTMLDivElement>(null);
+  const stickToBottom = useRef(true);
+  const onScroll = () => {
+    const el = logRef.current;
+    if (el) stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+  };
+
+  // ---------------------------------------------------------------- the live answer
+  const [live, setLive] = useState<Live | null>(null);
   const [extras, setExtras] = useState<Record<string, RunExtras>>({});
-  const collecting = useRef<RunExtras>({ tools: [] });
-  const runningHere = useRef(false);
-  const [follow, setFollow] = useState<Live | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-
-  // Keep the rail's "running" dot right even if the conversation closes mid-run.
-  useEffect(() => () => { if (runningHere.current) markRunning(pid, PANEL, false); }, [pid]);
-
-  // A chat run already going when the conversation opened (e.g. it was closed mid-answer): follow it.
-  useEffect(() => {
-    if (!b) return;
-    let off: (() => void) | null = null, alive = true;
-    agentApi.runs(pid).then(rs => {
-      const r = rs.find(x => x.status === 'running' && x.purpose === 'chat');
-      if (!alive || !r || run.runId) return;
-      const prompt = [...entries].reverse().find(e => e.role === 'user' && e.run_id === r.run_id)?.text ?? null;
-      setFollow({ runId: r.run_id, prompt, status: 'running', text: '', events: [], error: null, meta: { provider: r.provider as ProviderId, model: r.model, effort: r.effort, fast: r.fast } });
-      off = streamRun(r.run_id, (e) => {
-        setFollow(f => {
-          if (!f) return f;
-          const next = { ...f, events: [...f.events, e] };
-          if (e.type === 'text') next.text = f.text + e.delta;
-          if (e.type === 'error') next.error = e.message;
-          if (e.type === 'done') next.status = e.cancelled ? 'cancelled' : e.ok ? 'done' : 'error';
-          return next;
-        });
-        if (e.type === 'done') loadTranscript().then(() => setFollow(null));
-      });
-    }).catch(() => {});
-    return () => { alive = false; off?.(); };
-    // Only when the session changes: following is a one-time catch-up, not a poll.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pid, bindingKey]);
-
-  const live: Live | null = run.status !== 'idle'
-    ? { runId: run.runId, prompt: sent?.prompt ?? null, ctx: sent?.ctx, status: run.status as Live['status'], text: run.text, events: run.events, error: run.error, meta: run.meta }
-    : follow;
+  const [sentSteers, setSentSteers] = useState<SentSteer[]>([]);
+  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const stream = useRef<{ runId: string; off: () => void } | null>(null);
+  const starting = useRef(0);   // requests that may start an answer are on their way: their response reports it
   const running = live?.status === 'running';
 
-  const send = async (text: string, ctx?: RunContext) => {
-    if (!b || !text.trim() || running) return;
-    setNotice(null);
-    setSent({ prompt: text, ctx });
-    collecting.current = { tools: [] };
-    runningHere.current = true;
+  useEffect(() => () => stream.current?.off(), []);
+  // The rail's "running" dot, while the answer runs and the conversation is open.
+  useEffect(() => {
+    if (!running) return;
     markRunning(pid, PANEL, true);
+    return () => markRunning(pid, PANEL, false);
+  }, [running, pid]);
+
+  /** Show an answer in the live area and follow its stream (it replays from the start). */
+  const follow = useCallback((runId: string, init: Partial<Pick<Live, 'prompt' | 'ctx' | 'meta' | 'steerable'>> = {}) => {
+    setNotice(null);
+    if (stream.current?.runId === runId) {           // already followed: add what this caller knows
+      setLive(l => (l && l.runId === runId
+        ? { ...l, prompt: l.prompt ?? init.prompt ?? null, ctx: l.ctx ?? init.ctx, meta: l.meta ?? init.meta ?? null, steerable: init.steerable ?? l.steerable }
+        : l));
+      return;
+    }
+    stream.current?.off();
     stickToBottom.current = true;
+    setLive({ runId, prompt: init.prompt ?? null, ctx: init.ctx, status: 'running', events: [], error: null, meta: init.meta ?? null, steerable: !!init.steerable });
+    const off = streamRun(runId, e => setLive(l => (l && l.runId === runId ? applyEvent(l, e) : l)), {
+      // the server no longer knows it (it ended before a restart): the transcript has it
+      onGone: () => setLive(l => (l && l.runId === runId && l.status === 'running' ? { ...l, status: 'done' } : l)),
+    });
+    stream.current = { runId, off };
+  }, []);
+
+  /** Catch up with the server: the answer in progress (after opening, a reload, a reconnection) and the queue. */
+  const catchUp = useCallback(() => {
+    agentApi.runs(pid).then(rs => {
+      const r = rs.find(x => x.status === 'running' && x.purpose === 'chat');
+      if (r && !starting.current) {
+        follow(r.run_id, { meta: { provider: r.provider as RunStarted['provider'], model: r.model, effort: r.effort, fast: r.fast }, steerable: r.steerable });
+      }
+    }).catch(() => {});
+    agentApi.queue(pid).then(r => setQueue(r.items)).catch(() => {});
+  }, [pid, follow]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (b) catchUp(); }, [pid, bindingKey]);
+
+  useEffect(() => {
+    const offs = [
+      // An answer that started anywhere in this project (another tab, the queue) is followed here; one that ended
+      // (in any view) is in the transcript now.
+      onEvent('agent', (e) => {
+        const p = (e.payload ?? {}) as { run_id?: string; status?: string; purpose?: string };
+        if (p.status !== 'running') loadTranscript();
+        else if (p.purpose === 'chat' && p.run_id && !starting.current) follow(p.run_id);
+      }),
+      onEvent('queue', (e) => {
+        const p = (e.payload ?? {}) as { panel?: string; items?: QueueItem[] };
+        if (p.panel === PANEL) setQueue(p.items ?? []);
+      }),
+      onEvent('hello', () => { loadTranscript(); catchUp(); }),     // (re)connected, perhaps to a restarted server
+    ];
+    return () => offs.forEach(off => off());
+  }, [onEvent, loadTranscript, follow, catchUp]);
+
+  // When the answer ends: keep its tool lines and usage under it, reload the transcript (which now holds the
+  // exchange), then clear the live area. An error stays, with retry.
+  useEffect(() => {
+    if (!live || live.status === 'running' || !live.runId) return;
+    const { runId, status, events } = live;
+    setExtras(x => ({
+      ...x,
+      [runId]: { tools: events.filter(isTool).map(e => ({ name: e.name, detail: e.detail })), usage: [...events].reverse().find(isUsage), duration: events.find(isDone)?.duration_ms },
+    }));
+    setSentSteers(s => s.filter(x => x.runId !== runId));
+    loadTranscript().then(() => {
+      if (status === 'error') return;
+      setLive(l => (l && l.runId === runId ? null : l));
+      if (stream.current?.runId === runId) stream.current = null;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [live?.status, live?.runId]);
+
+  /** A request that may start an answer: the answer it starts comes back in its response (not from the event). */
+  const starts = async <T,>(request: () => Promise<T>): Promise<T> => {
+    starting.current++;
+    try { return await request(); } finally { starting.current--; }
+  };
+
+  const send = async (text: string, ctx?: RunContext) => {
+    if (!b || !text.trim()) return;
+    stream.current?.off();
+    stream.current = null;
+    stickToBottom.current = true;
+    setNotice(null);
+    setLive({ runId: null, prompt: text, ctx, status: 'running', events: [], error: null, meta: null, steerable: false });
     try {
-      await run.start({ panel: PANEL, prompt: text, purpose: 'chat', context: ctx }, (e) => {
-        if (e.type === 'tool') collecting.current.tools.push({ name: e.name, detail: e.detail });
-        if (e.type === 'usage') collecting.current.usage = e;
-        if (e.type === 'done') collecting.current.duration = e.duration_ms;
-      });
-    } catch { /* the error stays visible in the live area */ }
-    finally {
-      runningHere.current = false;
-      markRunning(pid, PANEL, false);
+      const meta = await starts(() => agentApi.start(pid, { panel: PANEL, prompt: text, purpose: 'chat', context: ctx }));
+      follow(meta.run_id, { prompt: text, ctx, meta, steerable: !!meta.steerable });
+    } catch (err) {
+      const busy = err instanceof ApiError && err.status === 409 ? (err.detail as { run_id?: string } | null)?.run_id : undefined;
+      if (busy) { follow(busy); await enqueue(text, ctx); }     // an answer started elsewhere meanwhile: this one waits
+      else setLive(l => (l && l.runId === null ? { ...l, status: 'error', error: errText(err) } : l));
     }
   };
 
-  // When a run ends: keep its tool lines and usage under its answer, reload the transcript (which now holds the
-  // exchange), then clear the live area. An error stays, with retry.
-  useEffect(() => {
-    const status = run.status;
-    if (status === 'idle' || status === 'running') return;
-    const id = run.runId;
-    if (id) setExtras(x => ({ ...x, [id]: collecting.current }));
-    loadTranscript().then(() => {
-      if (status === 'error') return;
-      run.reset();
-      setSent(null);
-      if (status === 'cancelled') setNotice(t('ag.cancelled'));
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [run.status]);
+  const enqueue = async (text: string, ctx?: RunContext) => {
+    try {
+      const r = await starts(() => agentApi.enqueue(pid, text, ctx));
+      setQueue(r.items);
+      if (r.started) follow(r.started.run_id, { prompt: text, ctx, meta: r.started, steerable: !!r.started.steerable });
+    } catch (err) { setNotice(errText(err)); setInput(i => i || text); }
+  };
+
+  const restarting = () => setNotice(t('ag.steer.restarting', { agent: providerLabel(live?.meta?.provider ?? b?.provider, t) }));
+
+  const steer = async (text: string) => {
+    const runId = live?.runId;
+    if (!runId) return enqueue(text);
+    const key = `${Date.now()}:${Math.random()}`;
+    setSentSteers(s => [...s, { key, runId, text }]);
+    try {
+      const r = await agentApi.steer(runId, text);
+      const id = r.id;
+      if (r.mode === 'steered' && id) setSentSteers(s => s.map(x => (x.key === key ? { ...x, id } : x)));
+      else { setSentSteers(s => s.filter(x => x.key !== key)); restarting(); }
+    } catch (err) {
+      setSentSteers(s => s.filter(x => x.key !== key));
+      if (err instanceof ApiError && err.status === 409) await enqueue(text);     // the answer ended meanwhile
+      else { setNotice(errText(err)); setInput(i => i || text); }
+    }
+  };
+
+  const sendQueuedNow = async (item: QueueItem) => {
+    try {
+      const r = await starts(() => agentApi.sendQueued(pid, item.id));
+      setQueue(r.items);
+      const id = r.id;
+      if (r.started) follow(r.started.run_id, { prompt: item.text, ctx: item.context ?? undefined, meta: r.started, steerable: !!r.started.steerable });
+      else if (r.mode === 'steered' && id) setSentSteers(s => [...s, { key: id, runId: r.run_id, text: item.text, id }]);
+      else if (r.mode === 'restart') restarting();
+    } catch (err) { setNotice(errText(err)); }
+  };
+
+  const unqueue = async (item: QueueItem, edit = false) => {
+    try {
+      setQueue((await agentApi.unqueue(pid, item.id)).items);
+      if (edit) { setInput(i => (i.trim() ? `${i.trimEnd()}\n${item.text}` : item.text)); focusInput(); }
+    } catch (err) { setNotice(errText(err)); }
+  };
+
+  const stop = () => { if (live?.runId) agentApi.cancel(live.runId).catch(err => setNotice(errText(err))); };
+  // The last answer was stopped (here, in another tab, before a reload): Resume continues the same session.
+  const lastEntry = useMemo(() => [...entries].reverse().find(e => !e.imported && e.role !== 'handoff'), [entries]);
+  const stopped = !live && lastEntry?.role === 'assistant' && lastEntry.status === 'cancelled';
+  const resume = () => send(t('ag.resume.prompt'));
 
   // ---------------------------------------------------------------- composer
   const [input, setInput] = useState('');
@@ -175,33 +260,38 @@ function DockBody({ pid }: { pid: string }) {
     if (from === 'ask') setAskCtx(c => { if (!c) return c; const n = { ...c }; delete n[key]; return Object.keys(n).length ? n : null; });
     else setDismissed(d => new Set(d).add(`${key}:${String(routeCtx?.[key])}`));
   };
-  const submit = () => {
+  /** The composer's message; the context goes with a message that starts an answer (a steered one goes as typed). */
+  const take = (withContext: boolean): { text: string; ctx?: RunContext } | null => {
     const text = input.trim();
-    if (!text || running) return;
+    if (!text) return null;
     setInput('');
+    if (!withContext) return { text };
     setAskCtx(null);
-    send(text, Object.keys(ctx).length ? ctx : undefined);
+    return { text, ctx: Object.keys(ctx).length ? ctx : undefined };
   };
+  const submit = () => {                      // ⌘↵: send, or steer into the answer in progress
+    if (switching) return;
+    if (running) { const m = take(false); if (m) steer(m.text); return; }
+    const m = take(true);
+    if (m) send(m.text, m.ctx);
+  };
+  const queueInput = () => { const m = take(true); if (m) enqueue(m.text, m.ctx); };   // ⇧⌘↵ while it answers
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); submit(); }
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      if (running && e.shiftKey) queueInput(); else submit();
+    }
   };
 
-  // ---------------------------------------------------------------- scrolling
-  const logRef = useRef<HTMLDivElement>(null);
-  const stickToBottom = useRef(true);
-  const onScroll = () => {
-    const el = logRef.current;
-    if (el) stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-  };
   useEffect(() => {
     const el = logRef.current;
     if (el && stickToBottom.current) el.scrollTop = el.scrollHeight;
-  }, [entries, live?.text, live?.events.length, live?.status]);
+  }, [entries, live?.events.length, live?.status, sentSteers.length]);
 
   // ---------------------------------------------------------------- binding changes
   const change = async (c: BindingChange) => {
     try { await sessions.update(PANEL, c); setNotice(null); }
-    catch (e) { setNotice(String((e as Error).message ?? e)); }
+    catch (e) { setNotice(errText(e)); }
   };
   // Switching backend hands the conversation's gist to the other one (an extract, no model call), then switches.
   const [switching, setSwitching] = useState<ProviderId | null>(null);
@@ -212,7 +302,7 @@ function DockBody({ pid }: { pid: string }) {
       await agentApi.handoff(pid, PANEL, to, false);
       sessions.reload();
       await loadTranscript();
-    } catch (e) { setNotice(t('ag.handoff.failed', { error: String((e as Error).message ?? e) })); }
+    } catch (e) { setNotice(t('ag.handoff.failed', { error: errText(e) })); }
     finally { setSwitching(null); }
   };
 
@@ -221,6 +311,15 @@ function DockBody({ pid }: { pid: string }) {
   }
   const agentName = providerLabel(b.provider, t);
   const write = b.session.permission === 'write';
+  // The live area shows the answer until the transcript holds it; meanwhile the transcript's lines of it are hidden.
+  const liveLogged = !!live?.runId && entries.some(e => e.run_id === live.runId && e.role === 'assistant');
+  const showLive = !!live && (live.status === 'running' || !liveLogged);
+  const hiddenRun = showLive ? live?.runId ?? null : null;
+  const livePrompt = live ? live.prompt ?? entries.find(e => e.run_id === live.runId && e.role === 'user' && !e.steer)?.text ?? null : null;
+  const pending = live ? pendingSteers(live, sentSteers) : [];
+  const liveAgent = providerLabel(live?.meta?.provider ?? b.provider, t);
+  const steerable = !!live?.steerable;
+  const typed = !!input.trim();
 
   return (
     <div className="ag-dock">
@@ -239,16 +338,37 @@ function DockBody({ pid }: { pid: string }) {
       <div className="ag-log" ref={logRef} onScroll={onScroll} aria-live="polite">
         {logError && <ErrorNote error={t('ag.log.loadError', { error: logError })} onRetry={loadTranscript} />}
         {!entries.length && !live && !logError && <div className="ag-empty muted">{t('agent.empty')}</div>}
-        {entries.map((e, i) => <EntryView key={`${e.ts}-${i}-${e.role}`} entry={e} extras={e.run_id ? extras[e.run_id] : undefined}
-          hideUser={!!live?.prompt && live.status !== 'done' && e.role === 'user' && !!live.runId && e.run_id === live.runId} />)}
-        {live && <LiveView live={live} pendingInTranscript={!!live.runId && entries.some(e => e.run_id === live.runId && e.role === 'assistant')}
-          onRetry={sent && live.status === 'error' ? () => { const s = sent; run.reset(); send(s.prompt, s.ctx); } : undefined}
-          onDismiss={() => { run.reset(); setSent(null); }} />}
+        {entries.map((e, i) => (hiddenRun && e.run_id === hiddenRun ? null
+          : <EntryView key={`${e.ts}-${i}-${e.role}`} entry={e} extras={e.run_id ? extras[e.run_id] : undefined} />))}
+        {live && showLive && <LiveView live={live} prompt={livePrompt} pending={pending} />}
+        {live?.status === 'error' && (
+          <div className="ag-error">
+            <ErrorNote error={`${t('agent.error')}: ${live.error ?? ''}`} onRetry={livePrompt ? () => send(livePrompt, live.ctx) : undefined} />
+            <Button size="sm" variant="ghost" onClick={() => setLive(null)}>{t('common.close')}</Button>
+          </div>
+        )}
         {switching && <div className="ag-notice row" style={{ justifyContent: 'center' }}><Spinner /> {t('ag.switching', { agent: providerLabel(switching, t) })}</div>}
         {notice && <div className="ag-notice">{notice}</div>}
       </div>
 
       <div className="ag-compose">
+        {queue.length > 0 && (
+          <div className="ag-queue" role="list" aria-label={t('ag.queue.title', { n: queue.length })}>
+            <div className="ag-queue-head">{t('ag.queue.title', { n: queue.length })}</div>
+            {queue.map(item => (
+              <div key={item.id} className="ag-queue-item" role="listitem">
+                <Icon name="hourglass" size={12} />
+                <span className="grow ag-queue-text" title={item.text}>{item.text}</span>
+                <button type="button" className="ag-queue-btn" onClick={() => sendQueuedNow(item)}
+                  title={t(!running ? 'ag.queue.startHint' : steerable ? 'ag.queue.steerHint' : 'ag.queue.restartHint', { agent: liveAgent })}>
+                  {t('ag.queue.now')}
+                </button>
+                <button type="button" className="ag-queue-btn" onClick={() => unqueue(item, true)} title={t('ag.queue.editHint')}>{t('ag.queue.edit')}</button>
+                <button type="button" className="ag-ctx-x" aria-label={t('ag.queue.remove')} title={t('ag.queue.remove')} onClick={() => unqueue(item)}><Icon name="close" size={10} /></button>
+              </div>
+            ))}
+          </div>
+        )}
         {chips.length > 0 && (
           <div className="ag-chips">
             {chips.map(c => (
@@ -261,15 +381,29 @@ function DockBody({ pid }: { pid: string }) {
           </div>
         )}
         <textarea ref={inputRef} className="textarea ag-input" rows={3} value={input} onChange={e => setInput(e.target.value)}
-          onKeyDown={onKeyDown} placeholder={t('agent.placeholder', { agent: agentName })} aria-label={t('agent.send')} />
+          onKeyDown={onKeyDown} aria-label={t('agent.send')}
+          placeholder={running ? t(steerable ? 'ag.placeholder.steer' : 'ag.placeholder.restart', { agent: liveAgent }) : t('agent.placeholder', { agent: agentName })} />
         <div className="row ag-compose-foot">
           <span className={`ag-perm-note${write ? ' write' : ''}`} title={t(write ? 'ag.perm.writeHint' : 'ag.perm.readHint')}>
             {write && <Icon name="warn" size={12} />}{t(write ? 'ag.perm.writeFoot' : 'ag.perm.readFoot')}
           </span>
           <span className="grow" />
-          {running
-            ? <Button icon="stop" onClick={() => (run.runId ? run.cancel() : follow?.runId && agentApi.cancel(follow.runId).catch(() => {}))}>{t('agent.cancel')}</Button>
-            : <Button variant="accent" icon="send" onClick={submit} disabled={!input.trim() || !!switching} title={t('ag.sendHint')}>{t('agent.send')}</Button>}
+          {running && (
+            <Button icon="stop" variant={typed ? 'ghost' : undefined} onClick={stop} disabled={!live?.runId} title={t('ag.stopHint')}>{t('agent.cancel')}</Button>
+          )}
+          {running && typed && <Button icon="hourglass" onClick={queueInput} title={t('ag.queue.hint')}>{t('ag.queue.add')}</Button>}
+          {running && typed && (
+            <Button variant="accent" icon="send" onClick={submit} disabled={!live?.runId}
+              title={t(steerable ? 'ag.steer.hint' : 'ag.steer.restartHint', { agent: liveAgent })}>
+              {t(steerable ? 'ag.steer' : 'ag.steer.restart')}
+            </Button>
+          )}
+          {!running && stopped && !typed && (
+            <Button variant="accent" icon="play" onClick={resume} disabled={!!switching} title={t('ag.resume.hint')}>{t('ag.resume')}</Button>
+          )}
+          {!running && !(stopped && !typed) && (
+            <Button variant="accent" icon="send" onClick={submit} disabled={!typed || !!switching} title={t('ag.sendHint')}>{t('agent.send')}</Button>
+          )}
         </div>
       </div>
     </div>
@@ -458,7 +592,7 @@ function AnswerMeta({ provider, model, effort, fast, children }: { provider: str
   );
 }
 
-function EntryView({ entry, extras, hideUser }: { entry: DockEntry; extras?: RunExtras; hideUser?: boolean }) {
+function EntryView({ entry, extras }: { entry: DockEntry; extras?: RunExtras }) {
   const t = useT();
   const rel = useRelTime();
   if (entry.role === 'handoff') {
@@ -480,19 +614,24 @@ function EntryView({ entry, extras, hideUser }: { entry: DockEntry; extras?: Run
     );
   }
   if (entry.role === 'user') {
-    if (hideUser) return null;
     return (
-      <div className={`ag-msg user ${entry.imported ? 'imported' : ''}`}>
+      <div className={`ag-msg user ${entry.imported ? 'imported' : ''}${entry.steer ? ' steered' : ''}`}>
         <div className="ag-bubble">{entry.text}</div>
-        <div className="ag-meta right">{entry.imported && <span className="ag-imported" title={t('ag.log.importedHint')}>{t('ag.log.imported')} ·</span>}<span>{rel(entry.ts)}</span></div>
+        <div className="ag-meta right">
+          {entry.imported && <span className="ag-imported" title={t('ag.log.importedHint')}>{t('ag.log.imported')} ·</span>}
+          {entry.steer && <span title={t('ag.steer.readHint')}>{t('ag.steer.read')} ·</span>}
+          <span>{rel(entry.ts)}</span>
+        </div>
       </div>
     );
   }
+  const cut = entry.status === 'cancelled' ? t('ag.cancelled') : entry.status === 'error' ? t('ag.failed') : null;
   return (
     <div className={`ag-msg assistant ${entry.imported ? 'imported' : ''}`}>
-      <Markdown text={entry.text} className="ag-answer" />
+      {entry.text ? <Markdown text={entry.text} className="ag-answer" /> : cut && <div className="ag-usage">{t('ag.cutEmpty')}</div>}
       {extras && <RunDetails extras={extras} />}
       <AnswerMeta provider={entry.provider} model={entry.model} effort={entry.effort} fast={entry.fast}>
+        {cut && <span className={`ag-cut ${entry.status}`}>· {cut}</span>}
         {entry.imported && <span className="ag-imported" title={t('ag.log.importedHint')}>· {t('ag.log.imported')}</span>}
         <span>· {rel(entry.ts)}</span>
       </AnswerMeta>
@@ -502,6 +641,22 @@ function EntryView({ entry, extras, hideUser }: { entry: DockEntry; extras?: Run
 
 function ToolLine({ name, detail }: { name: string; detail?: string }) {
   return <div className="ag-tool mono"><span className="ag-tool-name">{name}</span>{detail ? <span className="ag-tool-detail"> · {detail}</span> : null}</div>;
+}
+
+/** A run's tool calls, folded into one line ("12 tool calls") until opened; while it runs, the line also names the
+ *  latest tool, so progress shows without the list. */
+function ToolCalls({ tools, running }: { tools: ToolCall[]; running?: boolean }) {
+  const t = useT();
+  if (!tools.length) return null;
+  return (
+    <details className="ag-tools">
+      <summary className="mono">
+        {t('ag.tools', { n: tools.length })}
+        {running && <span className="ag-tools-latest"> · {tools[tools.length - 1].name}</span>}
+      </summary>
+      {tools.map((x, i) => <ToolLine key={i} name={x.name} detail={x.detail} />)}
+    </details>
+  );
 }
 
 function UsageLine({ usage, duration }: { usage?: Extract<AgentEvent, { type: 'usage' }>; duration?: number }) {
@@ -518,47 +673,53 @@ function UsageLine({ usage, duration }: { usage?: Extract<AgentEvent, { type: 'u
 }
 
 function RunDetails({ extras }: { extras: RunExtras }) {
-  const t = useT();
   return (
     <>
-      {extras.tools.length > 0 && (
-        <details className="ag-tools">
-          <summary className="mono">{t('ag.tools', { n: extras.tools.length })}</summary>
-          {extras.tools.map((x, i) => <ToolLine key={i} name={x.name} detail={x.detail} />)}
-        </details>
-      )}
+      <ToolCalls tools={extras.tools} />
       <UsageLine usage={extras.usage} duration={extras.duration} />
     </>
   );
 }
 
-function LiveView({ live, pendingInTranscript, onRetry, onDismiss }: { live: Live; pendingInTranscript: boolean; onRetry?: () => void; onDismiss: () => void }) {
+function LiveView({ live, prompt, pending }: { live: Live; prompt: string | null; pending: { key: string; text: string }[] }) {
   const t = useT();
-  const tools = live.events.filter((e): e is Extract<AgentEvent, { type: 'tool' }> => e.type === 'tool');
-  const usage = [...live.events].reverse().find((e): e is Extract<AgentEvent, { type: 'usage' }> => e.type === 'usage');
-  const done = [...live.events].reverse().find((e): e is Extract<AgentEvent, { type: 'done' }> => e.type === 'done');
+  const running = live.status === 'running';
+  const segs = useMemo(() => segmentsOf(live.events), [live.events]);
+  const usage = [...live.events].reverse().find(isUsage);
+  const done = live.events.find(isDone);
   const last = live.events[live.events.length - 1];
-  const thinking = live.status === 'running' && (!live.text || last?.type === 'thinking' || last?.type === 'tool');
-  if (pendingInTranscript && live.status === 'done') return null;    // the transcript already shows the answer
+  const thinking = running && (!segs[segs.length - 1].text || last?.type === 'thinking' || last?.type === 'tool');
   return (
     <>
-      {live.prompt && live.status !== 'done' && (
-        <div className="ag-msg user"><div className="ag-bubble">{live.prompt}</div></div>
-      )}
+      {prompt && <div className="ag-msg user"><div className="ag-bubble">{prompt}</div></div>}
+      {segs.map((s, i) => (
+        <Fragment key={i}>
+          {s.user !== undefined && (
+            <div className="ag-msg user steered">
+              <div className="ag-bubble">{s.user}</div>
+              <div className="ag-meta right" title={t('ag.steer.readHint')}>{t('ag.steer.read')}</div>
+            </div>
+          )}
+          {(s.tools.length > 0 || !!s.text) && (
+            <div className="ag-msg assistant live">
+              <ToolCalls tools={s.tools} running={running && i === segs.length - 1} />
+              {s.text && <Markdown text={s.text} className="ag-answer" />}
+            </div>
+          )}
+        </Fragment>
+      ))}
       <div className="ag-msg assistant live">
-        {tools.map((x, i) => <ToolLine key={i} name={x.name} detail={x.detail} />)}
-        {live.text && <Markdown text={live.text} className="ag-answer" />}
         {thinking && <div className="ag-thinking"><Spinner /><span>{t('agent.thinking')}</span></div>}
         {live.status === 'cancelled' && <div className="ag-usage">{t('ag.cancelled')}</div>}
-        {live.status !== 'running' && <UsageLine usage={usage} duration={done?.duration_ms} />}
+        {!running && <UsageLine usage={usage} duration={done?.duration_ms} />}
         {live.meta && <AnswerMeta provider={live.meta.provider} model={live.meta.model} effort={live.meta.effort} fast={live.meta.fast} />}
       </div>
-      {live.status === 'error' && (
-        <div className="ag-error">
-          <ErrorNote error={`${t('agent.error')}: ${live.error ?? ''}`} onRetry={onRetry} />
-          <Button size="sm" variant="ghost" onClick={onDismiss}>{t('common.close')}</Button>
+      {pending.map(p => (
+        <div key={p.key} className="ag-msg user pending">
+          <div className="ag-bubble">{p.text}</div>
+          <div className="ag-meta right"><Icon name="hourglass" size={10} /><span>{t('ag.steer.pending')}</span></div>
         </div>
-      )}
+      ))}
     </>
   );
 }

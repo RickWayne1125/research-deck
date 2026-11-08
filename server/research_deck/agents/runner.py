@@ -3,20 +3,34 @@
 Every panel goes through start(RunSpec): chat in the agent dock, writing review passes, code review and explanation,
 figure edits, handoff summaries. A run resumes the panel's bound session unless it is ephemeral (one-shot checks).
 
+A CLI run is durable. Its supervisor (supervise.py) is a process of its own that starts the CLI, keeps its stdin and
+writes what it prints into ~/.research-deck/runs/<id>/; this server only follows that folder. Closing the page,
+reloading it, or restarting the server (a redeploy) leaves the run going: recover() picks up every unfinished run
+when the server starts, and the stream replays it (the SSE ids carry BOOT, so a browser that reconnects to a new
+server is told to start over with a "reset" event). The fake agent (RD_FAKE_AGENT=1) runs in this process.
+
+While a run works: steer(run, text) gives Claude the message as soon as the tools it is running finish (stream-json
+input); Codex cannot take one into a running turn, so steering stops its turn and continues the session with the
+message (queued "now", started by the finish hook). cancel() stops a run: an interrupt for Claude, SIGINT for Codex.
+
 Normalized events (also the SSE payloads, see web/src/types.ts AgentEvent):
-  start {provider, model, effort, fast, session_id, purpose}
+  start {provider, model, effort, fast, session_id, purpose, steerable}
   session {session_id}            the backend assigned or confirmed a session id
   text {delta}                    assistant text (Claude: token deltas; Codex: whole messages)
   thinking {text?}                a heartbeat while the model reasons
   tool {name, detail}             a tool call, shell command, file change or MCP call
+  steer {id, text, at}            a message the researcher sent into the running turn, handed to Claude (not read yet)
+  user {id, text}                 Claude read that message (its echo); it goes into the transcript when the run ends
   usage {input, output, cache_read, cost}
   error {message}
   done {ok, text, session_id, duration_ms, cancelled?}
+  reset {}                        (the stream only) everything before this is void: the server restarted
 
 Commands (flags verified against Claude Code 2.1.290 and codex-cli 0.166):
-  claude -p --output-format stream-json --verbose --include-partial-messages --model M --effort E
-         [--resume SID | --no-session-persistence] [--settings {"fastMode":true}] [--permission-mode ...]
-         [--allowedTools ...] [--disallowedTools ...] [--mcp-config FILE] [--append-system-prompt S]      prompt on stdin
+  claude -p --input-format stream-json --output-format stream-json --replay-user-messages --verbose
+         --include-partial-messages --model M --effort E [--resume SID | --no-session-persistence]
+         [--settings {"fastMode":true}] [--permission-mode ...] [--allowedTools ...] [--disallowedTools ...]
+         [--mcp-config FILE] [--append-system-prompt S]                      messages and control requests on stdin
   codex exec [resume SID] --json --skip-git-repo-check -m M -c model_reasoning_effort="E"
          -c service_tier="priority|default" -c approval_policy="never" (--sandbox X | -c sandbox_mode="X")
          [-c mcp_servers.research_deck.*] [--ephemeral] -                                              prompt on stdin
@@ -25,25 +39,29 @@ from __future__ import annotations
 
 import contextlib
 import json
+import logging
 import os
-import signal
+import shutil
 import subprocess
 import sys
-import tempfile
 import threading
 import time
 import uuid
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from .. import config
-from ..util import append_jsonl, now_iso
+from ..util import append_jsonl, now_iso, read_json, write_json
+
+log = logging.getLogger("research_deck")
 
 READ_TOOLS = ["Read", "Glob", "Grep", "WebSearch", "WebFetch", "mcp__research-deck"]
 WRITE_TOOLS = READ_TOOLS + ["Edit", "Write", "MultiEdit", "NotebookEdit"]
 NEVER_TOOLS = ["Bash"]          # v1: agents driven from the dashboard do not run shell commands
 MAX_RUNS_KEPT = 200
+SERVER_DIR = Path(__file__).resolve().parents[2]       # where `python -m research_deck…` finds the package
+BOOT = uuid.uuid4().hex[:8]     # this server process; a stream reconnecting from another one starts over
 
 
 @dataclass
@@ -78,8 +96,9 @@ class Run:
     started: float = field(default_factory=time.time)
     finished: float | None = None
     error: str | None = None
-    process: subprocess.Popen | None = None
     cancel_requested: bool = False
+    dir: Path | None = None         # a CLI run's folder (supervise.py); None for the fake agent
+    supervisor: subprocess.Popen | None = None          # when this server started it (to reap it)
     _cond: threading.Condition = field(default_factory=threading.Condition)
 
     def emit(self, event: dict) -> None:
@@ -104,17 +123,24 @@ class Run:
                 self._cond.wait(left)
         return True
 
+    @property
+    def steerable(self) -> bool:
+        """A message can reach the running turn itself (Claude's stream-json input)."""
+        return self.spec.provider == "claude" and self.dir is not None
+
     def summary(self) -> dict:
         s = self.spec
         return {"run_id": self.id, "status": self.status, "provider": s.provider, "model": s.model, "effort": s.effort,
                 "fast": s.fast, "panel": s.panel, "purpose": s.purpose, "session_id": self.session_id or s.session_id,
-                "started": self.started, "finished": self.finished, "error": self.error}
+                "started": self.started, "finished": self.finished, "error": self.error, "steerable": self.steerable}
 
 
 _RUNS: dict[str, Run] = {}
 _RUNS_LOCK = threading.Lock()
 # purpose -> fn(spec) -> answer text, for RD_FAKE_AGENT=1 (tests, offline demos). Modules register their own.
 FAKE_RESPONDERS: dict[str, Callable[[RunSpec], str]] = {}
+# fn(run) after every run has ended and been recorded (agents/api.py starts the conversation's next queued message)
+FINISH_HOOKS: list[Callable[[Run], None]] = []
 
 
 def register_fake(purpose: str, fn: Callable[[RunSpec], str]) -> None:
@@ -129,18 +155,34 @@ def all_runs() -> list[Run]:
     return list(_RUNS.values())
 
 
-def start(spec: RunSpec) -> Run:
-    if config.FAKE_AGENT:
-        spec.provider = "fake"
-    run = Run(spec=spec)
-    run.session_id = spec.session_id
+def _register(run: Run) -> None:
     with _RUNS_LOCK:
         _RUNS[run.id] = run
         if len(_RUNS) > MAX_RUNS_KEPT:
             for old in sorted(_RUNS.values(), key=lambda r: r.started)[: len(_RUNS) - MAX_RUNS_KEPT]:
                 if old.status != "running":
                     _RUNS.pop(old.id, None)
-    threading.Thread(target=_execute, args=(run,), daemon=True, name=f"run-{run.id}").start()
+
+
+def _start_event(run: Run) -> dict:
+    s = run.spec
+    return {"type": "start", "provider": s.provider, "model": s.model, "effort": s.effort, "fast": s.fast,
+            "session_id": s.session_id, "purpose": s.purpose, "steerable": run.steerable}
+
+
+def start(spec: RunSpec) -> Run:
+    if config.FAKE_AGENT:
+        spec.provider = "fake"
+    run = Run(spec=spec)
+    run.session_id = spec.session_id
+    _register(run)
+    if not spec.ephemeral:
+        _transcript(spec, "user", spec.user_text or spec.prompt, run.id)
+    if spec.provider == "fake":
+        threading.Thread(target=_execute, args=(run,), daemon=True, name=f"run-{run.id}").start()
+    else:
+        run.dir = run_dir(run.id)
+        threading.Thread(target=_detached, args=(run, False), daemon=True, name=f"run-{run.id}").start()
     return run
 
 
@@ -155,55 +197,72 @@ def cancel(run_id: str) -> bool:
     if not run or run.status != "running":
         return False
     run.cancel_requested = True
-    _kill(run.process)
+    if run.dir is not None and run.dir.is_dir():
+        (run.dir / "stop").touch()
     return True
 
 
+def steer(run_id: str, text: str) -> tuple[str, str | None]:
+    """Give a running run one more message from the researcher: ("steered", id) (Claude reads it as soon as the tools
+    it is running finish; the run's steer and user events carry the id) or ("restart", None) (Codex: its turn stops
+    and the session continues with the message)."""
+    run = _RUNS.get(run_id)
+    text = (text or "").strip()
+    if not run or run.status != "running":
+        raise ValueError("this run has ended")
+    if not text:
+        raise ValueError("the message is empty")
+    spec = run.spec
+    if run.steerable and run.dir is not None:
+        inbox = run.dir / "inbox"
+        inbox.mkdir(parents=True, exist_ok=True)
+        name = f"{time.time_ns()}-{uuid.uuid4().hex[:6]}"
+        tmp = inbox / f"{name}.tmp"
+        tmp.write_text(json.dumps({"id": name, "text": text}, ensure_ascii=False), encoding="utf-8")
+        os.replace(tmp, inbox / f"{name}.json")
+        return "steered", name
+    from . import queue
+    queue.add(spec.project_id, spec.panel, text, front=True, now=True)
+    cancel(run_id)
+    return "restart", None
+
+
 def stop_all(grace: float = 3.0) -> None:
-    """Server shutdown: TERM every agent's process group, wait, then KILL what is left (synchronously — the daemon
-    threads that normally escalate die with the server)."""
-    procs = []
+    """Server shutdown. A CLI run is left going (its supervisor is a process of its own; the next server picks it up
+    with recover()); only the fake agent, which runs in this process, is stopped."""
     for run in list(_RUNS.values()):
-        if run.status == "running":
+        if run.status == "running" and run.dir is None:
             run.cancel_requested = True
-            if run.process and run.process.poll() is None:
-                procs.append(run.process)
-                try:
-                    os.killpg(run.process.pid, signal.SIGTERM)
-                except (ProcessLookupError, PermissionError):
-                    pass
-    deadline = time.time() + grace
-    for proc in procs:
+
+
+def recover() -> int:
+    """Follow every run a previous server started and did not see end (startup). Returns how many."""
+    root = runs_root()
+    if not root.is_dir():
+        return 0
+    found = 0
+    for d in sorted(root.iterdir()):
+        meta = read_json(d / "meta.json", None)
+        if not isinstance(meta, dict) or meta.get("finalized") or meta.get("run_id") in _RUNS:
+            continue
         try:
-            proc.wait(max(0.0, deadline - time.time()))
-        except subprocess.TimeoutExpired:
-            try:
-                os.killpg(proc.pid, signal.SIGKILL)
-            except (ProcessLookupError, PermissionError):
-                pass
+            spec = RunSpec(**meta["spec"])
+        except (KeyError, TypeError):
+            continue
+        run = Run(spec=spec, id=meta["run_id"], started=meta.get("started") or time.time())
+        run.dir, run.session_id = d, meta.get("session_id") or spec.session_id
+        _register(run)
+        threading.Thread(target=_detached, args=(run, True), daemon=True, name=f"run-{run.id}").start()
+        found += 1
+    _prune(root)
+    return found
 
 
-# ------------------------------------------------------------------ execution
+# ------------------------------------------------------------------ the end of a run (both kinds)
 
-def _execute(run: Run) -> None:
+def _complete(run: Run) -> None:
     from . import sessions
     spec = run.spec
-    lock = sessions.session_lock(spec.provider, None if spec.ephemeral else spec.session_id)
-    if not spec.ephemeral:
-        _transcript(spec, "user", spec.user_text or spec.prompt, run.id)
-    with lock or contextlib.nullcontext():
-        run.emit({"type": "start", "provider": spec.provider, "model": spec.model, "effort": spec.effort,
-                  "fast": spec.fast, "session_id": spec.session_id, "purpose": spec.purpose})
-        try:
-            if run.cancel_requested:          # cancelled while it waited for the session
-                pass
-            elif spec.provider == "fake":
-                _run_fake(run)
-            else:
-                _run_cli(run)
-        except Exception as e:  # noqa: BLE001 — every failure must reach the client as an event
-            run.error = str(e)
-            run.emit({"type": "error", "message": str(e)})
     ok = run.error is None and not run.cancel_requested
     run.finished = time.time()
     if run.session_id and not spec.ephemeral and spec.provider != "fake":
@@ -211,10 +270,20 @@ def _execute(run: Run) -> None:
             sessions.set_session_id(spec.project_id, spec.panel, spec.provider, run.session_id)
         except Exception:  # noqa: BLE001
             pass
-    if not spec.ephemeral and run.text:
-        _transcript(spec, "assistant", run.text, run.id, session_id=run.session_id)
+    status = "cancelled" if run.cancel_requested else ("done" if ok else "error")
+    if not spec.ephemeral:            # the messages Claude read while it answered come before the answer
+        sent_at = {e.get("id"): e.get("at") for e in run.events if e.get("type") == "steer"}
+        for e in run.events:
+            if e.get("type") == "user" and e.get("id"):
+                _transcript(spec, "user", e.get("text", ""), run.id, session_id=run.session_id, steer=True,
+                            ts=sent_at.get(e["id"]))
+    if not spec.ephemeral and (run.text or status != "done"):
+        _transcript(spec, "assistant", run.text, run.id, session_id=run.session_id,
+                    status=None if status == "done" else status)
+    if run.dir is not None:                   # recorded before anyone hears it ended: a restart never records it twice
+        _save_meta(run, finalized=True)
     with run._cond:
-        run.status = "cancelled" if run.cancel_requested else ("done" if ok else "error")
+        run.status = status
         run.events.append({"type": "done", "ok": ok, "text": run.text, "session_id": run.session_id,
                            "duration_ms": int((run.finished - run.started) * 1000), "cancelled": run.cancel_requested})
         run._cond.notify_all()
@@ -225,16 +294,43 @@ def _execute(run: Run) -> None:
             hub.publish(spec.project_id, "agent", {"run_id": run.id, "status": run.status, "purpose": spec.purpose})
         except Exception:  # noqa: BLE001 — an event failure must not fail the run
             pass
+    for hook in FINISH_HOOKS:
+        try:
+            hook(run)
+        except Exception:  # noqa: BLE001 — a hook must not fail the run
+            log.exception("a run's finish hook failed")
 
 
-def _transcript(spec: RunSpec, role: str, text: str, run_id: str, session_id: str | None = None) -> None:
+def _transcript(spec: RunSpec, role: str, text: str, run_id: str, session_id: str | None = None,
+                status: str | None = None, steer: bool = False, ts: str | None = None) -> None:
     from ..projects import research_dir
+    entry = {"ts": ts or now_iso(), "panel": spec.panel, "provider": spec.provider, "session_id": session_id or spec.session_id,
+             "role": role, "text": text, "run_id": run_id, "purpose": spec.purpose}
+    if status:
+        entry["status"] = status          # cancelled | error: the answer was cut short
+    if steer:
+        entry["steer"] = True             # sent into a running turn
     try:
-        append_jsonl(research_dir(spec.project_id) / "context" / "transcripts" / f"{spec.panel}.jsonl", {
-            "ts": now_iso(), "panel": spec.panel, "provider": spec.provider, "session_id": session_id or spec.session_id,
-            "role": role, "text": text, "run_id": run_id, "purpose": spec.purpose})
+        append_jsonl(research_dir(spec.project_id) / "context" / "transcripts" / f"{spec.panel}.jsonl", entry)
     except Exception:  # noqa: BLE001 — a transcript failure must not fail the run
         pass
+
+
+# ------------------------------------------------------------------ the fake agent (in this process)
+
+def _execute(run: Run) -> None:
+    from . import sessions
+    spec = run.spec
+    lock = sessions.session_lock(spec.provider, None if spec.ephemeral else spec.session_id)
+    with lock or contextlib.nullcontext():
+        run.emit(_start_event(run))
+        try:
+            if not run.cancel_requested:      # cancelled while it waited for the session
+                _run_fake(run)
+        except Exception as e:  # noqa: BLE001 — every failure must reach the client as an event
+            run.error = str(e)
+            run.emit({"type": "error", "message": str(e)})
+    _complete(run)
 
 
 def _run_fake(run: Run) -> None:
@@ -257,6 +353,194 @@ def _run_fake(run: Run) -> None:
     run.emit({"type": "usage", "input": len(spec.prompt) // 4, "output": len(answer) // 4, "cache_read": 0, "cost": 0})
 
 
+# ------------------------------------------------------------------ CLI runs (durable, followed from their folder)
+
+def runs_root() -> Path:
+    return config.LOCAL_DIR / "runs"
+
+
+def run_dir(run_id: str) -> Path:
+    return runs_root() / run_id
+
+
+def _save_meta(run: Run, finalized: bool = False) -> None:
+    assert run.dir is not None
+    write_json(run.dir / "meta.json", {"run_id": run.id, "spec": asdict(run.spec), "started": run.started,
+                                       "session_id": run.session_id, "finalized": finalized})
+
+
+def _detached(run: Run, recovered: bool) -> None:
+    from . import sessions
+    spec = run.spec
+    lock = sessions.session_lock(spec.provider, None if spec.ephemeral else spec.session_id)
+    with lock or contextlib.nullcontext():
+        run.emit(_start_event(run))
+        try:
+            if not recovered:
+                if run.cancel_requested:      # stopped while it waited for the session: never started
+                    _complete(run)
+                    return
+                _spawn(run)
+            _follow(run)
+        except Exception as e:  # noqa: BLE001 — every failure must reach the client as an event
+            run.error = run.error or str(e)
+            run.emit({"type": "error", "message": str(e)})
+        _complete(run)
+
+
+def _spawn(run: Run) -> None:
+    spec, d = run.spec, run.dir
+    assert d is not None
+    d.mkdir(parents=True, exist_ok=True)
+    cmd = build_command(spec, str(d))
+    write_json(d / "spec.json", {"cmd": cmd, "cwd": spec.cwd, "input": "stream-json" if spec.provider == "claude" else "text",
+                                 "prompt": _prompt_for(spec), "timeout_s": spec.timeout_s})
+    _save_meta(run)
+    env = dict(os.environ)
+    env["PYTHONPATH"] = os.pathsep.join(p for p in (str(SERVER_DIR), env.get("PYTHONPATH")) if p)
+    with open(d / "supervisor.log", "ab") as out:
+        run.supervisor = subprocess.Popen([sys.executable, "-m", "research_deck.agents.supervise", str(d)], cwd=str(d),
+                                          env=env, stdin=subprocess.DEVNULL, stdout=out, stderr=out,
+                                          start_new_session=True, close_fds=True)
+
+
+def _supervisor_alive(run: Run) -> bool:
+    if run.supervisor is not None:              # started by this server: poll() also reaps it
+        return run.supervisor.poll() is None
+    assert run.dir is not None
+    try:
+        pid = int((run.dir / "pid").read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def _follow(run: Run) -> None:
+    """Parse the CLI's output as the supervisor writes it, until the supervisor says the CLI ended."""
+    d = run.dir
+    assert d is not None
+    parser: ClaudeParser | CodexParser = ClaudeParser(run) if run.spec.provider == "claude" else CodexParser(run)
+    out, offset, buf = d / "out.jsonl", 0, ""
+    started, gone_since = time.monotonic(), None
+    while True:
+        if run.cancel_requested and not (d / "stop").exists():
+            (d / "stop").touch()
+        data = ""
+        try:
+            with open(out, encoding="utf-8") as f:
+                f.seek(offset)
+                data = f.read()
+                offset = f.tell()
+        except FileNotFoundError:
+            pass
+        if data:
+            buf += data
+            *lines, buf = buf.split("\n")
+            for line in lines:
+                _feed(parser, line)
+            continue
+        exit_info = read_json(d / "exit.json", None)
+        if isinstance(exit_info, dict):
+            # The supervisor writes exit.json after the last line: read what came between our read and this check.
+            try:
+                with open(out, encoding="utf-8") as f:
+                    f.seek(offset)
+                    buf += f.read()
+            except FileNotFoundError:
+                pass
+            *lines, buf = buf.split("\n")
+            for line in lines:
+                _feed(parser, line)
+            break
+        if _supervisor_alive(run):
+            gone_since = None
+        elif time.monotonic() - started > 5:
+            gone_since = gone_since or time.monotonic()
+            if time.monotonic() - gone_since > 2:
+                exit_info = {"code": None, "lost": True}
+                break
+        time.sleep(0.2)
+    _feed(parser, buf)
+    if run.supervisor is not None:
+        with contextlib.suppress(subprocess.TimeoutExpired):
+            run.supervisor.wait(5)
+    if exit_info.get("stopped"):
+        run.cancel_requested = True
+    elif exit_info.get("timed_out"):
+        run.error = f"timed out after {run.spec.timeout_s}s"
+        run.emit({"type": "error", "message": run.error})
+    elif exit_info.get("lost"):
+        run.error = "the agent stopped without finishing (its supervisor ended unexpectedly)"
+        run.emit({"type": "error", "message": run.error})
+    if not run.cancel_requested and run.error is None:
+        if not parser.finished:
+            tail = _tail(d / "err.log")
+            run.error = parser.failure or tail or f"{run.spec.provider} exited with code {exit_info.get('code')}"
+            run.emit({"type": "error", "message": run.error})
+        elif parser.failure:
+            run.error = parser.failure
+            run.emit({"type": "error", "message": parser.failure})
+    _requeue_unread(run)
+
+
+def _feed(parser: ClaudeParser | CodexParser, line: str) -> None:
+    line = line.strip()
+    if not line:
+        return
+    try:
+        event = json.loads(line)
+    except json.JSONDecodeError:
+        return
+    if isinstance(event, dict):
+        parser.feed(event)
+
+
+def _tail(path: Path, limit: int = 1500) -> str:
+    try:
+        return path.read_text(encoding="utf-8", errors="replace").strip()[-limit:]
+    except OSError:
+        return ""
+
+
+def _requeue_unread(run: Run) -> None:
+    """Messages steered in that Claude never read go first in the conversation's queue, in the order they were sent:
+    those still in the inbox (the CLI had stopped reading), and, when the run was stopped, those handed over but
+    dropped by the interrupt. They start next when the answer finished, and wait for the researcher when it was
+    stopped. (A finished run read everything it was handed: Claude answers every message before it ends.)"""
+    assert run.dir is not None
+    left = sorted((run.dir / "inbox").glob("*.json")) if (run.dir / "inbox").is_dir() else []
+    texts: list[str] = []
+    if run.cancel_requested:
+        held = {f.stem for f in left}
+        read = {e.get("id") for e in run.events if e.get("type") == "user" and e.get("id")}
+        texts += [e.get("text", "") for e in run.events
+                  if e.get("type") == "steer" and e.get("id") not in read and e.get("id") not in held]
+    for f in left:
+        texts.append((read_json(f, None) or {}).get("text") or "")
+        f.unlink(missing_ok=True)
+    if run.spec.ephemeral:
+        return
+    from . import queue
+    for text in reversed([t for t in texts if t.strip()]):
+        queue.add(run.spec.project_id, run.spec.panel, text, front=True)
+
+
+def _prune(root: Path) -> None:
+    done = []
+    for d in root.iterdir():
+        meta = read_json(d / "meta.json", None)
+        if isinstance(meta, dict) and meta.get("finalized"):
+            done.append((meta.get("started") or 0, d))
+    for _, d in sorted(done)[: max(0, len(done) - MAX_RUNS_KEPT)]:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def _mcp_server_def(spec: RunSpec) -> dict:
     return {"command": sys.executable, "args": ["-m", "research_deck.mcp_server", "--project", spec.project_id],
             "env": {"PYTHONPATH": str(config.APP_ROOT / "server"), "RD_URL": f"http://{config.HOST}:{config.PORT}",
@@ -272,7 +556,10 @@ def build_command(spec: RunSpec, tmpdir: str) -> list[str]:
         # --restricted: no code-running tools or WebFetch, file tools confined to the project folder, and the
         # project's own .claude/settings.json (hooks) and the user's settings are not loaded. --strict-mcp-config:
         # only the research-deck MCP server. Together they make "read" and "write" real boundaries.
-        cmd = [config.CLAUDE_CLI, "-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages",
+        # --input-format stream-json: the supervisor writes the prompt, steering messages and the interrupt on stdin;
+        # --replay-user-messages echoes the messages back, so they appear in the stream where Claude read them.
+        cmd = [config.CLAUDE_CLI, "-p", "--input-format", "stream-json", "--output-format", "stream-json",
+               "--replay-user-messages", "--verbose", "--include-partial-messages",
                "--restricted", "--strict-mcp-config", "--model", spec.model, "--effort", spec.effort]
         if spec.ephemeral:
             cmd += ["--no-session-persistence"]
@@ -334,77 +621,34 @@ def _prompt_for(spec: RunSpec) -> str:
     return spec.prompt
 
 
-def _run_cli(run: Run) -> None:
-    spec = run.spec
-    with tempfile.TemporaryDirectory(prefix="rd-run-") as tmpdir:
-        cmd = build_command(spec, tmpdir)
-        env = dict(os.environ)
-        env.pop("CLAUDECODE", None)  # a nested Claude Code must not think it runs inside this one
-        proc = subprocess.Popen(cmd, cwd=spec.cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                text=True, encoding="utf-8", env=env, start_new_session=True, bufsize=1)
-        run.process = proc
-        if run.cancel_requested:              # cancel() ran between Popen and the assignment above
-            _kill(proc)
-        errors: list[str] = []
-        threading.Thread(target=lambda: errors.extend(proc.stderr), daemon=True).start()
-        timer = threading.Timer(spec.timeout_s, lambda: (setattr(run, "error", f"timed out after {spec.timeout_s}s"), _kill(proc)))
-        timer.daemon = True
-        timer.start()
-        try:
-            try:
-                proc.stdin.write(_prompt_for(spec))
-                proc.stdin.close()
-            except BrokenPipeError:
-                pass
-            parser = ClaudeParser(run) if spec.provider == "claude" else CodexParser(run)
-            for line in proc.stdout:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    event = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                parser.feed(event)
-            code = proc.wait()
-        finally:
-            timer.cancel()
-        if run.cancel_requested:
-            return
-        if run.error is None and not parser.finished:
-            tail = "".join(errors[-20:]).strip()
-            run.error = parser.failure or (tail[-1500:] if tail else f"{spec.provider} exited with code {code}")
-            run.emit({"type": "error", "message": run.error})
-        elif parser.failure and run.error is None:
-            run.error = parser.failure
-            run.emit({"type": "error", "message": parser.failure})
-
-
-def _kill(proc: subprocess.Popen | None) -> None:
-    if not proc or proc.poll() is not None:
-        return
-    try:
-        os.killpg(proc.pid, signal.SIGTERM)
-    except (ProcessLookupError, PermissionError):
-        return
-    def hard():
-        time.sleep(3)
-        if proc.poll() is None:
-            try:
-                os.killpg(proc.pid, signal.SIGKILL)
-            except (ProcessLookupError, PermissionError):
-                pass
-    threading.Thread(target=hard, daemon=True).start()
-
-
 # ------------------------------------------------------------------ stream parsers
+
+def _user_text(message: dict) -> str | None:
+    """The text of a user message the CLI echoed back (--replay-user-messages); None for tool results."""
+    content = (message or {}).get("content")
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list) and content and all(isinstance(b, dict) and b.get("type") == "text" for b in content):
+        return "".join(b.get("text", "") for b in content)
+    return None
+
 
 class ClaudeParser:
     def __init__(self, run: Run):
         self.run, self.finished, self.failure, self.streamed, self.last_beat = run, False, None, False, 0.0
+        self.prompt = _prompt_for(run.spec).strip()   # echoed back when Claude reads it, like every message
+        self.prompt_echoed = False
+        self.sent: list[dict] = []   # steered messages handed to Claude: {"id", "text", "read"}
+        self.prior = ""              # the answers of the turns already finished in this run
+        self.after_result = False
 
     def text(self, delta: str) -> None:
         if delta:
+            if self.after_result:        # a new turn (a message that arrived after the last one ended)
+                self.after_result = False
+                if self.run.text:
+                    self.run.text += "\n\n"
+                    self.run.emit({"type": "text", "delta": "\n\n"})
             self.run.text += delta
             self.run.emit({"type": "text", "delta": delta})
 
@@ -415,6 +659,21 @@ class ClaudeParser:
             if sid and not self.run.spec.ephemeral:
                 self.run.session_id = sid
                 self.run.emit({"type": "session", "session_id": sid})
+        elif kind == "rd_sent":                      # the supervisor handed Claude a steered message
+            self.sent.append({"id": e.get("id"), "text": (e.get("text") or "").strip(), "read": False})
+            self.run.emit({"type": "steer", "id": e.get("id"), "text": e.get("text") or "", "at": e.get("at")})
+        elif kind == "user" and e.get("isReplay") and not e.get("isSynthetic"):
+            # Claude's echo of a message it read (tool results and the CLI's own user-role content are not echoes)
+            text = (_user_text(e.get("message") or {}) or "").strip()
+            if not text:
+                return
+            if not self.prompt_echoed and text == self.prompt:
+                self.prompt_echoed = True
+                return
+            match = next((m for m in self.sent if not m["read"] and m["text"] == text), None)
+            if match:
+                match["read"] = True
+                self.run.emit({"type": "user", "id": match["id"], "text": text})
         elif kind == "stream_event":
             inner = e.get("event") or {}
             delta = inner.get("delta") or {}
@@ -424,8 +683,6 @@ class ClaudeParser:
             elif delta.get("type") == "thinking_delta" and time.monotonic() - self.last_beat > 1:
                 self.last_beat = time.monotonic()
                 self.run.emit({"type": "thinking"})
-            elif inner.get("type") == "content_block_stop" and self.streamed and self.run.text and not self.run.text.endswith("\n"):
-                pass
         elif kind == "assistant":
             for block in (e.get("message") or {}).get("content") or []:
                 if block.get("type") == "tool_use":
@@ -439,10 +696,13 @@ class ClaudeParser:
                            "cache_read": u.get("cache_read_input_tokens", 0), "cost": e.get("total_cost_usd")})
             if e.get("session_id") and not self.run.spec.ephemeral:
                 self.run.session_id = e["session_id"]
-            if e.get("is_error"):
+            if e.get("is_error") and not self.run.cancel_requested:
                 self.failure = e.get("result") or "Claude did not answer"
             elif e.get("result"):
-                self.run.text = e["result"]
+                self.run.text = (self.prior + "\n\n" if self.prior else "") + e["result"]
+            self.prior = self.run.text
+            self.streamed = False
+            self.after_result = True
 
 
 class CodexParser:

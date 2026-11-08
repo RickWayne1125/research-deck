@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import time
 from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import quote
@@ -30,6 +31,8 @@ from mcp.server.fastmcp.exceptions import ToolError
 
 DEFAULT_URL = "http://127.0.0.1:8765"
 TIMEOUT_S = 30.0
+# The dashboard restarts (a redeploy) while an agent keeps working: a call that cannot connect waits for it this long.
+RESTART_WAIT_S = 60.0
 Lens = Literal["tried", "confirmed", "revise", "rerun"]
 
 INSTRUCTIONS = """\
@@ -209,10 +212,19 @@ class RdApi:
     def request(self, method: str, path: str, *, json_body: Any = None, params: dict | None = None) -> Any:
         url = path if path.startswith("/api/") else f"/api/projects/{quote(self.project, safe='')}{path}"
         params = {k: v for k, v in (params or {}).items() if v not in (None, "")}
-        try:
-            r = self.http.request(method, url, json=json_body, params=params or None, headers=self.headers())
-        except httpx.HTTPError as e:
-            raise ToolError(f"Research Deck is not reachable ({e}). Is the dashboard running?") from e
+        deadline, wait = time.monotonic() + RESTART_WAIT_S, 0.5
+        while True:
+            try:
+                r = self.http.request(method, url, json=json_body, params=params or None, headers=self.headers())
+                break
+            except httpx.ConnectError as e:
+                # Nothing reached the server (it is restarting): safe to send again, a write included.
+                if time.monotonic() + wait > deadline:
+                    raise ToolError(f"Research Deck is not reachable ({e}). Is the dashboard running?") from e
+                time.sleep(wait)
+                wait = min(wait * 2, 5.0)
+            except httpx.HTTPError as e:
+                raise ToolError(f"Research Deck is not reachable ({e}). Is the dashboard running?") from e
         try:
             data = r.json() if r.content else None
         except ValueError:
