@@ -52,13 +52,15 @@ export function DocsDrawer({ docs, loading, current, onOpen, onRefresh, floating
   );
 }
 
-export const Preview = memo(function Preview({ text, kind }: { text: string; kind: 'tex' | 'md' }) {
+/** pid, path: the document shown, so a Markdown link such as "../papers/a.pdf" opens that file. */
+export const Preview = memo(function Preview({ text, kind, pid, path }: { text: string; kind: 'tex' | 'md'; pid: string; path: string }) {
   const t = useT();
   const html = useMemo(() => kind === 'tex' ? renderTex(text, {
     abstract: t('wr.pv.abstract'), figure: t('wr.pv.figure'), table: t('wr.pv.table'), algorithm: t('wr.pv.algorithm'),
     input: t('wr.pv.input'), references: t('wr.pv.references'), code: t('wr.pv.code'),
   }) : '', [text, kind, t]);
-  if (kind === 'md') return <div className="wr-preview"><Markdown text={text} /></div>;
+  const base = useMemo(() => ({ project: pid, path }), [pid, path]);
+  if (kind === 'md') return <div className="wr-preview"><Markdown text={text} base={base} /></div>;
   return (
     <div className="wr-preview">
       <p className="wr-preview-note faint">{t('wr.preview.note')}</p>

@@ -17,6 +17,7 @@ import re
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from . import config, demo
@@ -277,6 +278,48 @@ def read_file(pid: str, path: str = Query(...)):
     except UnicodeDecodeError:
         raise HTTPException(415, "not a text file")
     return {"path": rel_to(root, target), "content": content, "sha": sha256_text(content), "mtime": target.stat().st_mtime}
+
+
+# GET …/raw serves a project file as itself, for the links and pictures in documents (a survey's "PDF" links). The
+# browser shows PDFs and pictures in its own viewer and other UTF-8 text as plain text; anything else downloads.
+# Nothing served here may run as a page of the dashboard: HTML and scripts arrive as plain text, the browser may not
+# sniff a type, and pictures and text get a sandboxed page with no powers. PDFs do not: Chrome's viewer refuses to open
+# under a sandbox, and a PDF's own scripts run inside the viewer, not on the dashboard's origin.
+VIEWABLE_TYPES = {".pdf": "application/pdf", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+                  ".gif": "image/gif", ".webp": "image/webp", ".svg": "image/svg+xml"}
+RAW_SANDBOX = "sandbox; default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:"
+TEXT_PROBE_BYTES = 8192
+
+
+def looks_like_text(path: Path) -> bool:
+    """UTF-8 with no NUL byte in the first 8 KiB (git's test for a binary file, plus the encoding)."""
+    with path.open("rb") as f:
+        head = f.read(TEXT_PROBE_BYTES)
+    if b"\0" in head:
+        return False
+    try:
+        head.decode("utf-8")
+    except UnicodeDecodeError as e:
+        # a character cut in two by the 8 KiB probe is still text
+        return len(head) == TEXT_PROBE_BYTES and e.reason == "unexpected end of data"
+    return True
+
+
+@router.get("/{pid}/raw")
+def raw_file(pid: str, path: str = Query(...)):
+    root = project_root(pid)
+    target = safe_join(root, path)
+    if not target.is_file():
+        raise HTTPException(404, f"no such file: {path}")
+    media = VIEWABLE_TYPES.get(target.suffix.lower())
+    headers = {"Cache-Control": "no-cache", "X-Content-Type-Options": "nosniff"}
+    if media != "application/pdf":
+        headers["Content-Security-Policy"] = RAW_SANDBOX
+    if media is None and looks_like_text(target):
+        media = "text/plain; charset=utf-8"
+    if media is None:
+        return FileResponse(target, media_type="application/octet-stream", headers=headers, filename=target.name)
+    return FileResponse(target, media_type=media, headers=headers, filename=target.name, content_disposition_type="inline")
 
 
 class WriteFile(BaseModel):

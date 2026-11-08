@@ -172,9 +172,12 @@ html.rd-resizing iframe { pointer-events: none !important; }
 .md pre { background: var(--plate); border: var(--line) solid var(--rule); border-radius: var(--r-md); padding: 10px 12px; overflow: auto; }
 .md pre code { background: none; padding: 0; font-size: 12px; line-height: 1.5; }
 .md blockquote { border-left: 2px solid var(--rule-strong); padding-left: 10px; color: var(--muted); }
-.md table { border-collapse: collapse; font-size: .95em; }
-.md th, .md td { border: var(--line) solid var(--rule); padding: 4px 8px; text-align: left; }
+/* A table is as wide as its text needs, up to the column, and scrolls sideways beyond that. Its cells break between
+   words only: "anywhere" (above) would let the table squeeze a column down to one letter per line. */
+.md table { border-collapse: collapse; font-size: .95em; display: block; width: max-content; max-width: 100%; overflow-x: auto; }
+.md th, .md td { border: var(--line) solid var(--rule); padding: 4px 8px; text-align: left; vertical-align: top; overflow-wrap: break-word; }
 .md a { color: var(--info); }
+.md a:not([href]) { color: inherit; }
 .md .katex-display { margin: .6em 0; overflow-x: auto; overflow-y: hidden; }
 
 /* visually hidden, still read by screen readers */

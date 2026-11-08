@@ -18,6 +18,7 @@ The research DAG's routes are in docs/DAG.md (§ HTTP API).
 | PATCH | /api/projects/{pid}/config | partial `ProjectConfig` | `ProjectConfig` |
 | GET | /api/projects/{pid}/tree | `?dir=&depth=` | `TreeNode[]` |
 | GET | /api/projects/{pid}/file | `?path=` | `FileContent` |
+| GET | /api/projects/{pid}/raw | `?path=` | the file itself, for links and pictures in documents: PDFs and PNG/JPEG/GIF/WebP/SVG pictures open in the browser, other UTF-8 text as plain text, anything else downloads. Never served as a page of the dashboard: nosniff, and a `sandbox` CSP on everything but PDFs |
 | PUT | /api/projects/{pid}/file | `{path, content, base_sha?}` | `{path, sha, mtime}`; 409 `{message, sha}` if the file changed on disk |
 
 ## New projects (start/)

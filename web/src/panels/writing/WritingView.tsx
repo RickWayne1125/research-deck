@@ -597,7 +597,7 @@ export function WritingView() {
                   onClickClaim={(cs) => cs[0] && navigate('dag', cs[0].id)}
                   onUserKey={() => { if (cardRef.current?.keys && !cardRef.current.why) closeCard(); }} />
               </div>
-              {mode === 'preview' && <Preview text={previewText} kind={doc.kind} />}
+              {mode === 'preview' && <Preview text={previewText} kind={doc.kind} pid={pid} path={doc.path} />}
             </div>
           )}
         </div>
