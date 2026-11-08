@@ -45,6 +45,38 @@ Docmost is never overwritten; it waits for your review. See the
 [guide](https://rickwayne1125.github.io/research-deck/guide/zotero-docmost/).
 
 
+## How it models research
+
+```mermaid
+flowchart LR
+  idea["Idea<br/>notes/idea.md"]
+  outline["Outline<br/>items and<br/>their tasks"]
+  survey["Survey<br/>papers, BibTeX"]
+  code["Code<br/>repositories"]
+  exp["Experiments<br/>runs on pools"]
+  paper["Paper<br/>text, figures"]
+  map["Research map<br/>beliefs, runs,<br/>typed links"]
+
+  idea --> outline
+  outline --> survey & code & exp & paper
+  survey -- "references" --> map
+  code -- "modules" --> map
+  exp -- "runs" --> map
+  paper -- "sections" --> map
+  map -- "evidence, freshness" --> outline
+```
+
+A project keeps one **research map** in `.research/`: a build graph of beliefs (the problem, references, findings,
+designs, claims) and the actions that back them (experiments, scripted figures), joined by typed links (evidence,
+basis, implements, describes, cites). The **outline** is the paper's argument kept on that map, and each item's tasks
+send work out. Survey, code, experiments and writing do not depend on one another: each records its own kind of node
+(references, modules, runs, sections), and they meet only on the map. Evidence flows back to the items it backs, and
+freshness carries a change across the workstreams: edit the code, and the runs that read it go stale, while the claims
+they back and the paragraphs that describe those claims are flagged for review. Claude and Codex can work in any of
+them, but what they change on the map arrives as a proposal, with its impact shown, until you accept it. Details:
+[docs/DAG.md](docs/DAG.md).
+
+
 ## How it fits together
 
 ```mermaid
