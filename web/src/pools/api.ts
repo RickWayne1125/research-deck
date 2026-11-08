@@ -35,9 +35,16 @@ export interface Rate {
 export type NodePrice = Pick<Rate, 'state' | 'amount' | 'unit' | 'item' | 'rule_amount' | 'from'>;
 
 export interface PoolCredential { ref: string | null; expires_at: string | null; days_left: number | null; state: 'ok' | 'soon' | 'expired' | null }
+/** A fix the page can offer for a failed read (pools/sources.py SourceError.needs): sign the Coder CLI in. */
+export interface ReadNeeds { kind: 'coder-login'; host: string | null }
+/** The Coder CLI's sign-in, in the folder ssh to a workspace reads (pools/coder.py). */
+export interface CoderStatus {
+  installed: boolean; cli: string | null; folder: string; managed: 'vscode' | null; host: string | null;
+  url: string | null; signed_in: boolean; user: string | null; error: string | null;
+}
 export interface PoolInfo {
   state: 'ok' | 'stale' | 'failed' | 'reading'; here: boolean; names?: string[]; source: PoolDef['source'];
-  read_at: string | null; age_s: number | null; tried_at: string | null; error: string | null; warnings: string[];
+  read_at: string | null; age_s: number | null; tried_at: string | null; error: string | null; needs?: ReadNeeds | null; warnings: string[];
   duration_s: number | null; reading: boolean; capabilities: string[]; credential: PoolCredential | null; billed: boolean;
   prices: PriceRule[]; rate: Rate;
   budget: { agent_gpu_hours_per_day: number | null; agent_used_today: number | null; month: { amount: number; unit: string } | null };
@@ -61,7 +68,7 @@ export interface PoolDoc {
   prices: PriceRule[]; credential: { expires_at: string | null }; capabilities: string[];
 }
 export interface TestResult {
-  ok: boolean; error?: string; duration_s: number; warnings?: string[]; doc?: PoolDoc; raw?: string; raw_truncated?: boolean;
+  ok: boolean; error?: string; needs?: ReadNeeds | null; duration_s: number; warnings?: string[]; doc?: PoolDoc; raw?: string; raw_truncated?: boolean;
   platform?: PoolPlatform;
 }
 
@@ -77,6 +84,9 @@ export const poolApi = {
   test: (def: PoolDef) => post<TestResult>('/api/pools/test', def),
   parse: (text: string) => post<{ def: PoolDef; exists: boolean }>('/api/pools/parse', { text }),
   setSelection: (pid: string, pools: string[] | null) => put<{ selection: string[] | null }>(`/api/projects/${enc(pid)}/pools`, { pools }),
+  coderStatus: (host?: string | null) => get<CoderStatus>('/api/pools/coder/status', { host }),
+  /** The token goes to the Coder CLI's prompt on the server, which keeps it where ssh reads it; nothing else stores it. */
+  coderLogin: (url: string, token: string, host?: string | null) => post<CoderStatus>('/api/pools/coder/login', { url, token, host: host ?? null }),
 };
 
 /** "Add this computer": a pool that reads this machine; not billed, agents may not queue there. */

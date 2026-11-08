@@ -10,6 +10,7 @@ import { Meter } from '../panels/experiments/parts';
 import { poolApi, thisComputer, type PoolCredential, type PoolInfo, type PoolList, type PoolView } from './api';
 import { amount, budgetSummary, matchText, num, pricesSummary, sourceText } from './format';
 import { PoolWizard, type WizardStart } from './PoolWizard';
+import { CoderSignInDialog } from './CoderSignIn';
 import './i18n';
 import './pools.css';
 
@@ -196,6 +197,7 @@ function PoolRow({ v, here, busy, onToggle, onEdit, onRefresh, onDelete }: {
   const { def } = v;
   const info = v.platform.pool;
   const src = sourceText(def, t);
+  const [coder, setCoder] = useState(false);
   return (
     <div className={`pl-row ${here ? '' : 'dim'}`}>
       <div className="col pl-row-main">
@@ -223,7 +225,15 @@ function PoolRow({ v, here, busy, onToggle, onEdit, onRefresh, onDelete }: {
             <dt>{t('pl.k.credential')}</dt>
             <dd className="row wrap pl-chips"><span className="mono">{info.credential.ref ?? t('pl.cred.fromSource')}</span><CredentialBadge c={info.credential} /></dd>
           </>}
-          {info.error && <><dt>{t('pl.k.error')}</dt><dd className="pl-err">{info.error}</dd></>}
+          {info.error && <><dt>{t('pl.k.error')}</dt><dd className="col pl-err">
+            {info.needs?.kind === 'coder-login' && (
+              <span className="row wrap pl-coder-hint">
+                <span>{info.needs.host ? t('pl.coder.needed', { host: info.needs.host }) : t('pl.coder.neededNoHost')}</span>
+                <Button size="sm" variant="accent" onClick={() => setCoder(true)}>{t('pl.coder.signIn')}</Button>
+              </span>
+            )}
+            <span>{info.error}</span>
+          </dd></>}
           {info.warnings.length > 0 && <><dt>{t('pl.k.warnings')}</dt><dd className="pl-warn">{info.warnings.slice(0, 3).join('；')}</dd></>}
         </dl>
       </div>
@@ -237,6 +247,7 @@ function PoolRow({ v, here, busy, onToggle, onEdit, onRefresh, onDelete }: {
           <Button size="sm" onClick={onDelete}>{t('pl.delete')}</Button>
         </div>
       </div>
+      {coder && <CoderSignInDialog host={info.needs?.host ?? null} onClose={() => setCoder(false)} onDone={onRefresh} />}
     </div>
   );
 }

@@ -175,8 +175,10 @@ Pools belong to the machine (`~/.research-deck/pools/<id>.yaml`). Every write, t
 | PUT | /api/pools/{id} | a definition (the YAML's fields; `id` must match) | `{def, platform}`; starts a first read. 409 when its id or one of its `names` is already another pool's |
 | DELETE | /api/pools/{id} | | `{trashed}` (the file moved to `pools/.trash/`) |
 | POST | /api/pools/{id}/refresh | `?project=` | `{def, platform}` after reading now |
-| POST | /api/pools/test | a definition | `{ok, duration_s, error?, warnings, doc, raw, platform}`: one read, nothing saved |
+| POST | /api/pools/test | a definition | `{ok, duration_s, error?, needs?, warnings, doc, raw, platform}`: one read, nothing saved. `needs: {kind: "coder-login", host}` when it failed because the Coder CLI is signed out (the pool's view carries the same `needs`) |
 | POST | /api/pools/parse | `{text}` (a pool file) | `{def, exists}` (validated, not saved) |
+| GET | /api/pools/coder/status | `?host=` (a Coder workspace host) | `{installed, cli, folder, managed, host, url, signed_in, user, error}`: the Coder CLI's sign-in in the folder ssh to that host reads (`ssh -G`), else the CLI's default folder (researcher only) |
+| POST | /api/pools/coder/login | `{url, token, host?}` (researcher only) | the status after `coder --global-config <folder> login <url>`; the token goes to the CLI's prompt on stdin and is kept only by the CLI. 400 when Coder refuses the token |
 | PUT | /api/projects/{pid}/pools | `{pools: [ids] \| null}` | `{selection}` (project.yaml `resources.pools`; null = all) |
 
 A platform name (`target.platform`, `spec.platform`) belongs to the pool whose id or one of whose `names` it is,

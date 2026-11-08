@@ -9,6 +9,7 @@ import {
   type PriceRule, type SourceType, type TestResult,
 } from './api';
 import { blank, DEFAULT_EVERY, fromName, isIdLike, NAME_MAX, nameKey, problems, slugId, tidyName } from './draft';
+import { CoderSignIn } from './CoderSignIn';
 import { amount, commandLine, everyText, matchText, num, ruleText } from './format';
 
 /** add: name = a platform name the records use, to make the pool for (its id, or one of its names). */
@@ -119,7 +120,7 @@ export function PoolWizard({ start, list, pid, onClose, onSaved }: {
           </div>
           <div className="col pl-w-col pl-w-right">
             <span className="label">{t('pl.w.result')}</span>
-            {test ? <TestView r={test} /> : <span className="faint pl-small">{t('pl.w.noResult')}</span>}
+            {test ? <TestView r={test} onRetest={runTest} /> : <span className="faint pl-small">{t('pl.w.noResult')}</span>}
           </div>
         </div>
       )}
@@ -286,11 +287,19 @@ function InventoryEditor({ nodes, onChange }: { nodes: InventoryNode[]; onChange
 
 // ------------------------------------------------------------------ the test result
 
-function TestView({ r }: { r: TestResult }) {
+function TestView({ r, onRetest }: { r: TestResult; onRetest: () => void }) {
   const t = useT();
   const { lang } = useI18n();
   if (!r.ok || !r.doc) {
-    return <div className="col pl-test"><b className="pl-bad">{t('pl.w.failed', { s: num(r.duration_s, lang) })}</b><div className="pl-err mono">{r.error}</div></div>;
+    return (
+      <div className="col pl-test">
+        <b className="pl-bad">{t('pl.w.failed', { s: num(r.duration_s, lang) })}</b>
+        {/* ssh to a Coder workspace failed because the Coder CLI is signed out: the sign-in, right here */}
+        {r.needs?.kind === 'coder-login' && <CoderSignIn host={r.needs.host} onDone={onRetest} />}
+        <details open={r.needs?.kind !== 'coder-login'}><summary className="faint pl-small">{t('pl.w.errorText')}</summary>
+          <div className="pl-err mono">{r.error}</div></details>
+      </div>
+    );
   }
   const d = r.doc;
   const gpus = new Map<string, number>();

@@ -10,6 +10,9 @@ DELETE /api/pools/{id}                     move the file to pools/.trash/ (the r
 POST   /api/pools/{id}/refresh?project=    read now (the researcher only)
 POST   /api/pools/test                     read an unsaved definition once (the researcher only)
 POST   /api/pools/parse                    a definition from YAML text, for importing a pool file (the researcher only)
+GET    /api/pools/coder/status?host=       the Coder CLI's sign-in, in the folder ssh to that host reads (coder.py)
+POST   /api/pools/coder/login              {url, token, host?}: sign the Coder CLI in there (the researcher only; the
+                                           token goes to the CLI, which keeps it; nothing is stored here)
 PUT    /api/projects/{pid}/pools           which pools this project uses: {"pools": [ids] | null = all}
 GET    /api/resources?project=             the Experiments › Resources snapshot (experiments/api.py serves it)
 
@@ -24,7 +27,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 
 from .. import actors, config
-from . import service, store
+from . import coder, service, store
 
 router = APIRouter(tags=["pools"])
 
@@ -84,6 +87,26 @@ def test_pool(body: dict[str, Any], request: Request):
     _human(request)
     try:
         return service.test(body)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+
+
+@router.get("/api/pools/coder/status")
+def coder_status(request: Request, host: str | None = None):
+    _human(request)
+    if host and not coder.host_in([host]):
+        raise HTTPException(400, "not a Coder workspace host (<agent>.<workspace>.<owner>.coder or coder.<workspace>)")
+    return coder.status(host)
+
+
+@router.post("/api/pools/coder/login")
+def coder_login(body: dict[str, Any], request: Request):
+    _human(request)
+    host = body.get("host") or None
+    if host and not coder.host_in([str(host)]):
+        raise HTTPException(400, "not a Coder workspace host (<agent>.<workspace>.<owner>.coder or coder.<workspace>)")
+    try:
+        return coder.login(str(body.get("url") or ""), str(body.get("token") or ""), host)
     except ValueError as e:
         raise HTTPException(400, str(e)) from e
 

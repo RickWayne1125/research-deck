@@ -91,7 +91,7 @@ def read_now(pool: dict, keep: bool = True) -> dict:
         doc, warnings, _raw = sources.read(pool)
         rec = {"sig": sig, "doc": doc, "read_at": tried_at, "tried_at": tried_at, "warnings": warnings[:30], "error": None}
     except sources.SourceError as e:
-        rec = {**(cached(pool) if keep else {}), "sig": sig, "tried_at": tried_at, "error": str(e)[:800]}
+        rec = {**(cached(pool) if keep else {}), "sig": sig, "tried_at": tried_at, "error": str(e)[:800], "needs": e.needs}
     except Exception as e:  # noqa: BLE001 — a broken adapter must not take the page down
         log.exception("reading the pool %s failed", pool["id"])
         rec = {**(cached(pool) if keep else {}), "sig": sig, "tried_at": tried_at, "error": f"{e.__class__.__name__}: {e}"[:800]}
@@ -160,7 +160,7 @@ def test(data: Any) -> dict:
     try:
         doc, warnings, raw = sources.read(pool)
     except sources.SourceError as e:
-        return {"ok": False, "error": str(e)[:800], "duration_s": round(time.monotonic() - started, 2)}
+        return {"ok": False, "error": str(e)[:800], "needs": e.needs, "duration_s": round(time.monotonic() - started, 2)}
     rec = {"doc": doc, "read_at": at, "tried_at": at, "warnings": warnings, "error": None}
     return {"ok": True, "duration_s": round(time.monotonic() - started, 2), "warnings": warnings, "doc": doc,
             "raw": raw[:20000], "raw_truncated": len(raw) > 20000, "platform": platform_view(pool, rec)}
@@ -455,7 +455,8 @@ def platform_view(pool: dict, rec: dict, *, here: bool = True, agent_used: float
             "state": state, "here": here, "names": pool.get("names") or [],
             "source": {k: v for k, v in src.items() if k != "inventory"},
             "read_at": rec.get("read_at"), "age_s": None if age is None else round(age), "tried_at": rec.get("tried_at"),
-            "error": rec.get("error"), "warnings": rec.get("warnings") or [], "duration_s": rec.get("duration_s"),
+            "error": rec.get("error"), "needs": rec.get("needs") if rec.get("error") else None,
+            "warnings": rec.get("warnings") or [], "duration_s": rec.get("duration_s"),
             "reading": reading(pool["id"]), "capabilities": (doc or {}).get("capabilities") or [],
             "credential": credential_view(pool, doc), "billed": pool["kind"] not in UNBILLED,
             "prices": rules(pool, doc), "rate": r,

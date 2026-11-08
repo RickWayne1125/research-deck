@@ -93,6 +93,26 @@ A name belongs to one pool. Saving a pool whose id or other name is already anot
 that has it. When two pool files written by hand list the same name, the pool first by id keeps it, and Settings says
 which file to fix.
 
+### Coder workspaces
+
+A [Coder](https://coder.com) workspace is read like any machine over ssh: use the ssh preset with the host that
+`coder config-ssh` set up (`<agent>.<workspace>.<owner>.coder`). ssh reaches it through the Coder CLI, which must be
+signed in. When a read or a test fails because it is not, the pool says so and offers **Sign in to Coder**: open the
+deployment's sign-in page (on any device, a phone too), copy the session token it shows, and paste it there. Research
+Deck hands the token to the CLI's own prompt; the CLI keeps it in its configuration folder, the one ssh reads, and
+Research Deck keeps nothing.
+
+!!! note "Why `coder login` in a terminal may not be enough"
+    `coder config-ssh` writes an ssh ProxyCommand that passes `--global-config`. With that option the Coder CLI reads
+    its session from a file in that folder and ignores the macOS keychain, which is where a plain `coder login` puts
+    it. So after `coder login`, ssh to a workspace can still say "You are signed out". Sign in from Research Deck, or
+    in a terminal with `coder --global-config "<the folder ssh -G <host> shows>" login <url>`.
+
+A read never starts a stopped workspace: pool commands run with `CODER_SSH_DISABLE_AUTOSTART=true`, so a stopped
+workspace reads as a failed read. Each read is a short ssh session on the workspace, which Coder may count as
+activity; a longer interval keeps it from holding off the workspace's automatic stop. Hosts the Coder VS Code
+extension manages (`coder-vscode.…`) keep the extension's own sign-in: sign in from VS Code.
+
 ### Credentials
 
 A pool names its credential, never holds it: `keychain:<name>` (a macOS keychain item you add yourself, e.g.

@@ -8,11 +8,16 @@ Use it as a resource pool's command source in Research Deck (Settings › Resour
 an ssh-agent for the host first (ssh gpu-box true should work without prompting). It prints one rd-pool/1 document
 and exits 0; when it cannot read the machine it exits 1 with the reason on stderr, which Research Deck shows as the
 read error while it keeps the last good reading. Standard library only.
+
+A Coder workspace (a host `coder config-ssh` set up, like main.myws.me.coder) works the same way once the Coder CLI is
+signed in where that ssh setup looks for the session; Research Deck offers the sign-in when a read fails for that
+reason. The read never starts a stopped workspace (CODER_SSH_DISABLE_AUTOSTART=true).
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from datetime import UTC, datetime
@@ -71,8 +76,9 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     # The script goes to sh on stdin, whatever the login shell over there is.
     cmd = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", args.host, "sh", "-s"]
+    env = {"CODER_SSH_DISABLE_AUTOSTART": "true", **os.environ}     # a status read must not start a workspace
     try:
-        p = subprocess.run(cmd, input=REMOTE + "\n", capture_output=True, text=True, timeout=args.timeout)
+        p = subprocess.run(cmd, input=REMOTE + "\n", capture_output=True, text=True, timeout=args.timeout, env=env)
     except (OSError, subprocess.TimeoutExpired) as e:
         print(f"ssh {args.host}: {e}", file=sys.stderr)
         return 1

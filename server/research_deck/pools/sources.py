@@ -3,7 +3,9 @@
 manual    the machines written in the definition; no live data
 local     this machine: nvidia-smi when it is there, the load average and memory
 command   a local program, run from its argument list without a shell, that prints one rd-pool/1 document on stdout and
-          exits 0 (timeout from the definition). It gets RD_POOL_ID and, when the pool names a credential, RD_POOL_SECRET.
+          exits 0 (timeout from the definition). It gets RD_POOL_ID and, when the pool names a credential, RD_POOL_SECRET;
+          and CODER_SSH_DISABLE_AUTOSTART=true, so ssh to a Coder workspace never starts a stopped one. When it fails
+          because the Coder CLI is signed out (ssh to a workspace), the error says so (needs: coder-login, coder.py).
 http      GET an https address (or plain http on this machine) that returns the document; the credential goes as
           Authorization: Bearer. Redirects are not followed.
 
@@ -24,13 +26,18 @@ from pathlib import Path
 
 import httpx
 
-from . import protocol, store
+from . import coder, protocol, store
 
 MAX_OUTPUT = 2 * 1024 * 1024
 
 
 class SourceError(Exception):
-    """Reading failed: the message says why, in words the researcher can act on."""
+    """Reading failed: the message says why, in words the researcher can act on. `needs` names a fix the page offers
+    ({"kind": "coder-login", "host"}: sign the Coder CLI in)."""
+
+    def __init__(self, message: str, needs: dict | None = None):
+        super().__init__(message)
+        self.needs = needs
 
 
 def now_iso() -> str:
@@ -87,7 +94,8 @@ def read(pool: dict) -> tuple[dict, list[str], str]:
     secret = resolve_credential(pool.get("credential"))
     if kind == "command":
         argv = [os.path.expanduser(a) if a.startswith("~/") else a for a in src["run"]]
-        env = {**os.environ, "RD_POOL_ID": pool["id"], **({"RD_POOL_SECRET": secret} if secret else {})}
+        env = {"CODER_SSH_DISABLE_AUTOSTART": "true", **os.environ, "RD_POOL_ID": pool["id"],
+               **({"RD_POOL_SECRET": secret} if secret else {})}
         cwd = store.pools_dir()
         cwd.mkdir(parents=True, exist_ok=True)
         try:
@@ -100,7 +108,8 @@ def read(pool: dict) -> tuple[dict, list[str], str]:
             raise SourceError(f"could not run {argv[0]}: {e}") from e
         err = p.stderr.decode("utf-8", errors="replace").strip()[-600:]
         if p.returncode != 0:
-            raise SourceError(f"the command exited {p.returncode}" + (f": {err}" if err else ""))
+            needs = {"kind": "coder-login", "host": coder.host_in(argv)} if coder.signed_out(err) else None
+            raise SourceError(f"the command exited {p.returncode}" + (f": {err}" if err else ""), needs)
         if len(p.stdout) > MAX_OUTPUT:
             raise SourceError("the output is larger than 2 MB")
         raw = p.stdout.decode("utf-8", errors="replace")

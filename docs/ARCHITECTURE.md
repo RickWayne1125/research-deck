@@ -28,7 +28,8 @@ research-deck/
     experiments/  experiment records + freshness from the DAG, their logs; /api/resources (the pools, or example data)
     pools/    resource pools: protocol.py (rd-pool/1), store.py (~/.research-deck/pools/<id>.yaml), sources.py (manual,
               this machine, command, http), service.py (background reads, platform views, prices, budgets), api.py,
-              __main__.py (python -m research_deck.pools check)
+              coder.py (the Coder CLI's sign-in that ssh to a Coder workspace needs), __main__.py
+              (python -m research_deck.pools check)
     viz/      figure registry, matplotlib renderer, draw.io files, OmniGraffle/DataGraph adapters, the house style
     start/    new projects from an idea (folder, notes/idea.md, git init) and Settings → New projects
     survey/   the early survey: search arXiv / Semantic Scholar / OpenAlex, download open-access PDFs, BibTeX, draft nodes
