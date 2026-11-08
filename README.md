@@ -41,24 +41,22 @@ directions may run side by side, and an abandoned or refuted node grows no new b
 ## How it fits together
 
 ```mermaid
-flowchart TB
+flowchart LR
   browser["Browser<br/>the web app"]
-  remote["Phone or laptop<br/>via Tailscale, optional"]:::outside
-  server["Research Deck server<br/>FastAPI, 127.0.0.1:8765"]
-  agents["Claude Code / Codex CLI<br/>headless, in the project"]
-  files[("Your files<br/>projects (.research/)<br/>~/.research-deck")]
-  survey["arXiv, Semantic Scholar,<br/>OpenAlex"]:::outside
-  pools["Resource pools<br/>GPU boxes, clusters, cloud"]:::outside
+  remote["Phone, laptop<br/>via Tailscale"]:::outside
+  server["Research Deck<br/>server<br/>127.0.0.1:8765"]
+  agents["Claude Code /<br/>Codex CLI"]
+  files[("Your files<br/>+ .research/")]
+  survey["arXiv, Semantic<br/>Scholar,<br/>OpenAlex"]:::outside
+  pools["Resource pools<br/>GPUs, clusters"]:::outside
 
-  browser -- "HTTP + live events" --> server
-  remote -. "tailnet owners only" .-> server
+  browser -- "HTTP, events" --> server
+  remote -. "owners only" .-> server
   server -- "starts runs" --> agents
   agents -- "MCP tools" --> server
   server -- "reads, writes" --> files
-  server -. "early survey" ..-> survey
-  server -. "reads status, prices" ..-> pools
-  files ~~~ survey
-  files ~~~ pools
+  server -. "survey" .-> survey
+  server -. "status, prices" .-> pools
 
   classDef outside stroke-dasharray: 5 4
 ```
