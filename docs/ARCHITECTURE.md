@@ -130,7 +130,8 @@ research-deck/
   - nothing submits jobs to remote machines or creates credentials; queued runs wait as experiment records until the
     researcher runs them; autocommit and agent queueing are off unless the user's or the project's DAG config turns
     them on.
-  - the early survey (`survey/`) is the only part that reaches the network, and only when the researcher starts it
+  - two parts reach the network: the resource pools the researcher adds, read through their command or HTTP source
+    (§ Resource pools; reads only), and the early survey (`survey/`), only when the researcher starts it
     (creating a project from an idea, or `POST /survey`; agents get 403). It sends the search queries to arXiv,
     Semantic Scholar and OpenAlex (public APIs, no keys, a generic `research-deck/<version>` User-Agent, nothing about
     the user; 429/503 are retried after a short wait). PDF links come from those answers and are untrusted: http(s)

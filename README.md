@@ -38,6 +38,38 @@ The map then grows **one step at a time**: the next step is drafted from the con
 directions may run side by side, and an abandoned or refuted node grows no new branch.
 
 
+## How it fits together
+
+```mermaid
+flowchart TB
+  browser["Browser<br/>the web app"]
+  remote["Phone or laptop<br/>via Tailscale, optional"]:::outside
+  server["Research Deck server<br/>FastAPI, 127.0.0.1:8765"]
+  agents["Claude Code / Codex CLI<br/>headless, in the project"]
+  files[("Your files<br/>projects (.research/)<br/>~/.research-deck")]
+  survey["arXiv, Semantic Scholar,<br/>OpenAlex"]:::outside
+  pools["Resource pools<br/>GPU boxes, clusters, cloud"]:::outside
+
+  browser -- "HTTP + live events" --> server
+  remote -. "tailnet owners only" .-> server
+  server -- "starts runs" --> agents
+  agents -- "MCP tools" --> server
+  server -- "reads, writes" --> files
+  server -. "early survey" ..-> survey
+  server -. "reads status, prices" ..-> pools
+  files ~~~ survey
+  files ~~~ pools
+
+  classDef outside stroke-dasharray: 5 4
+```
+
+Everything runs on your computer. The server listens on 127.0.0.1 only and keeps its state in each project's
+`.research/` folder and in `~/.research-deck/`. It runs your own Claude Code or Codex CLI headless, and the agents
+reach back to it through MCP tools. The dashed parts are optional: the survey runs when you start it, the pools you add
+are read for their status and prices, and Tailscale is there only if you set it up. Details:
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+
 ## Quick start
 
 Requirements: macOS or Linux, Python 3.12+, Node.js 20+ with pnpm (`corepack enable`), git. For the AI parts, the
@@ -94,9 +126,10 @@ Requests through Serve are accepted only from the listed owners.
 The server listens on 127.0.0.1 only and refuses requests from other origins (a CSRF header is required for every
 change, DNS rebinding is blocked). Agents run headless in the project folder: Claude Code restricted to the project
 with only Research Deck's MCP server; Codex in a read-only sandbox unless you allow writes for the conversation.
-Nothing submits jobs to remote machines or creates credentials. The early survey is the only part that reaches the
-network, and only when you start it: it queries arXiv, Semantic Scholar and OpenAlex (no keys, nothing about you) and
-downloads open-access PDFs (public addresses only, PDF files only, 60 MB at most). Details:
+Nothing submits jobs to remote machines or creates credentials. Two parts reach the network. The early survey runs only
+when you start it: it queries arXiv, Semantic Scholar and OpenAlex (no keys, nothing about you) and downloads
+open-access PDFs (public addresses only, PDF files only, 60 MB at most). A resource pool you add with a command or an
+HTTP source is read through that command or address, for its status and prices only. Details:
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (Safety).
 
 ## Documentation

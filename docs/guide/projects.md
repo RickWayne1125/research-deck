@@ -30,8 +30,8 @@ Project menu → **New from an idea…**: paste the idea, or upload a `.md`, `.t
    relevant papers, downloads the open-access PDFs into `papers/` (paywalled ones get a link and BibTeX), writes
    `papers/references.bib` and `notes/survey.md`, and drafts the problem and reference nodes for you to review.
 
-The survey is the only part of Research Deck that reaches the network, and only when you start it. It sends nothing
-about you and uses no keys.
+Apart from reading the resource pools you add, the survey is the only part of Research Deck that reaches the network,
+and only when you start it. It sends nothing about you and uses no keys.
 
 ## Phases
 
