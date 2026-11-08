@@ -44,19 +44,19 @@ directions may run side by side, and an abandoned or refuted node grows no new b
 flowchart LR
   browser["Browser<br/>the web app"]
   remote["Phone, laptop<br/>via Tailscale"]:::outside
+  survey["arXiv, Semantic<br/>Scholar,<br/>OpenAlex"]:::outside
+  pools["Resource pools<br/>GPUs, clusters"]:::outside
   server["Research Deck<br/>server<br/>127.0.0.1:8765"]
   agents["Claude Code /<br/>Codex CLI"]
   files[("Your files<br/>+ .research/")]
-  survey["arXiv, Semantic<br/>Scholar,<br/>OpenAlex"]:::outside
-  pools["Resource pools<br/>GPUs, clusters"]:::outside
 
   browser -- "HTTP, events" --> server
   remote -. "owners only" .-> server
+  survey -. "search results" .-> server
+  pools -. "status, prices" .-> server
   server -- "starts runs" --> agents
   agents -- "MCP tools" --> server
   server -- "reads, writes" --> files
-  server -. "survey" .-> survey
-  server -. "status, prices" .-> pools
 
   classDef outside stroke-dasharray: 5 4
 ```
