@@ -45,6 +45,11 @@ scripts/launchd.sh uninstall
 
 The agent logs to `~/.research-deck/logs/server.log`. The server still listens on 127.0.0.1 only.
 
+A project in a folder that iCloud Drive syncs (Desktop and Documents, with Optimize Mac Storage on) can have files
+that iCloud has offloaded to save space. The server downloads such a file when it reads it, as a program started from
+Terminal does; a launchd agent's read would otherwise fail with `Resource deadlock avoided`. To keep a project's files
+on the Mac, choose Keep Downloaded on its folder in Finder.
+
 ## Open it from your other devices (optional)
 
 With [Tailscale](https://tailscale.com), publish it to your tailnet only (never Funnel):

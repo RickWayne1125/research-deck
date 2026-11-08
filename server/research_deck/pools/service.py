@@ -340,15 +340,20 @@ def set_selection(pid: str, ids: list[str] | None) -> list[str] | None:
 
 
 def platform_names(pid: str) -> list[str]:
-    """The platform names the project uses: its records' target.platform and its map's spec.platform (cached 60 s)."""
+    """The platform names the project uses: its records' target.platform and its map's spec.platform (cached 60 s; when
+    a file could not be read, nothing is cached and the next call reads again)."""
     now = time.monotonic()
     hit = _NAMES.get(pid)
     if hit and now - hit[0] < NAMES_TTL_S:
         return hit[1]
     names: set[str] = set()
+    failed = False
     try:
         from ..experiments import records
         names |= records.target_platforms(pid)
+    except OSError as e:    # a file that is there but could not be read: one iCloud has offloaded and could not download
+        failed = True
+        log.warning("could not read the experiment records of %s: %s", pid, e)
     except Exception:  # noqa: BLE001 — a project without records
         log.debug("no records for %s", pid, exc_info=True)
     try:
@@ -356,10 +361,14 @@ def platform_names(pid: str) -> list[str]:
         from ..dag.model import spec_of
         from ..dag.service import store_for
         names |= {p for n in current(store_for(pid)).nodes.values() if (p := str(spec_of(n).get("platform") or "").strip())}
+    except OSError as e:
+        failed = True
+        log.warning("could not read the map of %s: %s", pid, e)
     except Exception:  # noqa: BLE001 — a project without a map
         log.debug("no map for %s", pid, exc_info=True)
     out = sorted(names, key=str.lower)
-    _NAMES[pid] = (now, out)
+    if not failed:
+        _NAMES[pid] = (now, out)
     return out
 
 

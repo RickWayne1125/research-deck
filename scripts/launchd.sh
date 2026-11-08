@@ -28,6 +28,8 @@ case "${1:-status}" in
     fi
     mkdir -p "$LOGS" "$HOME/Library/LaunchAgents"
     # PATH: git (Homebrew or Xcode tools) and the claude CLI (~/.local/bin); Codex is found at its app path.
+    # MaterializeDatalessFiles: read a file iCloud has offloaded by downloading it (a launchd agent's read fails otherwise).
+    # The server also turns this on for itself (research_deck/offloaded.py); the key covers Python's own start as well.
     cat > "$PLIST" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -49,6 +51,7 @@ case "${1:-status}" in
   <key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict>
   <key>ThrottleInterval</key><integer>10</integer>
   <key>ProcessType</key><string>Interactive</string>
+  <key>MaterializeDatalessFiles</key><true/>
   <key>StandardOutPath</key><string>$LOGS/server.log</string>
   <key>StandardErrorPath</key><string>$LOGS/server.log</string>
 </dict>

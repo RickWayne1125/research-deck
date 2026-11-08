@@ -1,6 +1,8 @@
 """Resource pools (research_deck/pools): rd-pool/1, definitions, sources, prices, budgets, routes and the adapters."""
+import errno
 import importlib.util
 import json
+import logging
 import sys
 import textwrap
 from pathlib import Path
@@ -155,6 +157,25 @@ def test_a_pool_answers_to_other_names_and_each_name_belongs_to_one_pool(client,
     listing = client.get("/api/pools").json()                          # a clash written by hand: the first by id keeps it
     assert listing["clashes"] == [{"name": A6000, "pool": "js2", "owner": "box"}]
     assert {v["def"]["id"]: v["def"].get("names") for v in listing["pools"]}["js2"] == ["Jetstream2 g3.large"]
+
+
+def test_platform_names_that_could_not_be_read_are_read_again_not_cached(project, monkeypatch, caplog):
+    pid, _ = project
+    from research_deck.experiments import records
+    reads = []
+
+    def target_platforms(p):
+        reads.append(p)
+        if len(reads) == 1:                 # a record iCloud has offloaded and this process could not download
+            raise OSError(errno.EDEADLK, "Resource deadlock avoided")
+        return {"workstation"}
+
+    monkeypatch.setattr(records, "target_platforms", target_platforms)
+    with caplog.at_level(logging.WARNING, logger="research_deck.pools"):
+        assert service.platform_names(pid) == []
+    assert "could not read the experiment records" in caplog.text and "Resource deadlock avoided" in caplog.text
+    assert service.platform_names(pid) == ["workstation"]                    # read again
+    assert service.platform_names(pid) == ["workstation"] and len(reads) == 2      # a good read is cached
 
 
 ADAPTER = '''

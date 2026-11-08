@@ -3,10 +3,11 @@ import argparse
 
 import uvicorn
 
-from . import config
+from . import config, offloaded
 
 
 def main() -> None:
+    offloaded.download_on_read()        # first: project files may be ones iCloud has offloaded (research_deck/offloaded.py)
     parser = argparse.ArgumentParser(prog="research_deck")
     parser.add_argument("--host", default=config.HOST)
     parser.add_argument("--port", type=int, default=config.PORT)

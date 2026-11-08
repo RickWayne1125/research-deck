@@ -19,6 +19,7 @@ research-deck/
   server/research_deck/        FastAPI backend (Python 3.12, .venv/)
     app.py                     app factory; mounts core routes + <pkg>/api.py:router for each panel package
     config.py util.py events.py projects.py system.py      core (do not change interfaces without updating docs/API.md)
+    __main__.py offloaded.py   python -m research_deck; on macOS it first has files iCloud offloaded downloaded on read
     agents/   catalog.py sessions.py runner.py context.py api.py  + discover.py handoff.py brief.py transcript.py
     dag/      the research DAG engine (docs/DAG.md)
     writing/  documents, the fixed AI proofreading passes, glossary, learned rules, snapshots
