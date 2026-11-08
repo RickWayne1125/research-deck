@@ -56,6 +56,17 @@ export function NewProjectSettingsSection() {
         <label className="row np-check"><input type="checkbox" checked={s.git_init} onChange={e => save({ git_init: e.target.checked })} /><span>{t('np.st.git')}</span></label>
       </dd>
 
+      <dt>{t('np.st.lit')}</dt>
+      <dd className="col np-st-col">
+        {(['files', 'zotero'] as const).map(b => (
+          <label key={b} className="row np-check">
+            <input type="radio" name="np-st-lit" checked={s.literature === b} onChange={() => save({ literature: b })} />
+            <span>{t(`np.st.lit.${b}`)}</span>
+          </label>
+        ))}
+        <span className="st-hint st-flush">{t('np.st.litHint')}</span>
+      </dd>
+
       <dt>{t('np.st.survey')}</dt>
       <dd className="col np-st-col">
         <div className="row wrap" style={{ gap: '6px 16px' }}>

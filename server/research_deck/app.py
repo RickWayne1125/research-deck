@@ -16,13 +16,19 @@ from . import __version__, actors, config, events, projects, system
 log = logging.getLogger("research_deck")
 
 # Each package owns its routes in <pkg>/api.py and exports `router`.
-PANEL_PACKAGES = ("dag", "agents", "writing", "coding", "experiments", "viz", "start", "survey", "outline", "pools")
+PANEL_PACKAGES = ("dag", "agents", "writing", "coding", "experiments", "viz", "start", "survey", "outline", "pools",
+                  "literature", "docmost")
 MUTATING = {"POST", "PUT", "PATCH", "DELETE"}
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     events.hub.bind_loop(asyncio.get_running_loop())
+    try:
+        from .docmost import sync as docmost_sync
+        docmost_sync.start_scanner()           # bound projects' notes go to Docmost while a sign-in is saved
+    except Exception:  # noqa: BLE001 — the dashboard starts without it
+        log.exception("the Docmost sync did not start")
     yield
     try:
         from .agents import runner

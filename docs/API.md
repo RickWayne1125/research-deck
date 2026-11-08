@@ -176,6 +176,63 @@ source returns is [rd-pool/1](examples/pool-adapter.md#the-document).
 quota or monthly budget); `usd` stays the USD total. The impact preview's summary carries `cost.rerun` and
 `unpriced.rerun` the same way.
 
+## Literature (literature/)
+
+Where a project keeps its papers: files in the project (the default) or a Zotero collection. This computer reaches
+Zotero through the desktop app's local API (`http://127.0.0.1:23119/api/`, Zotero 10+ for writes) or the zotero.org Web
+API; settings.json `zotero: {mode: local | web, library: users/<id> | groups/<id>, credential: keychain:<item> | env:<VAR>}`.
+The app's write key is kept in `~/.research-deck/secrets/zotero.json`; a zotero.org key stays in the Keychain. Every
+change and every request that reaches Zotero is the researcher's (403 for agents); no route returns a key.
+
+| Method | Path | Body / query | Response |
+|---|---|---|---|
+| GET | /api/settings/zotero | | `{mode, library, credential, local_key, local_remember, connect: {state, message}, check: {ok, at, message?, user?, write?, version?} \| null}` |
+| PATCH | /api/settings/zotero | any of `{mode, library, credential}` (null or "" removes the last two) | the status; 400 on a malformed value |
+| POST | /api/settings/zotero/connect | | the status. The app: shows its Allow / Always Allow / Deny dialog (`connect.state` waiting → done \| error); zotero.org: checks the key |
+| POST | /api/settings/zotero/check | | the status with a fresh `check` |
+| DELETE | /api/settings/zotero/key | | the status (the app's key forgotten) |
+| GET | /api/zotero/collections | | `{collections: [{key, name, parent}]}` |
+| GET | /api/projects/{pid}/literature | | `{backend: files \| zotero, collection, collection_name, bib, exported: {at, items, path, version, collection} \| null, zotero}` |
+| PUT | /api/projects/{pid}/literature | `{backend, collection?, create?}` | the project's literature (project.yaml `literature`); `create`: a new collection named after the project |
+| POST | /api/projects/{pid}/literature/export | | `{at, items, path, version, collection}`: references.bib's Zotero block rewritten |
+
+With Zotero, the survey (§ Survey) makes each kept paper an item of the project's collection (its citation key in
+Extra as `Citation Key: …`) with its open-access PDF as a stored attachment, writes no PDF or `index.md` into the
+project, and exports references.bib; a survey refuses to start (409) while Zotero does not answer. The export owns
+the block between `% >>> zotero` and `% <<< zotero` and keeps every entry outside it, commenting out (not deleting) one
+whose key the block now defines. A paper carries `zotero` (the item) and `zotero_pdf` (the attachment); notes link
+them as `zotero://select/…` and `zotero://open-pdf/…`.
+
+## Docmost (docmost/)
+
+This computer signs in to one Docmost site (settings.json `docmost: {url}`); a project binds one page and its notes
+(`notes/**/*.md`) become child pages of it, one way. Signing in opens a window on the computer running Research Deck:
+on macOS a Mac window with the system's WebKit (`docmost/login.swift`, built once with `xcrun swiftc`), elsewhere
+Chromium through Playwright (`pip install 'research-deck[docmost]'`). The site's cookies are kept in
+`~/.research-deck/secrets/docmost/session.json` and sent only to that site, never on a redirect. Reading the state is
+open; signing in, binding, syncing and resolving are the researcher's (403 for agents).
+
+| Method | Path | Body / query | Response |
+|---|---|---|---|
+| GET | /api/settings/docmost | | `{url, signed_in, user, at, login: {state, message, code?, phase?: build \| window}, install: {state, message}, playwright, helper: native \| playwright \| null}` |
+| PATCH | /api/settings/docmost | `{url}` (null forgets it) | the status; another site forgets the sign-in. http:// only on this computer or a private network |
+| POST | /api/settings/docmost/login | | the status; `login.state` waiting → done \| error (code 2 no sign-in window here, 3 window closed, 4 timed out, 5 no Playwright browser, 6 site unreachable, 7 the native window could not be built) |
+| POST | /api/settings/docmost/logout | | the status (the sign-in, and the window's own cookies and profile, deleted) |
+| POST | /api/settings/docmost/browser | | the status; `install.state` running → done \| error (Playwright's Chromium, once) |
+| GET | /api/projects/{pid}/docmost | | `{binding: {page, slug_id, space, space_slug, title, url} \| null, site, signed_in, running, last: {at, pushed, conflicts, errors}, notes: [{path, title, state, at, error, url}]}` |
+| PUT | /api/projects/{pid}/docmost | `{link}` (a page link, its slug id or its id) | binds the page (project.yaml `docmost`) and syncs once; 401 `{message, sign_in}` when Docmost wants a new sign-in |
+| DELETE | /api/projects/{pid}/docmost | | unbound (the pages stay in Docmost) |
+| POST | /api/projects/{pid}/docmost/sync | | syncs now; the project's status |
+| GET | /api/projects/{pid}/docmost/conflict | `?path=` | `{path, title, at, url, diff: [{kind: + \| - \| " " \| @, text}], remote, note}`: what changed in Docmost since the last push |
+| POST | /api/projects/{pid}/docmost/resolve | `{path, action: push \| take \| recreate \| forget}` | the project's status |
+
+A note's state: `synced`, `pending` (changed since its last push), `conflict` (the page was edited in Docmost since
+the last push: nothing is pushed until `push` replaces the page with the note or `take` writes Docmost's version into
+the note), `missing` (the page was deleted in Docmost: `recreate` or `forget`), `removed` (the note was deleted; its
+page stays), `error`. A note's first `# ` heading is the page's title and is left out of the page's text. While a
+sign-in is saved, every bound project is synced each minute; a note saved in the last 10 seconds waits a round.
+Sync state: `.research/docmost.json`.
+
 ## Visualization (viz/)
 
 | Method | Path | Body / query | Response |

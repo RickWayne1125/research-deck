@@ -175,13 +175,21 @@ def create(name: str, idea: str, file: dict | None, folder: str | None, survey: 
 
     summary = projects.add_project(projects.AddProject(root=str(root), name=name, kind="research"))
     pid = summary["id"]
+    if cfg["literature"] == "zotero":            # its collection is created when the survey first needs it
+        from ..literature import backend as literature
+        literature.set_config(pid, backend="zotero")
     rel = idea_path.relative_to(root).as_posix()
     out = {"project": summary, "root": str(root), "created": new_folder, "idea_file": rel,
-           "upload": kept.relative_to(root).as_posix() if kept else None, "survey": None}
+           "upload": kept.relative_to(root).as_posix() if kept else None, "survey": None, "survey_error": None}
     opts = survey or {}
     if opts.get("enabled", True):
         text = "\n\n".join(t for t in (idea, file_text) if t)
         unread = kept.name if kept and not file_text else None
-        out["survey"] = job.start(pid, text, idea_file=rel, unread=unread, count=opts.get("count"),
-                                  download_pdfs=opts.get("download_pdfs"), actor=actor)
+        try:
+            out["survey"] = job.start(pid, text, idea_file=rel, unread=unread, count=opts.get("count"),
+                                      download_pdfs=opts.get("download_pdfs"), actor=actor)
+        except HTTPException as e:               # e.g. Zotero is not reachable: the project exists all the same
+            if e.status_code != 409:
+                raise
+            out["survey_error"] = str(e.detail)
     return out

@@ -1,9 +1,11 @@
 """Settings for new projects, kept with the user's other machine-local defaults in ~/.research-deck/settings.json:
 
-    {"new_projects": {"dir": "~/Research", "git_init": true,
+    {"new_projects": {"dir": "~/Research", "git_init": true, "literature": "files" | "zotero",
                       "survey": {"sources": ["arxiv", "semantic_scholar", "openalex"], "count": 15,
                                  "download_pdfs": true, "papers_dir": "papers"}},
      "dag_defaults": {"stages": {"mode": "strict"}}}
+
+"literature" is where a new project keeps its papers (literature/backend.py); "zotero" needs Settings → Zotero.
 
 The default folder depends on the system (macOS ~/Research, Linux ~/research, Windows %USERPROFILE%\\Research).
 update() writes only these keys and keeps everything else in the file as it is.
@@ -21,8 +23,10 @@ from ..util import write_json
 
 SOURCES = ("arxiv", "semantic_scholar", "openalex")
 STAGE_MODES = ("strict", "ahead", "free")
+LITERATURE = ("files", "zotero")       # where a new project keeps its papers (literature/backend.py)
 DEFAULTS: dict[str, Any] = {
     "git_init": True,
+    "literature": "files",
     "survey": {"sources": list(SOURCES), "count": 15, "download_pdfs": True, "papers_dir": "papers"},
 }
 
@@ -58,6 +62,8 @@ def new_projects() -> dict:
     out["dir"] = str(mine.get("dir") or "") or default_dir()
     if isinstance(mine.get("git_init"), bool):
         out["git_init"] = mine["git_init"]
+    if mine.get("literature") in LITERATURE:
+        out["literature"] = mine["literature"]
     survey = mine.get("survey") or {}
     if isinstance(survey.get("sources"), list):
         out["survey"]["sources"] = [s for s in survey["sources"] if s in SOURCES]
@@ -95,6 +101,10 @@ def update(change: dict) -> dict:
         if not isinstance(change["git_init"], bool):
             raise ValueError("git_init must be true or false")
         mine["git_init"] = change["git_init"]
+    if "literature" in change:
+        if change["literature"] not in LITERATURE:
+            raise ValueError("literature must be files or zotero")
+        mine["literature"] = change["literature"]
     if isinstance(change.get("survey"), dict):
         survey = dict(mine.get("survey") or {})
         s = change["survey"]

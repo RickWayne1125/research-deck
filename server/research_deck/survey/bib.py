@@ -30,9 +30,17 @@ def _esc(s: str) -> str:
     return str(s).replace("\\", "\\textbackslash{}").replace("{", "\\{").replace("}", "\\}")
 
 
+# Item types that are not papers (from a Zotero library): the BibTeX entry type and the field the venue goes to.
+TYPES = {"book": ("book", "publisher"), "bookSection": ("incollection", "booktitle"), "thesis": ("phdthesis", "school"),
+         "report": ("techreport", "institution")}
+
+
 def entry(p: dict, k: str) -> str:
     venue = p.get("venue") or ""
-    if p.get("arxiv") and venue in ("", "arXiv"):
+    special = TYPES.get(p.get("type") or "")
+    if special:
+        kind, extra = special[0], ([(special[1], venue)] if venue else [])
+    elif p.get("arxiv") and venue in ("", "arXiv"):
         kind, extra = "misc", [("eprint", p["arxiv"]), ("archivePrefix", "arXiv")]
     elif CONFERENCE.search(venue):
         kind, extra = "inproceedings", [("booktitle", venue)]

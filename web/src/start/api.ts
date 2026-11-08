@@ -12,6 +12,8 @@ export interface NewProjectSettings {
   dir_expanded: string;             // where that points now
   default_dir: string;              // this system's default
   git_init: boolean;
+  /** Where a new project keeps its papers: files in the project, or a Zotero collection (Settings → Zotero). */
+  literature: 'files' | 'zotero';
   survey: { sources: SurveySource[]; count: number; download_pdfs: boolean; papers_dir: string };
   stage_mode: StageMode;
 }
@@ -25,6 +27,8 @@ export interface SurveyPaper {
   url: string | null; role: 'competitor' | 'baseline' | 'related' | 'background'; takeaway: string; delta: string;
   closes_gap: boolean; status: 'pending' | 'running' | 'done' | 'failed' | 'link'; file: string | null; error?: string;
   node: string | null; existing: boolean;
+  /** With Zotero as the project's backend: the item, and its PDF attachment. */
+  zotero?: string; zotero_pdf?: string;
 }
 
 export interface Survey {
@@ -54,6 +58,8 @@ export interface NewProjectBody {
 }
 export interface NewProjectResult {
   project: ProjectSummary; root: string; created: boolean; idea_file: string; upload: string | null; survey: Survey | null;
+  /** Why the survey did not start (Zotero not reachable, for example); the project exists all the same. */
+  survey_error?: string | null;
 }
 
 export const startApi = {

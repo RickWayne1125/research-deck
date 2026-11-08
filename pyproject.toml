@@ -13,6 +13,9 @@ test = ["pytest"]
 # contributors: the checks CI runs (ruff, pytest) and the documentation site (MkDocs)
 dev = ["pytest", "ruff>=0.8"]
 docs = ["mkdocs-material>=9.5"]
+# the Docmost sign-in window where the native macOS one (docmost/login.swift) cannot be used: other systems, or a
+# single sign-on that refuses an embedded window. Its browser: python -m playwright install chromium
+docmost = ["playwright>=1.48"]
 
 [build-system]
 requires = ["setuptools>=77"]
@@ -22,7 +25,7 @@ build-backend = "setuptools.build_meta"
 where = ["server"]
 
 [tool.setuptools.package-data]
-research_deck = ["outline/templates/*.yaml"]
+research_deck = ["outline/templates/*.yaml", "docmost/login.swift"]
 
 [tool.pytest.ini_options]
 pythonpath = ["server"]

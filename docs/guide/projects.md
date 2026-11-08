@@ -29,9 +29,11 @@ Project menu → **New from an idea…**: paste the idea, or upload a `.md`, `.t
 2. runs an **early survey** if you leave it on: it searches arXiv, Semantic Scholar and OpenAlex, keeps the most
    relevant papers, downloads the open-access PDFs into `papers/` (paywalled ones get a link and BibTeX), writes
    `papers/references.bib` and `notes/survey.md`, and drafts the problem and reference nodes for you to review.
+   With [Zotero](zotero-docmost.md) as the literature backend, the papers and their PDFs go into the project's Zotero
+   collection instead, and the project keeps only `references.bib`, exported from it.
 
-Apart from reading the resource pools you add, the survey is the only part of Research Deck that reaches the network,
-and only when you start it. It sends nothing about you and uses no keys.
+The survey reaches the network only when you start it; it sends nothing about you and uses no keys. Apart from it,
+only what you set up yourself does: the resource pools you add, and [Zotero and Docmost](zotero-docmost.md).
 
 ## Phases
 

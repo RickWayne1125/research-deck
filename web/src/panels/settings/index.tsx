@@ -10,10 +10,12 @@ import { CopyButton, ProviderMark, providerLabel } from '../../agent/parts';
 import { NewProjectSettingsSection } from '../../start/NewProjectSettings';
 import { OutlineTemplatesSection } from '../outline/Templates';
 import { PoolsSection } from '../../pools/PoolsSection';
+import { ZoteroSection } from '../../integrations/ZoteroSection';
+import { DocmostSection } from '../../integrations/DocmostSection';
 import './settings.css';
 import './i18n';
 
-const SECTIONS = ['newProjects', 'templates', 'pools', 'integrations', 'appearance', 'about'] as const;
+const SECTIONS = ['newProjects', 'templates', 'pools', 'zotero', 'docmost', 'integrations', 'appearance', 'about'] as const;
 type Section = (typeof SECTIONS)[number];
 
 export default function SettingsPanel() {
@@ -32,6 +34,8 @@ export default function SettingsPanel() {
           <Section id="newProjects" title={t('np.st.title')}><NewProjectSettingsSection /></Section>
           {project?.kind !== 'engineering' && <Section id="templates" title={t('ol.tpl.title')}><OutlineTemplatesSection /></Section>}
           <Section id="pools" title={t('pl.title')}><PoolsSection /></Section>
+          <Section id="zotero" title={t('ig.zotero')}><ZoteroSection /></Section>
+          <Section id="docmost" title={t('ig.docmost')}><DocmostSection /></Section>
           <Section id="integrations" title={t('st.sec.integrations')}><IntegrationsSection /></Section>
           <Section id="appearance" title={t('st.sec.appearance')}><AppearanceSection /></Section>
           <Section id="about" title={t('st.sec.about')}><AboutSection pid={pid} /></Section>

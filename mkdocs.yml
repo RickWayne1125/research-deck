@@ -69,6 +69,7 @@ nav:
       - The paper: guide/paper.md
       - The research map: guide/map.md
       - Agents and the conversation: guide/agents.md
+      - Zotero and Docmost: guide/zotero-docmost.md
       - Configuration: guide/configuration.md
   - Examples:
       - From an idea to a paper: examples/idea-to-paper.md

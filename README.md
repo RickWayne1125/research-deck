@@ -37,6 +37,13 @@ and `notes/survey.md`, and drafts the problem and reference nodes for you to rev
 The map then grows **one step at a time**: the next step is drafted from the confirmed nodes of the one before, several
 directions may run side by side, and an abandoned or refuted node grows no new branch.
 
+**Zotero and Docmost (optional).** A project can keep its papers in a **Zotero** collection instead of files: the
+survey stores each paper and its PDF there (through the Zotero app or zotero.org), and the project keeps only
+`references.bib`, exported from the collection. Its notes can follow a **Docmost** page: sign in once in a window
+that Research Deck opens, bind a page, and every `notes/*.md` becomes a page under it, one way. A page edited in
+Docmost is never overwritten; it waits for your review. See the
+[guide](https://rickwayne1125.github.io/research-deck/guide/zotero-docmost/).
+
 
 ## How it fits together
 
@@ -124,10 +131,12 @@ Requests through Serve are accepted only from the listed owners.
 The server listens on 127.0.0.1 only and refuses requests from other origins (a CSRF header is required for every
 change, DNS rebinding is blocked). Agents run headless in the project folder: Claude Code restricted to the project
 with only Research Deck's MCP server; Codex in a read-only sandbox unless you allow writes for the conversation.
-Nothing submits jobs to remote machines or creates credentials. Two parts reach the network. The early survey runs only
-when you start it: it queries arXiv, Semantic Scholar and OpenAlex (no keys, nothing about you) and downloads
-open-access PDFs (public addresses only, PDF files only, 60 MB at most). A resource pool you add with a command or an
-HTTP source is read through that command or address, for its status and prices only. Details:
+Nothing submits jobs to remote machines or creates credentials. The early survey runs only when you start it: it
+queries arXiv, Semantic Scholar and OpenAlex (no keys, nothing about you) and downloads open-access PDFs (public
+addresses only, PDF files only, 60 MB at most). Everything else that reaches the network is something you set up: a
+resource pool with a command or an HTTP source, read for its status and prices only; Zotero (the app on this computer,
+or zotero.org with a key you keep in the Keychain); and your Docmost site, which alone gets its sign-in cookies. Secrets
+Research Deck obtains itself stay in `~/.research-deck/secrets/` (owner-only files). Details:
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (Safety).
 
 ## Documentation

@@ -6,6 +6,7 @@ import os
 import shutil
 import sys
 from pathlib import Path
+from typing import Any
 
 APP_ROOT = Path(__file__).resolve().parents[2]          # research-deck/
 # Machine-local state lives outside the repository: the project registry, tokens and the user's own defaults.
@@ -89,6 +90,21 @@ def user_settings() -> dict:
             data = {}
         _SETTINGS_CACHE = (mtime, data if isinstance(data, dict) else {})
     return _SETTINGS_CACHE[1]
+
+
+def save_user_setting(key: str, value: Any) -> None:
+    """Set one top-level key of settings.json (None removes it) and keep the rest of the file as it is."""
+    from .util import write_json
+    try:
+        data = json.loads(SETTINGS_FILE.read_text(encoding="utf-8"))
+        data = data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        data = {}
+    if value is None:
+        data.pop(key, None)
+    else:
+        data[key] = value
+    write_json(SETTINGS_FILE, data)
 
 
 # ------------------------------------------------------------------ tailnet access (optional, machine-local)

@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 
 from research_deck import config
 from research_deck.dag import resolve
+from research_deck.docmost import sync as docmost_sync
 from research_deck.pools import service as pool_service
 
 
@@ -38,6 +39,7 @@ def isolated(tmp_path_factory, monkeypatch):
     monkeypatch.setitem(resolve.GIT_ENV, "GIT_CONFIG_GLOBAL", str(gitconfig))   # the map's git calls copy the env at import
     monkeypatch.setattr(pool_service, "BACKGROUND", False)          # resource pools are read on the spot, not in threads
     pool_service._NAMES.clear()
+    monkeypatch.setattr(docmost_sync, "BACKGROUND", False)          # no background note sync; tests call sync() themselves
     yield
 
 

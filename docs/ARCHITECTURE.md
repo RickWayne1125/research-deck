@@ -34,6 +34,14 @@ research-deck/
     outline/  the paper outline: model.py (the outline as the page shows it), ops.py (outline ops → map ops), service.py,
               tasks.py (.research/outline/tasks.json), templates.py (+ templates/*.yaml), structure.py (a written outline
               → a draft of sections and items)
+    literature/  where a project keeps its papers: zotero.py (this computer's Zotero connection and a client for the
+              app's local API and the zotero.org Web API), backend.py (files or a Zotero collection; references.bib
+              exported from it), api.py
+    docmost/  notes synced to a Docmost page: client.py (the site, the saved sign-in, page calls), login.swift (the
+              sign-in window on macOS: the system's WebKit, built once with xcrun swiftc), login.py (the same window
+              elsewhere: Chromium through Playwright), session.py (which window, building it, renewal), sync.py
+              (binding, one-way sync, conflicts, the scan), api.py
+    vault.py                   secrets Research Deck obtains itself, in ~/.research-deck/secrets/ (0700, files 0600)
     mcp_server.py              stdio MCP server exposing the dashboard to Codex/Claude (proxies the HTTP API)
   web/src/                     React 18 + TypeScript + Vite
     App.tsx state/ api/client.ts types.ts i18n/ styles/ components/   shell + shared (core)
@@ -42,6 +50,7 @@ research-deck/
     agent/                     AgentDock (the project conversation), useAgentRun (core hook), parts
     start/                     the new-project dialog, the survey card (on the outline page), Settings → New projects
     pools/                     Settings → Resource pools, the add/edit wizard, price and cost formatting
+    integrations/              Settings → Zotero and Settings → Docmost (sign-in, bound page, notes, conflict review)
     panels/<view>/index.tsx    one folder per view: outline (a research project's home), overview (Today; its list
                                shows on the outline page), dag (Map), experiments, writing (Paper), coding (Code),
                                settings; visualization holds the figures half of Paper
@@ -130,14 +139,22 @@ research-deck/
   - nothing submits jobs to remote machines or creates credentials; queued runs wait as experiment records until the
     researcher runs them; autocommit and agent queueing are off unless the user's or the project's DAG config turns
     them on.
-  - two parts reach the network: the resource pools the researcher adds, read through their command or HTTP source
-    (§ Resource pools; reads only), and the early survey (`survey/`), only when the researcher starts it
+  - what reaches the network, each only once the researcher sets it up: Zotero (`literature/`: the app's local API
+    on 127.0.0.1, or api.zotero.org with a key from the Keychain; PDF uploads go to the address Zotero returns, https
+    or the local app, without the key), the Docmost site the researcher names (`docmost/`: its cookies go only to that
+    site, never on a redirect; http:// only on loopback or a private network; the sign-in window is a separate process
+    that hands back nothing but that site's cookies; a page edited in Docmost is never overwritten), the resource
+    pools (read through their command or HTTP source, § Resource pools; reads only), and the early survey (`survey/`),
+    only when the researcher starts it
     (creating a project from an idea, or `POST /survey`; agents get 403). It sends the search queries to arXiv,
     Semantic Scholar and OpenAlex (public APIs, no keys, a generic `research-deck/<version>` User-Agent, nothing about
     the user; 429/503 are retried after a short wait). PDF links come from those answers and are untrusted: http(s)
     only, every redirect hop (at most 5) must resolve to public addresses only, the body must start with `%PDF`, at
     most 60 MB is written, through a temporary file next to the target. The agent requests of the survey are
     one-shot and tool-less (they read abstracts from the prompt); the agent never reaches the network itself.
+  - secrets Research Deck obtains itself (the Zotero app's write key, the Docmost sign-in and its browser profile) live
+    in `~/.research-deck/secrets/` (folder 0700, files 0600, `vault.py`), never in settings.json, the browser or logs;
+    keys the researcher brings stay in the Keychain and are only named. Connecting, binding and syncing are human-only.
   - known limit: agent identities are self-asserted once the shared agent token matches (per-run tokens are a v2 item).
 
 ## Resource pools

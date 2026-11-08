@@ -1,0 +1,32 @@
+/* Settings › Zotero and Settings › Docmost (prefix .ig-) */
+.ig-col { gap: 8px; align-items: flex-start; min-width: 0; }
+.ig-row { gap: 8px; align-items: center; min-width: 0; }
+.ig-field { gap: 3px; width: min(460px, 100%); font-size: var(--fs-sm); }
+.ig-field .input { width: 100%; }
+.ig-sub { gap: 8px; padding-left: 22px; align-items: flex-start; }
+.ig-wait { color: var(--muted); font-size: var(--fs-sm); }
+.ig-ok { gap: 6px; font-size: var(--fs-sm); color: var(--muted); }
+.ig-err { margin: 0; color: var(--accent); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.ig-cmd { gap: 6px; max-width: 100%; }
+.ig-cmd code { font-size: 11px; padding: 3px 6px; border-radius: var(--r-xs); background: var(--plate); overflow-wrap: anywhere; }
+.ig-link { gap: 4px; color: var(--info); text-decoration: none; }
+.ig-link:hover { text-decoration: underline; }
+.ig-last { font-size: var(--fs-sm); }
+.ig-bind { width: min(620px, 100%); }
+.ig-bind .input { min-width: 0; }
+.ig-notes { width: min(720px, 100%); }
+.ig-notes td { vertical-align: top; }
+.ig-note-title { color: var(--ink-strong); overflow-wrap: anywhere; }
+.ig-note-path, .ig-when { font-size: 11px; }
+.ig-when { margin-left: 6px; }
+.ig-note-err { margin-top: 3px; font-size: 11px; }
+.ig-actions { text-align: right; white-space: nowrap; }
+.ig-actions .btn + .btn { margin-left: 6px; }
+.ig-conflict { gap: 10px; }
+.ig-p { margin: 0; line-height: 1.55; }
+.ig-diff { margin: 0; max-height: 46vh; overflow: auto; padding: 8px 0; background: var(--plate); border: var(--line) solid var(--rule);
+  border-radius: var(--r-md); font-size: 12px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ig-dl { padding: 0 10px; }
+.ig-dl-add { background: color-mix(in srgb, var(--ok, #2e7d32) 14%, transparent); }
+.ig-dl-del { background: color-mix(in srgb, var(--accent) 12%, transparent); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+.ig-dl-hunk { color: var(--faint); }

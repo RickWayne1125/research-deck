@@ -124,6 +124,15 @@ def start(pid: str, idea: str, *, idea_file: str | None = None, unread: str | No
         raise HTTPException(400, "count must be between 1 and 60")
     papers_dir = cfg["papers_dir"]
     safe_join(projects.project_root(pid), papers_dir)            # refuses a folder outside the project
+    from ..literature import backend as literature
+    from ..literature import zotero
+    if literature.uses_zotero(pid):                               # the papers go to Zotero: make sure it answers
+        try:
+            zc = zotero.client()
+            zc.check()
+            literature.ensure_collection(pid, zc)
+        except zotero.ZoteroError as e:
+            raise HTTPException(409, f"Zotero: {e}") from e
     with _LOCK:
         if any(a["pid"] == pid and not a.get("done") for a in _ACTIVE.values()):
             raise HTTPException(409, "a survey is already running in this project")
@@ -136,7 +145,8 @@ def start(pid: str, idea: str, *, idea_file: str | None = None, unread: str | No
          "created_at": now_iso(), "finished_at": None, "by": actor, "error": None, "warnings": [],
          "idea_file": idea_file, "lang": prompts.language(idea),
          "options": {"sources": chosen, "count": count, "download_pdfs": cfg["download_pdfs"] if download_pdfs is None
-                     else bool(download_pdfs), "papers_dir": papers_dir},
+                     else bool(download_pdfs), "papers_dir": papers_dir,
+                     "literature": "zotero" if literature.uses_zotero(pid) else "files"},
          "title": None, "summary": None, "queries": [], "search": None, "candidates": 0, "papers": [], "nodes": [],
          "files": {}, "agent": None}
     job = Job(pid, s)
@@ -169,6 +179,11 @@ class Job:
     @property
     def active(self) -> dict:
         return _ACTIVE.get(self.s["id"]) or {}
+
+    @property
+    def zotero(self) -> bool:
+        """The project keeps its literature in Zotero (literature/backend.py): papers become items, not files."""
+        return self.s["options"].get("literature") == "zotero"
 
     def save(self) -> None:
         with _FILE_LOCK:
@@ -205,7 +220,7 @@ class Job:
             framed = self.step("frame", lambda: self.frame(idea, unread))
             found = self.step("search", lambda: self.search(framed["queries"]))
             survey_md = self.step("select", lambda: self.select(idea, framed["problem"], found))
-            if self.s["options"]["download_pdfs"]:
+            if self.s["options"]["download_pdfs"] or self.zotero:     # with Zotero every paper becomes an item
                 self.step("download", self.download)
             else:
                 self.s["steps"]["download"] = "skipped"
@@ -360,6 +375,9 @@ class Job:
         return out
 
     def download(self) -> None:
+        if self.zotero:
+            self.download_to_zotero()
+            return
         pdir = self.papers_dir()
         pdir.mkdir(parents=True, exist_ok=True)
         for p in self.s["papers"]:
@@ -378,6 +396,50 @@ class Job:
                 p.update(status="done", file=rel)
             except Exception as e:  # noqa: BLE001 — one paper's failure is recorded and the rest go on
                 p.update(status="failed", error=fetch.describe(e))
+            self.save()
+
+    def download_to_zotero(self) -> None:
+        """Each kept paper becomes an item of the project's collection; its open-access PDF (fetched with the same
+        checks, into a temporary folder) becomes a stored attachment. Nothing is written into the project. A Zotero
+        failure is recorded on the papers and as a warning, and the survey goes on to the map and the notes."""
+        import tempfile
+
+        from ..literature import backend as literature
+        from ..literature import zotero
+        try:
+            c = zotero.client()
+            collection = literature.ensure_collection(self.pid, c)
+            self.s["zotero"] = {"library": c.library, "collection": collection}
+            todo = [p for p in self.s["papers"] if not p.get("zotero")]
+            made = c.create_items([zotero.item_from_paper(p, p["key"], collection) for p in todo]) if todo else []
+        except zotero.ZoteroError as e:
+            self.warn(f"Zotero: {e}")
+            for p in self.s["papers"]:
+                if p["status"] == "pending":
+                    p.update(status="failed", error=f"Zotero: {e}")
+            return
+        for p, (key, why) in zip(todo, made, strict=True):
+            if key:
+                p["zotero"] = key
+            else:
+                p["zotero_error"] = why
+                if p["status"] == "pending":
+                    p.update(status="failed", error=f"Zotero: {why}")
+        self.save()
+        for p in self.s["papers"]:
+            self.check()
+            if p["status"] != "pending" or not p.get("zotero"):
+                continue
+            p["status"] = "running"
+            self.save()
+            try:
+                with tempfile.TemporaryDirectory(prefix="rd-survey-") as tmp:
+                    dest = Path(tmp) / f"{p['key']}.pdf"
+                    p["size"] = fetch.fetch_pdf(p["pdf_url"], dest)
+                    p["zotero_pdf"] = c.attach_pdf(p["zotero"], dest, f"{p['key']}.pdf", url=p["pdf_url"])
+                p.update(status="done", file=None)
+            except Exception as e:  # noqa: BLE001 — one paper's failure is recorded and the rest go on
+                p.update(status="failed", error=str(e) if isinstance(e, zotero.ZoteroError) else fetch.describe(e))
             self.save()
 
     def draft(self, framed: dict) -> None:
@@ -440,7 +502,7 @@ class Job:
     def reference_node(self, p: dict) -> dict:
         citation = {k: v for k, v in {"bibkey": p["key"], "authors": _authors(p["authors"]), "year": p["year"],
                                       "venue": p["venue"], "doi": p["doi"], "arxiv": p["arxiv"], "url": p["url"],
-                                      "pdf": p.get("file")}.items() if v}
+                                      "pdf": p.get("file"), "zotero": p.get("zotero")}.items() if v}
         facets: dict[str, Any] = {"citation": {"type": "json", "value": citation},
                                   "role": {"type": "json", "value": p["role"]}}
         if p["takeaway"]:
@@ -454,20 +516,29 @@ class Job:
 
     def write(self, framed: dict, survey_md: str) -> None:
         zh = self.s["lang"] == "zh"
-        pdir = self.papers_dir()
-        pdir.mkdir(parents=True, exist_ok=True)
         files: dict[str, str] = {}
-        # references.bib: new keys appended, the file's other entries left as they are
-        have = self.bib_keys()
-        entries = [bib.entry(self._paper(p), p["key"]) for p in self.s["papers"] if p["key"] not in have]
-        if entries:
-            path = self.bib_path()
-            old = path.read_text(encoding="utf-8") if path.exists() else ""
-            write_text_atomic(path, old + ("\n" if old and not old.endswith("\n") else "") + ("\n" if old else "") + "\n".join(entries))
-        files["bib"] = self.bib_path().relative_to(self.root).as_posix()
-        index = _free(pdir / "index.md")
-        write_text_atomic(index, self.index_md(zh, index.parent))
-        files["index"] = index.relative_to(self.root).as_posix()
+        if self.zotero:
+            # Zotero holds the papers; the project keeps only references.bib, exported from the collection.
+            from ..literature import backend as literature
+            from ..literature import zotero
+            try:
+                files["bib"] = literature.export_bib(self.pid)["path"]
+            except zotero.ZoteroError as e:
+                self.warn(f"Zotero: references.bib was not exported: {e}")
+        else:
+            pdir = self.papers_dir()
+            pdir.mkdir(parents=True, exist_ok=True)
+            # references.bib: new keys appended, the file's other entries left as they are
+            have = self.bib_keys()
+            entries = [bib.entry(self._paper(p), p["key"]) for p in self.s["papers"] if p["key"] not in have]
+            if entries:
+                path = self.bib_path()
+                old = path.read_text(encoding="utf-8") if path.exists() else ""
+                write_text_atomic(path, old + ("\n" if old and not old.endswith("\n") else "") + ("\n" if old else "") + "\n".join(entries))
+            files["bib"] = self.bib_path().relative_to(self.root).as_posix()
+            index = _free(pdir / "index.md")
+            write_text_atomic(index, self.index_md(zh, index.parent))
+            files["index"] = index.relative_to(self.root).as_posix()
         notes = self.root / "notes"
         notes.mkdir(exist_ok=True)
         survey = _free(notes / "survey.md")
@@ -482,6 +553,12 @@ class Job:
         return {k: p.get(k) for k in ("title", "authors", "year", "venue", "doi", "arxiv", "url")}
 
     def _link(self, p: dict, base: Path) -> str:
+        library = (self.s.get("zotero") or {}).get("library")
+        if library and p.get("zotero"):
+            from ..literature import zotero
+            if p.get("zotero_pdf"):
+                return f"[PDF]({zotero.pdf_link(library, p['zotero_pdf'])})"
+            return f"[Zotero]({zotero.item_link(library, p['zotero'])})"
         if p.get("file"):
             return f"[PDF]({os.path.relpath(self.root / p['file'], base)})"
         return f"[link]({p['url']})" if p.get("url") else ""
@@ -547,14 +624,16 @@ class Job:
         links = sum(1 for p in papers if p["status"] in ("link", "failed"))
         files = self.s["files"]
         nodes = self.s["nodes"]
+        where_zh = "附在 Zotero 条目上" if self.zotero else f"存到了 `{self.s['options']['papers_dir']}/`"
+        where_en = "attached to their Zotero items" if self.zotero else f"saved in `{self.s['options']['papers_dir']}/`"
         if zh:
             text = (f"前期调研完成：检索到 {self.s['search']['found']} 篇候选，保留 {len(papers)} 篇，"
-                    f"{pdfs} 篇 PDF 存到了 `{self.s['options']['papers_dir']}/`，{links} 篇只存链接和 BibTeX。"
+                    f"{pdfs} 篇 PDF {where_zh}，{links} 篇只存链接和 BibTeX。"
                     f"综述在 `{files.get('survey')}`。地图上起草了 {len(nodes)} 个节点（问题和文献），都是提议，等你确认；"
                     "没有运行任何实验。")
         else:
             text = (f"The early survey is done: {self.s['search']['found']} candidates found, {len(papers)} kept, "
-                    f"{pdfs} PDFs saved in `{self.s['options']['papers_dir']}/`, {links} with a link and BibTeX only. "
+                    f"{pdfs} PDFs {where_en}, {links} with a link and BibTeX only. "
                     f"The survey is in `{files.get('survey')}`. It drafted {len(nodes)} nodes (the problem and the "
                     "references) as proposals for you to confirm; nothing was run.")
         provider = (self.s.get("agent") or {}).get("provider") or "claude"
@@ -565,8 +644,9 @@ class Job:
         except OSError:
             log.exception("survey %s: could not write the conversation", self.s["id"])
         note = (f"Research Deck ran the early survey ({self.s['id']}) outside this conversation. Queries: "
-                + "; ".join(self.s["queries"]) + f". It kept {len(papers)} papers ({pdfs} PDFs in "
-                f"{self.s['options']['papers_dir']}/, BibTeX in {files.get('bib')}), wrote {files.get('survey')} and "
+                + "; ".join(self.s["queries"]) + f". It kept {len(papers)} papers ({pdfs} PDFs "
+                + ("attached to their items in the project's Zotero collection" if self.zotero else
+                   f"in {self.s['options']['papers_dir']}/") + f", BibTeX in {files.get('bib')}), wrote {files.get('survey')} and "
                 f"drafted these proposed nodes: {', '.join(nodes) or 'none'}. They are unconfirmed and no experiment was run.")
         for prov in sessions.PROVIDERS:
             path = pending_path(self.pid, "project", prov)
