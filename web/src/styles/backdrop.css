@@ -1,0 +1,68 @@
+/* The art behind the dashboard (components/Backdrop.tsx) and the theme and background swatches of Settings →
+   Appearance. Every color is a Radix token, so the art follows the accent and light or dark. */
+.rd-backdrop { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+
+/* radix-ui.com's background (components/radixArt.ts) and the palettes of its examples: the BackgroundImage art and its
+   palettes from github.com/radix-ui/website, MIT License, Copyright (c) 2024 WorkOS */
+.rd-bg-radix { background: var(--color-background); }
+.rd-art { position: absolute; inset: 0; display: flex; justify-content: center; align-items: flex-start; }
+.rd-art svg { flex-shrink: 0; width: max(125%, 1800px); height: auto; opacity: .5; }
+.rd-pal-red {
+  --color-background-image-base: var(--red-2); --color-background-image-accent-1: var(--crimson-a7);
+  --color-background-image-accent-2: var(--red-1); --color-background-image-accent-3: var(--red-3);
+  --color-background-image-accent-4: var(--red-7); --color-background-image-accent-5: var(--color-background);
+  --color-background-image-accent-6: var(--red-a4); --color-background-image-accent-7: var(--red-5);
+}
+.rd-pal-indigo {
+  --color-background-image-base: var(--color-background); --color-background-image-accent-1: var(--indigo-a7);
+  --color-background-image-accent-2: var(--violet-6); --color-background-image-accent-3: var(--purple-9);
+  --color-background-image-accent-4: var(--blue-5); --color-background-image-accent-5: var(--slate-1);
+  --color-background-image-accent-6: var(--crimson-a5); --color-background-image-accent-7: var(--indigo-5);
+}
+.rd-pal-accent {
+  --color-background-image-base: var(--color-background); --color-background-image-accent-1: var(--accent-a7);
+  --color-background-image-accent-2: var(--accent-6); --color-background-image-accent-3: var(--accent-9);
+  --color-background-image-accent-4: var(--accent-5); --color-background-image-accent-5: var(--gray-1);
+  --color-background-image-accent-6: var(--accent-a5); --color-background-image-accent-7: var(--accent-4);
+}
+.rd-pal-teal {
+  --color-background-image-base: var(--sage-1); --color-background-image-accent-1: var(--teal-a7);
+  --color-background-image-accent-2: var(--mint-7); --color-background-image-accent-3: var(--green-9);
+  --color-background-image-accent-4: var(--sky-5); --color-background-image-accent-5: var(--crimson-3);
+  --color-background-image-accent-6: var(--mint-a5); --color-background-image-accent-7: var(--teal-5);
+}
+
+/* a custom theme's backgrounds, in its accent */
+.rd-bg-ribbons { background: linear-gradient(100deg, var(--accent-a3) 0%, var(--accent-a2) 35%, transparent 70%), var(--gray-1); }
+.rd-ribbons { position: absolute; inset: 0; width: 100%; height: 100%; }
+.rd-bg-gradient {
+  background:
+    linear-gradient(118deg, transparent 16%, color-mix(in oklab, var(--gray-1) 38%, transparent) 34%, transparent 52%),
+    radial-gradient(95% 80% at 0% 0%, var(--accent-a6), transparent 72%),
+    linear-gradient(100deg, var(--accent-a4) 0%, var(--accent-a3) 30%, var(--accent-a2) 56%, transparent 86%),
+    var(--gray-1);
+}
+/* sized in % of the box, so a swatch shows the same glow as the window */
+.rd-bg-glow {
+  background:
+    radial-gradient(54% 71% at -4% -6%, var(--accent-a7), transparent 64%),
+    radial-gradient(44% 60% at 36% 24%, var(--accent-a4), transparent 70%),
+    radial-gradient(60% 73% at 104% 6%, var(--accent-a6), transparent 62%),
+    radial-gradient(50% 64% at 86% 90%, var(--accent-a5), transparent 66%),
+    radial-gradient(46% 60% at 4% 100%, var(--accent-a5), transparent 68%),
+    linear-gradient(135deg, var(--accent-2), var(--gray-1) 48%, var(--accent-2));
+}
+.rd-bg-plain { background: var(--gray-2); }
+/* the user's picture: blurred (the layer reaches past the window, so the blur leaves no pale edge) under a veil of the
+   page color, so text on the view stays legible over any picture */
+.rd-bg-image { background: var(--gray-1); }
+.rd-photo { position: absolute; inset: calc(-2 * var(--rd-blur, 0px)); background: center / cover no-repeat; filter: blur(var(--rd-blur, 0px)); }
+.rd-bg-image::after { content: ""; position: absolute; inset: 0; background: color-mix(in oklab, var(--color-background) 42%, transparent); }
+.dark .rd-bg-image::after { background: color-mix(in oklab, var(--gray-1) 62%, transparent); }
+
+/* swatches (Settings → Appearance): the three Radix themes in miniature, and custom */
+.rd-chip-red { background: radial-gradient(130% 130% at 0% 0%, var(--crimson-a7), transparent 62%), linear-gradient(135deg, var(--red-4), var(--red-1)); }
+.rd-chip-indigo { background: radial-gradient(130% 130% at 0% 0%, var(--indigo-a7), transparent 62%), linear-gradient(135deg, var(--violet-5), var(--blue-2)); }
+.rd-chip-teal { background: radial-gradient(130% 130% at 0% 0%, var(--teal-a7), transparent 62%), linear-gradient(135deg, var(--mint-5), var(--sage-2)); }
+.rd-chip-custom { background: linear-gradient(135deg, var(--gray-4), var(--gray-1)); }
+.rd-chip-accent { background: radial-gradient(130% 130% at 0% 0%, var(--accent-a7), transparent 62%), linear-gradient(135deg, var(--accent-5), var(--accent-1)); }

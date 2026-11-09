@@ -7,21 +7,45 @@ import { contrast, hex, luminance, mix, parseColor, terminalColors, type Rgb } f
 
 // ---------------------------------------------------------------- colors
 
-// tokens.css as text. Vitest blanks CSS imports (?raw too) and the web tsconfig has no Node types: hence an untyped
-// dynamic import of node:fs.
+// tokens.css and the Radix tokens it imports, as text. Vitest blanks CSS imports (?raw too) and the web tsconfig has
+// no Node types: hence an untyped dynamic import of node:fs.
 const fsModule = 'node:fs';
 const { readFileSync } = await import(/* @vite-ignore */ fsModule);
 const tokensCss: string = readFileSync(new URL('../../styles/tokens.css', import.meta.url), 'utf8');
+const radixCss: string = readFileSync(new URL('../../styles/vendor/radix-themes-tokens.css', import.meta.url), 'utf8');
 
-/** The custom properties declared in the first block whose selector matches `selector`. */
-function block(selector: RegExp): Record<string, string> {
-  const m = selector.exec(tokensCss);
-  if (!m) throw new Error(`no block ${selector}`);
-  const body = tokensCss.slice(m.index + m[0].length, tokensCss.indexOf('}', m.index + m[0].length));
-  return Object.fromEntries([...body.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map(d => [d[1], d[2].trim()]));
+/** The custom properties of every top-level block whose selector matches `selector`, later blocks winning. */
+function blocks(css: string, selector: RegExp): Record<string, string> {
+  const out: Record<string, string> = {};
+  const re = new RegExp(selector.source, 'gm');
+  for (let m = re.exec(css); m; m = re.exec(css)) {
+    const start = m.index + m[0].length;
+    const body = css.slice(start, css.indexOf('}', start));
+    for (const d of body.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) out[d[1]] = d[2].trim();
+  }
+  return out;
 }
-const light = block(/^:root\s*\{/m);
-const dark = { ...light, ...block(/^:root\[data-theme="dark"\]\s*\{/m) };
+
+/** Every token resolved to its final value, as the browser does on <html> for the default theme (Radix red: accent
+ *  red, gray slate) in light or dark. */
+function theme(mode: 'light' | 'dark'): Record<string, string> {
+  const raw = {
+    ...blocks(radixCss, /^:root, \.light, \.light-theme \{/),
+    ...(mode === 'dark' ? blocks(radixCss, /^\.dark, \.dark-theme \{/) : {}),
+    ...blocks(radixCss, /^:where\(\.radix-themes\) \{/),
+    ...(mode === 'dark' ? blocks(radixCss, /^:is\(\.dark, \.dark-theme\),\s*:is\(\.dark, \.dark-theme\) :where\(\.radix-themes:not\(\.light, \.light-theme\)\) \{/) : {}),
+    ...blocks(radixCss, /^\[data-accent-color='red'\] \{/),
+    ...blocks(radixCss, /^\.radix-themes:where\(\[data-gray-color='slate'\]\) \{/),
+    ...blocks(tokensCss, /^:root \{/),
+    ...blocks(tokensCss, mode === 'dark' ? /^\.radix-themes\.dark \{/ : /^\.radix-themes\.light \{/),
+  };
+  const resolve = (v: string, depth = 0): string => (depth > 20 ? v
+    : v.replace(/var\((--[\w-]+)(?:,\s*([^)]*))?\)/g, (_m, name: string, fallback?: string) =>
+      (raw[name] !== undefined ? resolve(raw[name], depth + 1) : fallback ?? '')));
+  return Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, resolve(v)]));
+}
+const light = theme('light');
+const dark = theme('dark');
 
 describe('terminal colors', () => {
   it('parses the token formats', () => {
@@ -58,7 +82,7 @@ describe('terminal colors', () => {
 
   it('derives every color from the tokens', () => {
     const c = terminalColors(tok => dark[tok] ?? '')!;
-    expect(c.theme.background).toBe(dark['--paper']);
+    expect(c.theme.background).toBe(dark['--solid-paper']);
     expect(c.theme.foreground).toBe(dark['--ink']);
     expect(c.theme.red).toBe(dark['--accent']);                          // already readable on the dark paper
     const l = terminalColors(tok => light[tok] ?? '')!;

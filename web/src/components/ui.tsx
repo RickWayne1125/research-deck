@@ -5,8 +5,10 @@ import { Icon, type IconName } from './icons';
 import { ResizeHandle, useResizableWidth } from './resize';
 import { useT } from '../i18n';
 
+/** A Radix Themes button (styles/base.css .btn): soft gray by default; primary and accent are solid in the accent,
+ *  soft is the accent's soft variant, ghost has no fill, danger is soft red. sm is Radix size 1. */
 export function Button({ icon, children, variant, size, active, ...rest }: {
-  icon?: IconName | string; variant?: 'primary' | 'accent' | 'ghost' | 'danger'; size?: 'sm'; active?: boolean; children?: ReactNode;
+  icon?: IconName | string; variant?: 'primary' | 'accent' | 'soft' | 'ghost' | 'danger'; size?: 'sm'; active?: boolean; children?: ReactNode;
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   const cls = ['btn', variant, size, active ? 'active' : '', rest.className].filter(Boolean).join(' ');
   return <button type="button" {...rest} className={cls}>{icon && <Icon name={icon} />}{children}</button>;
@@ -16,11 +18,12 @@ export function IconButton({ icon, label, ...rest }: { icon: IconName | string; 
   return <button type="button" className="icon-btn" aria-label={label} title={label} {...rest}><Icon name={icon} /></button>;
 }
 
-export function Segmented<T extends string>({ value, options, onChange, ariaLabel }: {
-  value: T; options: { value: T; label: ReactNode; title?: string }[]; onChange: (v: T) => void; ariaLabel?: string;
+/** A Radix segmented control (styles/base.css .seg); sm is Radix size 1. */
+export function Segmented<T extends string>({ value, options, onChange, ariaLabel, size }: {
+  value: T; options: { value: T; label: ReactNode; title?: string }[]; onChange: (v: T) => void; ariaLabel?: string; size?: 'sm';
 }) {
   return (
-    <div className="seg" role="group" aria-label={ariaLabel}>
+    <div className={size ? `seg ${size}` : 'seg'} role="group" aria-label={ariaLabel}>
       {options.map(o => (
         <button key={o.value} type="button" aria-pressed={o.value === value} title={o.title} onClick={() => onChange(o.value)}>{o.label}</button>
       ))}
@@ -32,7 +35,14 @@ export function Badge({ tone, children, title }: { tone?: 'process' | 'data' | '
   return <span className={`badge ${tone ?? ''}`} title={title}>{children}</span>;
 }
 
-export function Spinner() { return <span className="spinner" role="status" aria-label="loading" />; }
+/** The Radix spinner: eight leaves fading in turn (an empty .spinner elsewhere is a plain ring). */
+export function Spinner({ size, label = 'loading' }: { size?: 'sm'; label?: string }) {
+  return (
+    <span className={size ? `spinner ${size}` : 'spinner'} role="status" aria-label={label}>
+      <i /><i /><i /><i /><i /><i /><i /><i />
+    </span>
+  );
+}
 
 export function Empty({ icon = 'info', title, children, action }: { icon?: IconName | string; title: ReactNode; children?: ReactNode; action?: ReactNode }) {
   return (

@@ -201,11 +201,11 @@ export function LogTerminal({ pid, eid, title, live }: { pid: string; eid: strin
     return () => { alive = false; };
   }, [phase, pid, eid]);
 
-  // Colors follow the UI theme (data-theme on <html>, or the system's when it is "auto").
+  // Colors follow the UI theme (light or dark and the accent, on <html>: state/appearance.ts).
   useEffect(() => {
     const update = () => setColors(readColors());
     const mo = new MutationObserver(update);
-    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-accent-color', 'data-gray-color'] });
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     mq.addEventListener('change', update);
     return () => { mo.disconnect(); mq.removeEventListener('change', update); };

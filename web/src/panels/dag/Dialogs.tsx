@@ -282,7 +282,7 @@ export function NewNodeDialog({ pid, graph, starter, onClose, onCreated }: {
             <span className="mono faint">{ID_PREFIX[kind]}.</span>
             <input className="input mono grow" value={idSlug} onChange={e => setIdSlug(e.target.value)} placeholder={autoSlug || 'tail-latency'} />
           </div>
-          <span className={`mono dg-hint ${clash ? '' : 'faint'}`} style={clash ? { color: 'var(--accent)' } : undefined}>{clash ? t('dag.new.idTaken', { id }) : id}</span>
+          <span className={`mono dg-hint ${clash ? '' : 'faint'}`} style={clash ? { color: 'var(--accent-text)' } : undefined}>{clash ? t('dag.new.idTaken', { id }) : id}</span>
         </label>
         {MAIN_FACET[kind] && (
           <label className="field"><span className="label">{t(`dag.new.facet.${MAIN_FACET[kind]}`)}</span>

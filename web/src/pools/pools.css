@@ -4,7 +4,7 @@
 .pl-top { gap: 8px; }
 .pl-small { font-size: var(--fs-xs); line-height: 1.45; }
 .pl-p { margin: 0; line-height: 1.6; }
-.pl-bad { color: var(--accent); }
+.pl-bad { color: var(--accent-text); }
 .pl-good { color: var(--ok-ink, var(--ink)); }
 .pl-chips { gap: 6px; }
 .pl-chip-btn { cursor: pointer; max-width: 100%; }
@@ -14,7 +14,7 @@
 .pl-card { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border: var(--line) solid var(--rule); border-radius: var(--r-lg); background: var(--surface); min-width: 0; }
 .pl-empty { border-style: dashed; background: var(--plate); }
 .pl-code { font-size: 11.5px; padding: 1px 5px; border-radius: var(--r-xs); background: var(--plate); overflow-wrap: anywhere; }
-.pl-err { color: var(--accent); font-size: var(--fs-sm); white-space: pre-wrap; overflow-wrap: anywhere; }
+.pl-err { color: var(--accent-text); font-size: var(--fs-sm); white-space: pre-wrap; overflow-wrap: anywhere; }
 .pl-warn { color: var(--stale); font-size: var(--fs-sm); }
 .input.invalid { border-color: var(--accent-line); }
 
@@ -56,7 +56,7 @@
 .pl-step { display: inline-flex; align-items: center; gap: 6px; }
 .pl-step b { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 999px; border: var(--line) solid var(--rule-strong); font-size: 10.5px; }
 .pl-step.on { color: var(--ink-strong); }
-.pl-step.on b { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.pl-step.on b { background: var(--ink); color: var(--gray-1); border-color: var(--ink); }
 .pl-step.done { color: var(--muted); }
 .pl-w-error { margin-bottom: 10px; }
 .pl-w-grid { display: grid; grid-template-columns: 220px minmax(0, 1.1fr) minmax(0, 1fr); gap: 0; margin: -16px -18px; min-height: 420px; }
@@ -74,14 +74,14 @@
 .pl-arg.todo { border-color: var(--stale); background: var(--stale-wash); }
 .pl-arg input { border: 0; background: none; font-size: 12px; padding: 4px 2px 4px 8px; color: var(--ink); min-width: 0; outline: none; }
 .pl-arg button { border: 0; background: none; padding: 4px 6px; color: var(--faint); cursor: pointer; display: inline-grid; place-items: center; }
-.pl-arg button:hover { color: var(--accent); }
+.pl-arg button:hover { color: var(--accent-text); }
 .pl-arg-add { display: inline-flex; align-items: center; gap: 4px; border: var(--line) dashed var(--rule-strong); border-radius: var(--r-md); background: none; color: var(--faint); padding: 4px 8px; font-size: 12px; cursor: pointer; }
 .pl-names { gap: 4px; }
 .pl-name { display: flex; align-items: center; gap: 6px; padding: 4px 4px 4px 8px; border: var(--line) solid var(--rule-strong); border-radius: var(--r-md); background: var(--surface); font-size: var(--fs-sm); min-width: 0; }
 .pl-name.clash { border-color: var(--accent-line); }
 .pl-name-text { min-width: 0; overflow-wrap: anywhere; }
 .pl-name button { border: 0; background: none; padding: 3px 5px; color: var(--faint); cursor: pointer; display: inline-grid; place-items: center; }
-.pl-name button:hover { color: var(--accent); }
+.pl-name button:hover { color: var(--accent-text); }
 .pl-name-add { gap: 6px; }
 .pl-inv { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) 64px minmax(0, 1fr) 28px; gap: 6px; align-items: center; }
 .pl-test { gap: 8px; min-width: 0; }
@@ -96,7 +96,7 @@
 
 /* Experiments › Resources: pool cards */
 .pl-res-head { gap: 8px; }
-.pl-res-errbox { padding: 8px 10px; border-radius: var(--r-md); background: var(--accent-wash); color: var(--accent); font-size: var(--fs-sm); white-space: pre-wrap; overflow-wrap: anywhere; }
+.pl-res-errbox { padding: 8px 10px; border-radius: var(--r-md); background: var(--accent-wash); color: var(--accent-text); font-size: var(--fs-sm); white-space: pre-wrap; overflow-wrap: anywhere; }
 .ex-plat.dim { opacity: .62; }
 .pl-chip-dash { border-style: dashed; }
 .pl-res-names { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

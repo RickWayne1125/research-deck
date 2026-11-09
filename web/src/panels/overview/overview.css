@@ -88,7 +88,7 @@ button.ov-act-row:hover { background: var(--plate); }
 .ov-eng-icon { color: var(--slate); flex: none; }
 .ov-eng-select { min-height: 26px; max-width: 180px; padding: 2px 6px; font-size: var(--fs-sm); }
 .ov-eng-more { padding-top: 8px; padding-bottom: 10px; border-top: var(--line) solid var(--rule); }
-.ov-eng-bad { color: var(--accent); }
+.ov-eng-bad { color: var(--accent-text); }
 
 .list-item.ov-eng-repo, .list-item.ov-eng-doc, .list-item.ov-eng-exp {
   width: 100%; border-left: 0; border-right: 0; border-top: 0; background: none; color: inherit; text-align: left; font: inherit;
@@ -140,7 +140,7 @@ button.ov-act-row:hover { background: var(--plate); }
 .td-stepper li + li::before { content: ""; width: 16px; height: 1px; background: var(--rule-strong); margin-right: 2px; }
 .td-step-dot { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; border: 1.5px solid var(--faint); flex: none; }
 .td-stepper li.done { color: var(--ok); }
-.td-stepper li.done .td-step-dot { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+.td-stepper li.done .td-step-dot { background: var(--ok); border-color: var(--ok); color: var(--green-contrast); }
 .td-stepper li.current { color: var(--ink-strong); font-weight: 600; }
 .td-stepper li.current .td-step-dot { border: 4.5px solid var(--accent); }
 .td-next { border: 0; background: none; padding: 0; font-size: var(--fs-sm); color: var(--info); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
@@ -160,7 +160,7 @@ button.ov-act-row:hover { background: var(--plate); }
 .td-tag { flex: none; margin-top: 1px; }
 .td-tag.is-prop { border-style: dashed; }
 .td-tag.is-warn { color: var(--stale); border-color: color-mix(in srgb, var(--stale) 45%, transparent); background: var(--stale-wash); }
-.td-tag.is-accent { color: var(--accent); border-color: var(--accent-line); background: var(--accent-wash); }
+.td-tag.is-accent { color: var(--accent-text); border-color: var(--accent-line); background: var(--accent-wash); }
 .td-text { flex: 1 1 360px; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .td-h3 { margin: 0; font: 600 var(--fs-md)/1.4 var(--sans); color: var(--ink-strong); }
 .td-p { margin: 0; color: var(--muted); font-size: var(--fs-sm); }
@@ -186,7 +186,7 @@ button.ov-act-row:hover { background: var(--plate); }
 .td-checks li svg { margin-top: 3px; flex: none; }
 .td-checks li.ok { color: var(--muted); }
 .td-checks li.ok svg { color: var(--ok); }
-.td-checks li.no svg { color: var(--accent); }
+.td-checks li.no svg { color: var(--accent-text); }
 .td-check-items { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .td-check-items .chip { cursor: pointer; }
 .td-recent .card { border: 0; background: none; }

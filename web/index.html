@@ -5,6 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Research Deck</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script>
+      // The theme before the first paint: the Radix theme root on <html> from the last appearance (state/appearance.ts
+      // caches it) and light or dark (state/app.tsx), so a reload never flashes the default.
+      (function () {
+        var d = document.documentElement, r = null, t = 'auto';
+        try {
+          r = (JSON.parse(localStorage.getItem('rd.appearance') || 'null') || {}).resolved;
+          t = localStorage.getItem('rd.theme') || 'auto';
+        } catch (e) { /* storage unavailable */ }
+        r = r || { accent: 'red', gray: 'slate', radius: 'medium', background: 'radix' };
+        var dark = t === 'dark' || (t !== 'light' && !!window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+        d.className = 'radix-themes ' + (dark ? 'dark' : 'light');
+        d.style.colorScheme = dark ? 'dark' : 'light';
+        d.setAttribute('data-accent-color', String(r.accent));
+        d.setAttribute('data-gray-color', String(r.gray));
+        d.setAttribute('data-radius', String(r.radius));
+        d.setAttribute('data-background', String(r.background));
+        d.setAttribute('data-scaling', '100%');
+        d.setAttribute('data-panel-background', 'translucent');
+        d.setAttribute('data-has-background', 'false');
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

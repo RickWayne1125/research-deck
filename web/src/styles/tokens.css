@@ -1,91 +1,84 @@
-/* Research Deck design tokens. A quiet, print-like house style shared with the figures (server/research_deck/viz/style.py):
-   - neutral-white substrate #FAFAF7, Charcoal #30343A ink and one accent, Signal Red #C83232
-   - auxiliary Slate #787B7F and Light Gray #CBCCCE
-   - pastel semantic roles (process / data / emphasis / neutral), flat fills, thin lines, 8 px grid
-   - Helvetica, borderless mildly rounded cards, no shadows on content
+/* Research Deck design tokens, drawn from Radix Themes (vendor/radix-themes-tokens.css, MIT, WorkOS).
+   <html> is the theme root: class "radix-themes light|dark" and data-accent-color, data-gray-color, data-radius,
+   data-scaling and data-panel-background, set from Settings → Appearance (state/appearance.ts; index.html applies the
+   last choice before the first paint). Every name below follows the theme, so the panels' CSS keeps using these names
+   and changes with the accent, the gray, the radius and light or dark.
+   - glass: the page shows the background art (components/Backdrop.tsx); panels are translucent over it
+   - one accent (Radix red by default) for the focal path, the primary action and what needs attention
+   - the figures keep their own print style (server/research_deck/viz/style.py); it does not follow these tokens
    Colors are tokens; components never hard-code hex values. */
+@import './vendor/radix-themes-tokens.css';
+
 :root {
-  color-scheme: light;
-  /* substrate and ink */
-  --paper: #fafaf7;
-  --surface: #ffffff;
-  --plate: #f4f5f6;
-  --wash: #efefeb;
-  --ink: #30343a;
-  --ink-strong: #1f2226;
-  --muted: #5d6167;
-  --slate: #787b7f;
-  --faint: #a3a8ae;
-  --rule: #e1e2df;
-  --rule-strong: #cbccce;
+  /* substrate: the sheet a view is drawn on (translucent over the art), the surfaces on it, and soft fills */
+  --paper: color-mix(in oklab, var(--color-background) 58%, transparent);
+  --paper-solid: color-mix(in oklab, var(--color-background) 86%, transparent);  /* sticky bars over scrolling content */
+  --surface: color-mix(in oklab, var(--color-panel-solid) 80%, transparent);
+  --plate: var(--gray-a2);
+  --wash: var(--gray-a3);
+  --glass: var(--color-panel-translucent);
+  --glass-filter: blur(40px) saturate(1.6);
+  /* solid colors for what cannot draw translucent tokens (the log terminal, panels/experiments/termTheme.ts) */
+  --solid-paper: var(--color-background);
+  --solid-surface: var(--color-panel-solid);
+  --solid-slate: var(--gray-10);
+  --solid-rule: var(--gray-7);
 
-  /* the one accent: Signal Red, for the focal path, the primary action and what needs attention */
-  --accent: #c83232;
-  --accent-ink: #ffffff;
-  --accent-wash: #f8e6e6;
-  --accent-line: #e3a9a9;
+  /* ink */
+  --ink: var(--gray-12);
+  --ink-strong: var(--gray-12);
+  --muted: var(--gray-a11);
+  --slate: var(--gray-a10);
+  --faint: var(--gray-a9);
+  --rule: var(--gray-a5);
+  --rule-strong: var(--gray-a7);
 
-  /* semantic roles (the same as the figures' diagram roles) */
-  --process: #e6eef7;  --process-line: #6d8fac;  --process-ink: #2f4c66;
-  --data: #e7f1ed;     --data-line: #7fa591;     --data-ink: #2d5a43;
-  --emphasis: #f6e6e2; --emphasis-line: #b67c73; --emphasis-ink: #7a3e35;
-  --neutral: #f4f5f6;  --neutral-line: #a3a8ae;  --neutral-ink: #4a4f55;
+  /* the accent: fills use step 9, text step 11 */
+  --accent: var(--accent-9);
+  --accent-text: var(--accent-11);
+  --accent-ink: var(--accent-contrast);
+  --accent-wash: var(--accent-a3);
+  --accent-line: var(--accent-a7);
+  /* errors stay red whatever the accent */
+  --danger: var(--red-11);
+  --danger-wash: var(--red-a3);
+
+  /* semantic roles (solid steps: they also fill map nodes that lines pass behind) */
+  --process: var(--blue-3);     --process-line: var(--blue-8);     --process-ink: var(--blue-11);
+  --data: var(--green-3);       --data-line: var(--green-8);       --data-ink: var(--green-11);
+  --emphasis: var(--tomato-3);  --emphasis-line: var(--tomato-8);  --emphasis-ink: var(--tomato-11);
+  --neutral: var(--gray-3);     --neutral-line: var(--gray-8);     --neutral-ink: var(--gray-11);
 
   /* states */
-  --ok: #2f7d5b;       --ok-wash: #e3f0e9;
-  --warn: #a8661b;     --warn-wash: #f7ecd9;
-  --info: #3f6f9a;     --info-wash: #e6eef7;
-  --stale: #b7791f;    --stale-wash: #fbf1de;
+  --ok: var(--green-10);        --ok-wash: var(--green-3);
+  --warn: var(--orange-11);     --warn-wash: var(--orange-3);
+  --info: var(--blue-11);       --info-wash: var(--blue-3);
+  --stale: var(--amber-11);     --stale-wash: var(--amber-3);
 
   /* the four kinds of task on the outline: literature, code, figure, experiment */
-  --type-lit: #3f6f9a;  --type-code: #6b4fa0;  --type-fig: #2f7d7d;  --type-exp: #8a5410;
+  --type-lit: var(--blue-11);  --type-code: var(--cyan-11);  --type-fig: var(--purple-11);  --type-exp: var(--orange-11);
 
-  /* type: Helvetica first (the figures' face), PingFang SC for Chinese, JetBrains Mono for code */
-  --sans: "Helvetica Neue", Helvetica, "PingFang SC", "Noto Sans CJK SC", Arial, sans-serif;
+  /* type: the system face (SF Pro / PingFang SC on a Mac), JetBrains Mono for code */
+  --sans: var(--default-font-family);
   --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Songti SC", "Noto Serif CJK SC", Georgia, serif;
   --mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, "PingFang SC", monospace;
   --fs-xs: 11px; --fs-sm: 12px; --fs-md: 13px; --fs-lg: 15px; --fs-xl: 18px; --fs-2xl: 24px;
 
-  /* geometry: 4/8 px rhythm, mildly rounded flat cards */
-  --r-xs: 3px; --r-sm: 5px; --r-md: 6px; --r-lg: 10px;
+  /* geometry: Radix radii (they follow Settings → Appearance → Radius), 4/8 px rhythm */
+  --r-xs: var(--radius-1); --r-sm: var(--radius-2); --r-md: var(--radius-3); --r-lg: var(--radius-4);
+  --r-btn: max(var(--radius-2), var(--radius-full));
+  --r-btn-sm: max(var(--radius-1), var(--radius-full));
   --gap-1: 4px; --gap-2: 8px; --gap-3: 12px; --gap-4: 16px; --gap-5: 24px; --gap-6: 32px;
   --line: 1px; --line-strong: 1.5px;
   --bar-h: 48px; --nav-w: 200px; --dock-w: 380px;
 
-  --shadow-pop: 0 1px 2px rgb(20 22 26 / .06), 0 8px 24px rgb(20 22 26 / .12);
-  --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  --shadow-pop: var(--shadow-5);
+  --shadow-card: 0 1px 1px var(--black-a1), 0 14px 38px -12px var(--accent-a6), 0 4px 14px -6px var(--black-a2);
+  --ring: 0 0 0 2px var(--focus-8);
   --ease: cubic-bezier(.2, .7, .2, 1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --paper: #151719; --surface: #1c1f22; --plate: #22262a; --wash: #262a2e;
-    --ink: #e4e5e2; --ink-strong: #f4f4f1; --muted: #a9adb2; --slate: #8f9399; --faint: #6f747a;
-    --rule: #2d3135; --rule-strong: #3b4045;
-    --accent: #e0524f; --accent-ink: #151719; --accent-wash: #3a2324; --accent-line: #7d3a39;
-    --process: #1f2a35; --process-line: #6d8fac; --process-ink: #b7cde2;
-    --data: #1e2b25; --data-line: #7fa591; --data-ink: #b5d6c4;
-    --emphasis: #33241f; --emphasis-line: #b67c73; --emphasis-ink: #e6c0b8;
-    --neutral: #25292d; --neutral-line: #6f747a; --neutral-ink: #c9ccd0;
-    --ok: #5cbf8f; --ok-wash: #1d3329; --warn: #e0a556; --warn-wash: #3a2d1a;
-    --info: #7fa9d1; --info-wash: #1f2a35; --stale: #e0a556; --stale-wash: #3a2d1a;
-    --type-lit: #7fa9d1; --type-code: #b39ddb; --type-fig: #6cc4c4; --type-exp: #e0a556;
-    --shadow-pop: 0 1px 2px rgb(0 0 0 / .3), 0 10px 28px rgb(0 0 0 / .45);
-  }
-}
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --paper: #151719; --surface: #1c1f22; --plate: #22262a; --wash: #262a2e;
-  --ink: #e4e5e2; --ink-strong: #f4f4f1; --muted: #a9adb2; --slate: #8f9399; --faint: #6f747a;
-  --rule: #2d3135; --rule-strong: #3b4045;
-  --accent: #e0524f; --accent-ink: #151719; --accent-wash: #3a2324; --accent-line: #7d3a39;
-  --process: #1f2a35; --process-line: #6d8fac; --process-ink: #b7cde2;
-  --data: #1e2b25; --data-line: #7fa591; --data-ink: #b5d6c4;
-  --emphasis: #33241f; --emphasis-line: #b67c73; --emphasis-ink: #e6c0b8;
-  --neutral: #25292d; --neutral-line: #6f747a; --neutral-ink: #c9ccd0;
-  --ok: #5cbf8f; --ok-wash: #1d3329; --warn: #e0a556; --warn-wash: #3a2d1a;
-  --info: #7fa9d1; --info-wash: #1f2a35; --stale: #e0a556; --stale-wash: #3a2d1a;
-    --type-lit: #7fa9d1; --type-code: #b39ddb; --type-fig: #6cc4c4; --type-exp: #e0a556;
-  --shadow-pop: 0 1px 2px rgb(0 0 0 / .3), 0 10px 28px rgb(0 0 0 / .45);
-}
+/* Radix's light panels are 70 % white; a little more of the art shows through here. Its dark ones are nearly clear
+   (they count on a 64 px blur everywhere); ours blur only the navigation, the conversation and the pill. */
+.radix-themes.light { --color-panel-translucent: rgba(255, 255, 255, 0.6); }
+.radix-themes.dark { --color-panel-translucent: color-mix(in oklab, var(--gray-2) 72%, transparent); }

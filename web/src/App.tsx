@@ -14,6 +14,8 @@ import { ResizeHandle, useResizableWidth } from './components/resize';
 import { Palette } from './components/Palette';
 import { post } from './api/client';
 import { AgentDock } from './agent/AgentDock';
+import { AgentPill } from './agent/AgentPill';
+import { Backdrop } from './components/Backdrop';
 import { NewProjectDialog } from './start/NewProjectDialog';
 import './start/i18n';
 import { ProviderMark, useRunningPanels, useSessions } from './agent/parts';
@@ -136,9 +138,10 @@ export default function App() {
   const main = views.filter(v => v !== 'settings');
   return (
     <div ref={shell} className={`shell${dockOpen && projectId ? ' dock-open' : ''}${collapsed ? ' nav-collapsed' : ''}`} style={{ ...nav.style, ...dock.style }}>
+      <Backdrop />
       <nav id="rd-nav" className="sidenav" aria-label={t('app.name')}>
         <div className="brand">
-          <span className="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="currentColor" /><circle cx="10" cy="11" r="3" fill="var(--paper)" /><circle cx="22" cy="11" r="3" fill="var(--paper)" /><circle cx="16" cy="22" r="3.4" fill="var(--accent)" /><path d="M10 11 16 22 22 11" fill="none" stroke="var(--paper)" strokeWidth="1.6" /></svg></span>
+          <span className="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><circle cx="10" cy="10.5" r="3.2" fill="currentColor" /><circle cx="22" cy="10.5" r="3.2" fill="currentColor" /><circle cx="16" cy="22" r="3.6" fill="currentColor" /><path d="M10 10.5 16 22 22 10.5" fill="none" stroke="currentColor" strokeWidth="1.8" /></svg></span>
           <b>{t('app.name')}</b>
         </div>
         <ProjectSwitcher current={known} />
@@ -170,6 +173,7 @@ export default function App() {
             </div>
           </div>
         )}
+        {projectId && !dockOpen && <AgentPill pid={projectId} onOpen={focusDock} />}
       </main>
 
       {projectId && (dockOpen ? (
@@ -328,7 +332,7 @@ function AddProjectDialog({ onClose }: { onClose: () => void }) {
 
 function LangSwitch() {
   const { lang, setLang } = useI18n();
-  return <Segmented ariaLabel="Language" value={lang} onChange={setLang} options={[{ value: 'zh', label: '中' }, { value: 'en', label: 'EN' }]} />;
+  return <Segmented size="sm" ariaLabel="Language" value={lang} onChange={setLang} options={[{ value: 'zh', label: '中' }, { value: 'en', label: 'EN' }]} />;
 }
 
 function ThemeSwitch() {

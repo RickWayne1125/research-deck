@@ -49,7 +49,9 @@ To run ruff and a few file checks at each commit: `pip install pre-commit && pre
   CLI spawned directly. Whatever only the researcher may do checks `actors.is_human`. Docstrings say what a module is
   for and what its routes return; [docs/ARCHITECTURE.md](https://github.com/RickWayne1125/research-deck/blob/main/docs/ARCHITECTURE.md) lists the conventions in full.
 - **Frontend.** One folder per view under `web/src/panels/`; shared pieces in `components/`. Colors are tokens from
-  `styles/tokens.css`, never hex values in components. Every string goes through `i18n` in both Chinese and English.
+  `styles/tokens.css` (names over the Radix Themes tokens, so they follow the theme), never hex values in components;
+  the shared classes in `styles/base.css` look like Radix components. Every string goes through `i18n` in both Chinese
+  and English.
 - **Tests.** Backend tests use `RD_FAKE_AGENT` fakes (`runner.register_fake`) and temporary folders; never a real CLI,
   the network or `~/.research-deck`. Pure logic in the web app gets a `*.test.ts` next to it.
 - **No project content in the repo.** Research Deck is generic: examples and tests use made-up content, and the only

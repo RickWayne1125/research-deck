@@ -2,6 +2,7 @@
 // Routing is the hash: #/<projectId>/<view>[/<sub>] so a reload or a shared link reopens the same place.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { get, p, subscribeEvents } from '../api/client';
+import { applyMode } from './appearance';
 import type { AgentCatalog, Health, ProjectDetail, ProjectEvent, ProjectSummary, ViewId } from '../types';
 
 export type Theme = 'auto' | 'light' | 'dark';
@@ -121,9 +122,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setThemeState(t);
     try { localStorage.setItem('rd.theme', t); } catch { /* ignore */ }
   }, []);
+  // light or dark on <html> (the Radix theme root, state/appearance.ts); "auto" follows the system as it changes
   useEffect(() => {
-    if (theme === 'auto') document.documentElement.removeAttribute('data-theme');
-    else document.documentElement.setAttribute('data-theme', theme);
+    const mq = window.matchMedia?.('(prefers-color-scheme: dark)');
+    const apply = () => applyMode(theme === 'auto' ? (mq?.matches ? 'dark' : 'light') : theme);
+    apply();
+    if (theme !== 'auto' || !mq) return;
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
   }, [theme]);
 
   const setDockOpen = useCallback((v: boolean) => {

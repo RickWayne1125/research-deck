@@ -34,6 +34,19 @@ saved as `notes/idea.md` (`idea-2.md` … when one exists) and an upload is kept
 with pypdf). A folder created here gets `git init` (setting `git_init`, unless it is inside a repository) and a
 `.gitignore` with `<papers_dir>/*.pdf`. Both routes that change something are the researcher's only (403 for agents).
 
+## Appearance (appearance.py)
+
+Settings → Appearance, kept in `~/.research-deck/settings.json` (`appearance`) and, for an uploaded picture,
+`~/.research-deck/backgrounds/`. Changes are the researcher's only (403 for agents).
+
+| Method | Path | Body / query | Response |
+|---|---|---|---|
+| GET | /api/settings/appearance | | `{theme: radix-red\|radix-indigo\|radix-teal\|custom, custom: {accent, radius, background}, blur: 0–100, image: url \| null}` |
+| PATCH | /api/settings/appearance | any of `{theme, custom: {accent (a Radix color), radius: none\|small\|medium\|large\|full, background: radix\|ribbons\|gradient\|glow\|plain\|image}, blur}`; `null` puts a key back to its default | the settings; 400 for an unknown value, or `image` without a picture |
+| PUT | /api/settings/appearance/image | `{name, content_base64}` (PNG, JPEG, WebP, GIF or AVIF by its bytes, ≤ 15 MB; SVG is refused) | the settings, now `custom` with the picture as the background (it replaces the one before) |
+| DELETE | /api/settings/appearance/image | | the settings (a picture background falls back to the ribbons) |
+| GET | /api/settings/appearance/image | `?v=` the version in `image` | the picture: nosniff, a `sandbox` CSP, cached for good when `v` matches |
+
 ## Survey (survey/)
 
 | Method | Path | Body / query | Response |

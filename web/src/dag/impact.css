@@ -7,7 +7,7 @@
 .dgx-sum.is-zero { color: var(--faint); }
 .dgx-sum.tone-stale b { color: var(--stale); }
 .dgx-sum.tone-warn b { color: var(--warn); }
-.dgx-sum.tone-accent b { color: var(--accent); }
+.dgx-sum.tone-accent b { color: var(--accent-text); }
 .dgx-sum.tone-info b { color: var(--info); }
 .dgx-sum.tone-data b { color: var(--data-ink); }
 .dgx-sum.tone-emphasis b { color: var(--emphasis-ink); }
@@ -56,9 +56,9 @@
 .dgx-more { border: 0; background: none; color: var(--info); cursor: pointer; padding: 2px 6px; font-size: var(--fs-xs); text-align: left; }
 
 .dgx-locks { border: var(--line) solid var(--accent-line); border-radius: var(--r-md); padding: 8px 10px; margin: 0; display: flex; flex-direction: column; gap: 6px; background: var(--accent-wash); }
-.dgx-locks legend { padding: 0 4px; color: var(--accent); }
+.dgx-locks legend { padding: 0 4px; color: var(--accent-text); }
 .dgx-lock { display: flex; align-items: flex-start; gap: 6px; font-size: var(--fs-sm); color: var(--ink); cursor: pointer; }
 .dgx-lock input { margin: 2px 0 0; accent-color: var(--accent); }
-.dgx-lock svg { flex: none; margin-top: 1px; color: var(--accent); }
+.dgx-lock svg { flex: none; margin-top: 1px; color: var(--accent-text); }
 .dgx-dialog { gap: 12px; }
 .dgx-loading { opacity: .55; transition: opacity .15s; }

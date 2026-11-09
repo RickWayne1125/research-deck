@@ -1,16 +1,24 @@
 /* Shared element and component classes. Panels use these and add only their own layout in a panel-scoped CSS file
-   (class prefix = panel name, e.g. .wr- for writing, .cd- coding, .ex- experiments, .vz- visualization, .dg- DAG). */
+   (class prefix = panel name, e.g. .wr- for writing, .cd- coding, .ex- experiments, .vz- visualization, .dg- DAG).
+   The components follow Radix Themes 3.3 (Button, IconButton, SegmentedControl, Badge, Card, TextField, Tabs, Table,
+   Dialog, DropdownMenu, Callout, Kbd, Spinner; MIT, Copyright (c) 2023 WorkOS) with its tokens (tokens.css): the same
+   sizes, radii, colors and states, under the app's own class names. */
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
 body {
-  background: var(--paper); color: var(--ink); font: 400 var(--fs-md)/1.45 var(--sans);
-  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  background: var(--color-background); color: var(--ink); font: 400 var(--fs-md)/1.45 var(--sans);
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility;
 }
 button, input, select, textarea { font: inherit; color: inherit; }
 a { color: inherit; text-underline-offset: 2px; }
 code, kbd, pre, .mono { font-family: var(--mono); font-size: .92em; }
-kbd { border: var(--line) solid var(--rule-strong); border-bottom-width: 2px; border-radius: var(--r-xs); padding: 0 4px; font-size: var(--fs-xs); background: var(--surface); }
-::selection { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+kbd {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; top: -.03em;
+  min-width: 1.75em; height: fit-content; padding: 0 .5em .05em; vertical-align: text-top; white-space: nowrap; user-select: none;
+  font: 400 .78em/1.7em var(--default-font-family); word-spacing: -.1em; color: var(--gray-12);
+  background-color: var(--gray-1); border-radius: calc(var(--radius-factor) * .35em); box-shadow: var(--kbd-box-shadow);
+}
+::selection { background: var(--focus-a5); }
 :focus-visible { outline: none; box-shadow: var(--ring); }
 .muted { color: var(--muted); }
 .faint { color: var(--faint); }
@@ -23,111 +31,167 @@ kbd { border: var(--line) solid var(--rule-strong); border-bottom-width: 2px; bo
 .ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hidden { display: none !important; }
 
-/* micro label: mono, spaced capitals — the editorial counterpoint to the grotesk body */
-.label { font: 500 10.5px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--slate); }
-.h1 { font: 600 var(--fs-xl)/1.25 var(--sans); color: var(--ink-strong); margin: 0; }
+/* a small label over a field or a group (Radix Text size 1, medium) */
+.label { font: 500 var(--fs-sm)/1.3 var(--sans); letter-spacing: var(--letter-spacing-1); color: var(--gray-a11); }
+.h1 { font: 700 var(--fs-xl)/1.25 var(--sans); letter-spacing: var(--letter-spacing-4); color: var(--ink-strong); margin: 0; }
 .h2 { font: 600 var(--fs-lg)/1.3 var(--sans); color: var(--ink-strong); margin: 0; }
 .h3 { font: 600 var(--fs-md)/1.3 var(--sans); color: var(--ink-strong); margin: 0; }
 
-/* buttons */
+/* buttons (Radix Button): soft gray by default; primary/accent solid, soft = the accent's soft, ghost, danger;
+   sm = size 1 (24 px), else size 2 (32 px) */
 .btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 30px; padding: 0 12px;
-  border: var(--line) solid var(--rule-strong); border-radius: var(--r-md); background: var(--surface); color: var(--ink);
-  font: 500 var(--fs-md)/1 var(--sans); cursor: pointer; white-space: nowrap; transition: border-color .12s, background-color .12s;
+  --btn-bg: var(--gray-a3); --btn-bg-hover: var(--gray-a4); --btn-bg-active: var(--gray-a5); --btn-fg: var(--gray-12); --btn-ring: none;
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; gap: var(--space-2); vertical-align: top;
+  min-height: var(--space-6); padding: 0 var(--space-3); border: 0; border-radius: var(--r-btn);
+  background-color: var(--btn-bg); box-shadow: var(--btn-ring); color: var(--btn-fg);
+  font: 500 var(--fs-md)/1 var(--sans); letter-spacing: var(--letter-spacing-2); white-space: nowrap; user-select: none;
+  cursor: pointer; transition: background-color .12s, box-shadow .12s, color .12s;
 }
-.btn:hover { border-color: var(--slate); }
-.btn:disabled { opacity: .45; cursor: default; }
-.btn.primary { background: var(--ink); border-color: var(--ink); color: var(--paper); }
-.btn.primary:hover { background: var(--ink-strong); }
-.btn.accent { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.btn.ghost { border-color: transparent; background: transparent; }
-.btn.ghost:hover { background: var(--wash); }
-.btn.danger { color: var(--accent); border-color: var(--accent-line); }
-.btn.sm { min-height: 24px; padding: 0 8px; font-size: var(--fs-sm); border-radius: var(--r-sm); }
-.btn.active, .btn[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.btn:hover { background-color: var(--btn-bg-hover); }
+.btn:active:not(:disabled) { background-color: var(--btn-bg-active); }
+.btn:focus-visible, .icon-btn:focus-visible { box-shadow: var(--btn-ring); outline: 2px solid var(--focus-8); outline-offset: 2px; }
+.btn.primary, .btn.accent {
+  --btn-bg: var(--accent-9); --btn-bg-hover: var(--accent-10); --btn-bg-active: var(--accent-10); --btn-fg: var(--accent-contrast);
+}
+.btn.primary:active:not(:disabled), .btn.accent:active:not(:disabled) { filter: var(--base-button-solid-active-filter); }
+.btn.soft { --btn-bg: var(--accent-a3); --btn-bg-hover: var(--accent-a4); --btn-bg-active: var(--accent-a5); --btn-fg: var(--accent-a11); }
+.btn.ghost { --btn-bg: transparent; --btn-bg-hover: var(--gray-a3); --btn-bg-active: var(--gray-a4); --btn-fg: var(--gray-12); }
+.btn.danger { --btn-bg: var(--red-a3); --btn-bg-hover: var(--red-a4); --btn-bg-active: var(--red-a5); --btn-fg: var(--red-a11); }
+.btn.active, .btn[aria-pressed="true"] { --btn-bg: var(--accent-a4); --btn-bg-hover: var(--accent-a5); --btn-fg: var(--accent-a11); }
+.btn.sm { min-height: var(--space-5); padding: 0 var(--space-2); gap: var(--space-1); font-size: var(--fs-sm); border-radius: var(--r-btn-sm); }
+.btn:disabled { --btn-bg: var(--gray-a3); --btn-bg-hover: var(--gray-a3); --btn-fg: var(--gray-a8); cursor: not-allowed; filter: none; }
+.btn.ghost:disabled { --btn-bg: transparent; --btn-bg-hover: transparent; }
 .icon-btn {
-  display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: var(--r-md); border: 0;
-  background: transparent; color: var(--muted); cursor: pointer;
+  display: inline-grid; place-items: center; flex-shrink: 0; width: 28px; height: 28px; padding: 0; border: 0; border-radius: var(--r-btn);
+  background: transparent; color: var(--gray-a11); cursor: pointer; transition: background-color .12s, color .12s;
 }
-.icon-btn:hover { background: var(--wash); color: var(--ink); }
+.icon-btn:hover { background: var(--gray-a3); color: var(--gray-12); }
+.icon-btn:active:not(:disabled) { background: var(--gray-a4); }
+.icon-btn:disabled { color: var(--gray-a8); background: transparent; cursor: not-allowed; }
 .icon-btn svg, .btn svg { width: 16px; height: 16px; flex: none; }
+.btn.sm svg { width: 14px; height: 14px; }
 
-/* segmented control */
-.seg { display: inline-flex; border: var(--line) solid var(--rule-strong); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
-.seg > button { border: 0; background: none; padding: 0 10px; min-height: 26px; font: 500 var(--fs-sm)/1 var(--sans); color: var(--muted); cursor: pointer; }
-.seg > button + button { border-left: var(--line) solid var(--rule); }
-.seg > button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+/* segmented control (Radix SegmentedControl, surface): the chosen option sits on a raised indicator */
+.seg {
+  position: relative; isolation: isolate; display: inline-flex; align-items: stretch; vertical-align: top; flex-shrink: 0;
+  height: var(--space-6); border-radius: var(--r-btn); color: var(--gray-12);
+  background-color: var(--color-surface); background-image: linear-gradient(var(--gray-a3), var(--gray-a3));
+}
+.seg > button {
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex: 1 0 auto;
+  border: 0; border-radius: inherit; background: none; padding: 0 var(--space-3); color: var(--gray-a11);
+  font: 500 var(--fs-md)/1 var(--sans); white-space: nowrap; cursor: pointer; transition: color .12s;
+}
+.seg > button:hover { color: var(--gray-12); }
+.seg > button[aria-pressed="true"] { color: var(--gray-12); }
+.seg > button[aria-pressed="true"]::before {
+  content: ""; position: absolute; inset: 1px; z-index: -1; border-radius: max(.5px, calc(var(--r-btn) - 1px));
+  background-color: var(--segmented-control-indicator-background-color); box-shadow: 0 0 0 1px var(--gray-a4);
+}
+.seg > button + button::after { content: ""; position: absolute; left: -.5px; top: 25%; bottom: 25%; width: 1px; background: var(--gray-a4); }
+.seg > button[aria-pressed="true"]::after, .seg > button[aria-pressed="true"] + button::after { display: none; }
+.seg > button:disabled { color: var(--gray-a8); cursor: not-allowed; }
+.seg > button:focus-visible { box-shadow: none; outline: 2px solid var(--focus-8); outline-offset: -1px; }
+.seg.sm { height: var(--space-5); border-radius: var(--r-btn-sm); }
+.seg.sm > button { padding: 0 var(--space-2); font-size: var(--fs-sm); }
+.seg.sm > button[aria-pressed="true"]::before { border-radius: max(.5px, calc(var(--r-btn-sm) - 1px)); }
 
-/* chips and badges */
+/* chips and badges (Radix Badge size 1: chips are the surface variant as a pill, badges the soft variant) */
 .chip {
-  display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px; border-radius: 999px;
-  border: var(--line) solid var(--rule-strong); font: 500 var(--fs-xs)/1 var(--sans); color: var(--muted); background: var(--surface); white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: 999px;
+  border: var(--line) solid var(--gray-a6); background: var(--gray-surface); font: 500 var(--fs-xs)/1 var(--sans); color: var(--gray-a11); white-space: nowrap;
 }
 .badge {
-  display: inline-flex; align-items: center; gap: 4px; height: 18px; padding: 0 6px; border-radius: var(--r-xs);
-  font: 500 10.5px/1 var(--mono); letter-spacing: .02em; white-space: nowrap; background: var(--neutral); color: var(--neutral-ink);
+  --b-bg: var(--gray-a3); --b-fg: var(--gray-a11);
+  display: inline-flex; align-items: center; flex-shrink: 0; gap: 4px; height: fit-content; padding: 2px 6px;
+  border-radius: max(var(--radius-1), var(--radius-full)); background: var(--b-bg); color: var(--b-fg);
+  font: 500 var(--font-size-1)/14px var(--sans); letter-spacing: var(--letter-spacing-1); white-space: nowrap;
 }
-.badge.process { background: var(--process); color: var(--process-ink); }
-.badge.data, .badge.ok { background: var(--data); color: var(--data-ink); }
-.badge.emphasis { background: var(--emphasis); color: var(--emphasis-ink); }
-.badge.warn, .badge.stale { background: var(--stale-wash); color: var(--stale); }
-.badge.accent { background: var(--accent-wash); color: var(--accent); }
-.badge.solid { background: var(--ink); color: var(--paper); }
-.dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--faint); flex: none; }
-.dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.accent { background: var(--accent); } .dot.info { background: var(--info); }
+.badge.mono { font-family: var(--mono); font-size: 11px; }
+.badge.process { --b-bg: var(--blue-a3); --b-fg: var(--blue-a11); }
+.badge.data, .badge.ok { --b-bg: var(--green-a3); --b-fg: var(--green-a11); }
+.badge.emphasis { --b-bg: var(--tomato-a3); --b-fg: var(--tomato-a11); }
+.badge.warn, .badge.stale { --b-bg: var(--amber-a3); --b-fg: var(--amber-a11); }
+.badge.accent { --b-bg: var(--accent-a3); --b-fg: var(--accent-a11); }
+.badge.solid { --b-bg: var(--gray-12); --b-fg: var(--gray-1); }
+.dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--gray-a8); flex: none; }
+.dot.ok { background: var(--green-9); } .dot.warn { background: var(--amber-9); } .dot.accent { background: var(--accent-9); } .dot.info { background: var(--blue-9); }
 
-/* cards and lists */
-.card { background: var(--surface); border: var(--line) solid var(--rule); border-radius: var(--r-lg); min-width: 0; }
-.card-head { display: flex; align-items: center; gap: var(--gap-2); padding: 10px 14px; border-bottom: var(--line) solid var(--rule); }
+/* cards (Radix Card, surface, on glass) and lists */
+.card { background: var(--surface); border: var(--line) solid var(--rule); border-radius: var(--r-lg); box-shadow: var(--shadow-card); min-width: 0; }
+.card-head { display: flex; align-items: center; gap: var(--gap-2); padding: 10px 14px; border-bottom: var(--line) solid var(--gray-a4); }
 .card-body { padding: 12px 14px; }
 .list { display: flex; flex-direction: column; }
-.list-item { display: flex; align-items: center; gap: var(--gap-2); padding: 8px 12px; border-bottom: var(--line) solid var(--rule); cursor: pointer; min-width: 0; }
+.list-item { display: flex; align-items: center; gap: var(--gap-2); padding: 8px 12px; border-bottom: var(--line) solid var(--gray-a4); cursor: pointer; min-width: 0; }
 .list-item:last-child { border-bottom: 0; }
-.list-item:hover { background: var(--plate); }
-.list-item.active { background: var(--wash); box-shadow: inset 2px 0 0 var(--accent); }
+.list-item:hover { background: var(--gray-a2); }
+.list-item.active { background: var(--accent-a3); box-shadow: inset 2px 0 0 var(--accent-9); }
 .kv { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; }
-.kv dt { color: var(--slate); font: 500 var(--fs-sm)/1.45 var(--sans); }
+.kv dt { color: var(--gray-a11); font: 500 var(--fs-sm)/1.45 var(--sans); }
 .kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+/* tables (Radix Table) */
 .table { width: 100%; border-collapse: collapse; font-size: var(--fs-md); }
-.table th { text-align: left; font: 500 10.5px/1.2 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--slate); padding: 8px 10px; border-bottom: var(--line) solid var(--rule-strong); white-space: nowrap; }
-.table td { padding: 8px 10px; border-bottom: var(--line) solid var(--rule); vertical-align: middle; }
-.table tr:hover td { background: var(--plate); }
+.table th { text-align: left; font: 600 var(--fs-sm)/1.3 var(--sans); color: var(--gray-12); padding: 8px 10px; border-bottom: var(--line) solid var(--gray-a6); white-space: nowrap; }
+.table td { padding: 8px 10px; border-bottom: var(--line) solid var(--gray-a5); vertical-align: middle; }
+.table tr:hover td { background: var(--gray-a2); }
 
-/* tabs */
-.tabs { display: flex; gap: 2px; border-bottom: var(--line) solid var(--rule); padding: 0 var(--gap-3); }
-.tab { border: 0; background: none; padding: 10px 10px 9px; font: 500 var(--fs-md)/1 var(--sans); color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
-.tab:hover { color: var(--ink); }
-.tab[aria-selected="true"] { color: var(--ink-strong); border-bottom-color: var(--accent); }
-
-/* form fields */
-.input, .select, .textarea {
-  min-height: 30px; padding: 5px 9px; border: var(--line) solid var(--rule-strong); border-radius: var(--r-md);
-  background: var(--surface); color: var(--ink); font: 400 var(--fs-md)/1.4 var(--sans); min-width: 0;
+/* tabs (Radix Tabs): the chosen tab is underlined in the accent */
+.tabs { display: flex; gap: 2px; box-shadow: inset 0 -1px 0 0 var(--gray-a5); padding: 0 var(--gap-3); }
+.tab {
+  position: relative; border: 0; background: none; padding: 11px 10px 10px; font: 500 var(--fs-md)/1 var(--sans);
+  color: var(--gray-a11); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: 0; border-radius: var(--radius-2) var(--radius-2) 0 0;
 }
-.textarea { resize: vertical; line-height: 1.5; }
-.input:focus, .select:focus, .textarea:focus { outline: none; border-color: var(--slate); box-shadow: var(--ring); }
+.tab:hover { color: var(--gray-12); background: var(--gray-a2); }
+.tab[aria-selected="true"] { color: var(--gray-12); border-bottom-color: var(--accent-indicator); }
+
+/* form fields (Radix TextField / TextArea / Select trigger, surface) */
+.input, .select, .textarea {
+  min-height: var(--space-6); padding: 5px 10px; border: var(--line) solid var(--gray-a7); border-radius: var(--r-btn);
+  background-color: var(--color-surface); color: var(--gray-12); font: 400 var(--fs-md)/1.4 var(--sans); min-width: 0;
+}
+.textarea { resize: vertical; line-height: 1.5; border-radius: var(--radius-3); padding: 7px 10px; }
+.input::placeholder, .textarea::placeholder { color: var(--gray-a10); }
+.input:focus, .select:focus, .textarea:focus { outline: 2px solid var(--focus-8); outline-offset: -1px; box-shadow: none; }
+.input:disabled, .select:disabled, .textarea:disabled, .input:read-only, .textarea:read-only { background-color: var(--gray-a2); color: var(--gray-a11); }
+.input:disabled, .select:disabled, .textarea:disabled { cursor: not-allowed; }
+.input[aria-invalid="true"], .textarea[aria-invalid="true"] { border-color: var(--red-a8); }
 .field { display: flex; flex-direction: column; gap: 4px; }
 
-/* panel frame: every main panel is a .panel with a .panel-head and a .panel-body */
+/* panel frame: every main panel is a .panel with a .panel-head and a .panel-body; the head sits on the art */
 .panel { display: flex; flex-direction: column; height: 100%; min-height: 0; min-width: 0; }
-.panel-head { flex: none; display: flex; align-items: center; gap: var(--gap-3); padding: 10px 18px; border-bottom: var(--line) solid var(--rule); min-height: 52px; background: var(--paper); }
-.panel-head .h1 { font-size: var(--fs-lg); }
+.panel-head { flex: none; display: flex; align-items: center; gap: var(--gap-3); padding: 12px 20px; border-bottom: var(--line) solid var(--gray-a4); min-height: 56px; background: transparent; }
+.panel-head .h1 { font-size: var(--font-size-5); line-height: var(--line-height-5); letter-spacing: var(--letter-spacing-5); }
 .panel-body { flex: 1 1 auto; min-height: 0; overflow: auto; }
 .empty { display: grid; place-items: center; gap: 6px; padding: 40px 20px; text-align: center; color: var(--muted); }
 .empty .h3 { color: var(--ink); }
-.notice { display: flex; gap: 8px; align-items: flex-start; padding: 8px 12px; border-radius: var(--r-md); background: var(--plate); color: var(--muted); font-size: var(--fs-sm); }
-.notice.warn { background: var(--stale-wash); color: var(--stale); }
-.notice.accent { background: var(--accent-wash); color: var(--accent); }
+/* notes (Radix Callout, soft, size 1): gray, warn (amber), accent (red: errors and what needs attention) */
+.notice { display: flex; gap: 8px; align-items: flex-start; padding: 9px 12px; border-radius: var(--radius-3); background: var(--gray-a3); color: var(--gray-a11); font-size: var(--fs-sm); }
+.notice.warn { background: var(--amber-a3); color: var(--amber-a11); }
+.notice.accent { background: var(--red-a3); color: var(--red-a11); }
 
-/* dialogs and popovers */
-.scrim { position: fixed; inset: 0; background: rgb(15 17 19 / .32); z-index: 60; display: grid; place-items: center; padding: 24px; }
-.dialog { width: min(640px, 100%); max-height: calc(100vh - 48px); display: flex; flex-direction: column; background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow-pop); border: var(--line) solid var(--rule); }
-.dialog-head { display: flex; align-items: center; gap: 8px; padding: 14px 18px; border-bottom: var(--line) solid var(--rule); }
-.dialog-body { padding: 16px 18px; overflow: auto; }
-.dialog-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 18px; border-top: var(--line) solid var(--rule); }
-.popover { position: absolute; z-index: 50; background: var(--surface); border: var(--line) solid var(--rule); border-radius: var(--r-lg); box-shadow: var(--shadow-pop); padding: 6px; min-width: 200px; }
-.menu-item { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; border: 0; background: none; padding: 7px 9px; border-radius: var(--r-sm); cursor: pointer; font-size: var(--fs-md); }
-.menu-item:hover { background: var(--wash); }
+/* dialogs and popovers (Radix Dialog and DropdownMenu, soft items) */
+.scrim { position: fixed; inset: 0; background: var(--color-overlay); z-index: 60; display: grid; place-items: center; padding: 24px; animation: rd-fade-in .16s var(--ease); }
+.dialog {
+  width: min(640px, 100%); max-height: calc(100vh - 48px); display: flex; flex-direction: column; background: var(--color-panel-solid);
+  border-radius: var(--radius-5); box-shadow: var(--shadow-6); border: 0; outline: none; animation: rd-dialog-in .2s var(--ease);
+}
+.dialog-head { display: flex; align-items: center; gap: 8px; padding: 18px 20px 8px; }
+.dialog-head .h2 { font-size: var(--font-size-4); line-height: var(--line-height-4); font-weight: 700; letter-spacing: var(--letter-spacing-4); }
+.dialog-body { padding: 8px 20px 16px; overflow: auto; }
+.dialog-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px 18px; }
+.popover {
+  position: absolute; z-index: 50; background: var(--color-panel-solid); border: 0; border-radius: var(--radius-4); box-shadow: var(--shadow-5);
+  padding: var(--space-2); min-width: 200px; animation: rd-fade-in .12s var(--ease);
+}
+.menu-item {
+  display: flex; align-items: center; gap: 8px; width: 100%; min-height: var(--space-6); text-align: left; border: 0; background: none;
+  padding: 6px 10px; border-radius: var(--radius-2); cursor: pointer; font-size: var(--fs-md); color: var(--gray-12);
+}
+.menu-item:hover, .menu-item:focus-visible { background: var(--accent-a3); color: var(--accent-12); box-shadow: none; }
+.menu-item:disabled { color: var(--gray-a8); background: none; cursor: not-allowed; }
+@keyframes rd-fade-in { from { opacity: 0; } }
+@keyframes rd-dialog-in { from { opacity: 0; transform: translateY(6px) scale(.98); } }
+@media (prefers-reduced-motion: reduce) { .scrim, .dialog, .popover { animation: none; } }
 
 /* resizable panes (components/resize.tsx): a 7 px handle centered on the pane's 1 px inner border (offsets count from
    the padding box: 3 px outside, the border, 3 px inside, so it takes little of a neighbouring scrollbar), a line on
@@ -138,10 +202,10 @@ kbd { border: var(--line) solid var(--rule-strong); border-bottom-width: 2px; bo
 .rs-handle::after { content: ""; position: absolute; top: 0; bottom: 0; width: 2px; background: transparent; transition: background-color .12s var(--ease); }
 .rs-handle[data-edge="left"]::after { left: 3px; }
 .rs-handle[data-edge="right"]::after { right: 3px; }
-.rs-handle:hover::after { background: var(--rule-strong); transition-delay: .08s; }
-.rs-handle.is-dragging::after { background: var(--slate); transition: none; }
+.rs-handle:hover::after { background: var(--gray-a7); transition-delay: .08s; }
+.rs-handle.is-dragging::after { background: var(--accent-9); transition: none; }
 .rs-handle:focus-visible { box-shadow: none; }
-.rs-handle:focus-visible::after { background: var(--accent); }
+.rs-handle:focus-visible::after { background: var(--accent-9); }
 html.rd-resizing, html.rd-resizing * { cursor: col-resize !important; user-select: none !important; -webkit-user-select: none !important; }
 html.rd-resizing iframe { pointer-events: none !important; }
 @media (prefers-reduced-motion: reduce) { .rs-handle::after { transition: none; } }
@@ -154,11 +218,25 @@ html.rd-resizing iframe { pointer-events: none !important; }
 
 /* code and diffs */
 .code { font: 400 12px/1.55 var(--mono); white-space: pre; tab-size: 4; }
-.diff-add { background: color-mix(in srgb, var(--ok) 13%, transparent); }
-.diff-del { background: color-mix(in srgb, var(--accent) 12%, transparent); }
-.spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--rule-strong); border-top-color: var(--accent); animation: spin .8s linear infinite; flex: none; }
+.diff-add { background: var(--green-a3); }
+.diff-del { background: var(--red-a3); }
+/* spinner (Radix Spinner: eight leaves, components/ui.tsx); an empty .spinner is a ring */
+.spinner { position: relative; display: inline-block; flex: none; width: var(--space-4); height: var(--space-4); opacity: var(--spinner-opacity); color: var(--gray-12); }
+.spinner:empty { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--gray-a5); border-top-color: var(--accent-9); animation: spin .8s linear infinite; opacity: 1; }
+.spinner > i { position: absolute; top: 0; left: calc(50% - 12.5% / 2); width: 12.5%; height: 100%; animation: rd-leaf var(--spinner-animation-duration) linear infinite; }
+.spinner > i::before { content: ""; display: block; width: 100%; height: 30%; border-radius: var(--radius-1); background-color: currentColor; }
+.spinner > i:nth-child(1) { transform: rotate(0deg); animation-delay: calc(-8 / 8 * var(--spinner-animation-duration)); }
+.spinner > i:nth-child(2) { transform: rotate(45deg); animation-delay: calc(-7 / 8 * var(--spinner-animation-duration)); }
+.spinner > i:nth-child(3) { transform: rotate(90deg); animation-delay: calc(-6 / 8 * var(--spinner-animation-duration)); }
+.spinner > i:nth-child(4) { transform: rotate(135deg); animation-delay: calc(-5 / 8 * var(--spinner-animation-duration)); }
+.spinner > i:nth-child(5) { transform: rotate(180deg); animation-delay: calc(-4 / 8 * var(--spinner-animation-duration)); }
+.spinner > i:nth-child(6) { transform: rotate(225deg); animation-delay: calc(-3 / 8 * var(--spinner-animation-duration)); }
+.spinner > i:nth-child(7) { transform: rotate(270deg); animation-delay: calc(-2 / 8 * var(--spinner-animation-duration)); }
+.spinner > i:nth-child(8) { transform: rotate(315deg); animation-delay: calc(-1 / 8 * var(--spinner-animation-duration)); }
+.spinner.sm { width: var(--space-3); height: var(--space-3); }
+@keyframes rd-leaf { from { opacity: 1; } to { opacity: .25; } }
 @keyframes spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
+@media (prefers-reduced-motion: reduce) { .spinner:empty { animation-duration: 2.4s; } .spinner > i { animation-duration: 2.4s; } }
 
 /* rendered markdown (agent answers, previews, notes) */
 .md { line-height: 1.55; overflow-wrap: anywhere; }
@@ -168,15 +246,16 @@ html.rd-resizing iframe { pointer-events: none !important; }
 .md ul, .md ol { padding-left: 1.3em; }
 .md h1, .md h2, .md h3, .md h4 { font-size: 1em; font-weight: 600; margin: 1em 0 .4em; color: var(--ink-strong); }
 .md h1 { font-size: 1.15em; }
-.md code { background: var(--plate); border-radius: var(--r-xs); padding: .05em .3em; }
-.md pre { background: var(--plate); border: var(--line) solid var(--rule); border-radius: var(--r-md); padding: 10px 12px; overflow: auto; }
+.md code { background: var(--gray-a3); color: var(--gray-12); border-radius: calc(var(--radius-factor) * 4px); padding: .05em .3em; }
+.md pre { background: var(--gray-a2); border: var(--line) solid var(--gray-a5); border-radius: var(--radius-3); padding: 10px 12px; overflow: auto; }
 .md pre code { background: none; padding: 0; font-size: 12px; line-height: 1.5; }
-.md blockquote { border-left: 2px solid var(--rule-strong); padding-left: 10px; color: var(--muted); }
+.md blockquote { border-left: 2px solid var(--accent-a6); padding-left: 10px; color: var(--muted); }
 /* A table is as wide as its text needs, up to the column, and scrolls sideways beyond that. Its cells break between
    words only: "anywhere" (above) would let the table squeeze a column down to one letter per line. */
 .md table { border-collapse: collapse; font-size: .95em; display: block; width: max-content; max-width: 100%; overflow-x: auto; }
 .md th, .md td { border: var(--line) solid var(--rule); padding: 4px 8px; text-align: left; vertical-align: top; overflow-wrap: break-word; }
-.md a { color: var(--info); }
+.md a { color: var(--accent-11); text-decoration-color: var(--accent-a5); }
+.md a:hover { text-decoration-color: currentColor; }
 .md a:not([href]) { color: inherit; }
 .md .katex-display { margin: .6em 0; overflow-x: auto; overflow-y: hidden; }
 

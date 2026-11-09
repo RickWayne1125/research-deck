@@ -3,8 +3,8 @@
 // conversation (its header).
 import { useEffect, type ReactNode } from 'react';
 import { useApp } from '../../state/app';
-import { useI18n, useT } from '../../i18n';
-import { ErrorNote, PanelHead, Segmented, Spinner, useLoad } from '../../components/ui';
+import { useT } from '../../i18n';
+import { ErrorNote, PanelHead, Spinner, useLoad } from '../../components/ui';
 import { agentApi } from '../../agent/api';
 import { CopyButton, ProviderMark, providerLabel } from '../../agent/parts';
 import { NewProjectSettingsSection } from '../../start/NewProjectSettings';
@@ -12,6 +12,7 @@ import { OutlineTemplatesSection } from '../outline/Templates';
 import { PoolsSection } from '../../pools/PoolsSection';
 import { ZoteroSection } from '../../integrations/ZoteroSection';
 import { DocmostSection } from '../../integrations/DocmostSection';
+import { AppearanceSection } from './Appearance';
 import './settings.css';
 import './i18n';
 
@@ -95,29 +96,6 @@ function IntegrationsSection() {
       </dl>
 
     </div>
-  );
-}
-
-// ------------------------------------------------------------------ appearance
-
-function AppearanceSection() {
-  const t = useT();
-  const { lang, setLang } = useI18n();
-  const { theme, setTheme } = useApp();
-  return (
-    <dl className="kv st-kv st-appearance">
-      <dt>{t('st.app.lang')}</dt>
-      <dd className="col" style={{ gap: 4, alignItems: 'flex-start' }}>
-        <Segmented ariaLabel={t('st.app.lang')} value={lang} onChange={setLang}
-          options={[{ value: 'zh', label: t('lang.zh') }, { value: 'en', label: t('lang.en') }]} />
-        <span className="st-hint st-flush">{t('st.app.langHint')}</span>
-      </dd>
-      <dt>{t('st.app.theme')}</dt>
-      <dd>
-        <Segmented ariaLabel={t('st.app.theme')} value={theme} onChange={setTheme}
-          options={[{ value: 'auto', label: t('theme.auto') }, { value: 'light', label: t('theme.light') }, { value: 'dark', label: t('theme.dark') }]} />
-      </dd>
-    </dl>
   );
 }
 

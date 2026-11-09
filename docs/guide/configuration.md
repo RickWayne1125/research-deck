@@ -11,7 +11,9 @@ Your own defaults, shared by every project on this machine. Missing keys take th
   "new_projects": {"dir": "~/Research", "git_init": true,
                    "survey": {"sources": ["arxiv", "semantic_scholar", "openalex"], "count": 15,
                               "download_pdfs": true, "papers_dir": "papers"}},
-  "tailnet": {"host": "<machine>.<tailnet>.ts.net", "https_port": 8765, "owners": ["you@example.com"]}
+  "tailnet": {"host": "<machine>.<tailnet>.ts.net", "https_port": 8765, "owners": ["you@example.com"]},
+  "appearance": {"theme": "custom", "custom": {"accent": "indigo", "radius": "large", "background": "image"},
+                 "blur": 40, "image": "3f2a9c0d1e4b5a67.jpg"}
 }
 ```
 
@@ -21,8 +23,26 @@ Your own defaults, shared by every project on this machine. Missing keys take th
 | `dag_defaults` | defaults for new maps: blocking gates, git autocommit of the map, stage rules (`strict`, `ahead`, `free`) |
 | `new_projects` | where **New from an idea** creates folders, `git init`, and the early survey's sources, size and PDF folder |
 | `tailnet` | accept requests through Tailscale Serve from these owners only (see [Installation](../getting-started/install.md)) |
+| `appearance` | the theme and background ([below](#appearance)) |
 
 Most of these are also in **Settings**.
+
+## Appearance
+
+**Settings → Appearance** sets the look of the whole dashboard. It is built on
+[Radix Themes](https://www.radix-ui.com/themes):
+
+- **Theme.** Radix red (the default), Radix indigo and Radix teal are radix-ui.com's own looks: an accent, a matching
+  gray, a radius and the site's background art in that palette. **Custom** lets you pick the accent (any of Radix's
+  26 colors; the gray follows it), the radius (none to full) and the background.
+- **Background** (custom). The Radix art in your accent, ribbons, a gradient, a glow, a plain fill, or a picture of
+  your own: **Upload a picture…** takes PNG, JPEG, WebP, GIF or AVIF up to 15 MB, and **Picture blur** softens it. The
+  picture is kept in `~/.research-deck/backgrounds/` (one at a time; a new one replaces it), never in a project.
+- **Light or dark** (or follow the system) is chosen per browser; everything else is the same in all your browsers.
+- **Reset to default** goes back to Radix red; an uploaded picture stays available until you remove it.
+
+The navigation, the conversation and the agent pill (it floats over the view while an answer is being written and
+the conversation is folded) are frosted glass over the background; dialogs and menus are solid.
 
 ## Resource pools: `~/.research-deck/pools/<id>.yaml`
 

@@ -58,7 +58,7 @@
 .vz-preview.is-failed img { opacity: .45; }
 .vz-preview-flag {
   position: absolute; left: 10px; bottom: 10px; display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px;
-  border-radius: var(--r-sm); background: var(--accent-wash); color: var(--accent); font-size: var(--fs-xs);
+  border-radius: var(--r-sm); background: var(--accent-wash); color: var(--accent-text); font-size: var(--fs-xs);
 }
 .vz-log { border: var(--line) solid var(--rule); border-radius: var(--r-md); background: var(--surface); }
 .vz-log summary { display: flex; align-items: center; gap: 6px; padding: 7px 10px; cursor: pointer; list-style: none; color: var(--muted); }

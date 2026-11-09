@@ -13,6 +13,11 @@ export function parseColor(value: string): Rgb | null {
   if (long) return [0, 2, 4].map(i => parseInt(long[1].slice(i, i + 2), 16)) as Rgb;
   const fn = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/.exec(v);
   if (fn) return [fn[1], fn[2], fn[3]].map(x => Math.min(255, Math.round(Number(x)))) as Rgb;
+  // Radix's wide-gamut values on a P3 screen; read as sRGB, which is close enough for picking terminal colors
+  const p3 = /^color\(\s*(?:display-p3|srgb)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/.exec(v);
+  if (p3) return [p3[1], p3[2], p3[3]].map(x => Math.min(255, Math.round(Number(x) * 255))) as Rgb;
+  if (v === 'white') return [255, 255, 255];
+  if (v === 'black') return [0, 0, 0];
   return null;
 }
 
@@ -41,7 +46,8 @@ export function readable(c: Rgb, ground: Rgb, toward: Rgb, min: number): Rgb {
   return toward;
 }
 
-export const TERM_TOKENS = ['--paper', '--surface', '--ink', '--ink-strong', '--slate', '--rule-strong',
+/** Solid colors only (styles/tokens.css): the page's own --paper and --surface are translucent over the art. */
+export const TERM_TOKENS = ['--solid-paper', '--solid-surface', '--ink', '--ink-strong', '--solid-slate', '--solid-rule',
   '--accent', '--ok', '--warn', '--info'] as const;
 type Token = (typeof TERM_TOKENS)[number];
 
@@ -62,9 +68,9 @@ export function terminalColors(read: (token: string) => string): TermColors | nu
     if (!c) return null;
     tok[name] = c;
   }
-  const darkUi = luminance(tok['--paper']) < luminance(tok['--ink']);
-  const ground = darkUi ? tok['--paper'] : tok['--ink-strong'];
-  const top = darkUi ? tok['--ink-strong'] : tok['--surface'];       // the lightest token: colors lift toward it
+  const darkUi = luminance(tok['--solid-paper']) < luminance(tok['--ink']);
+  const ground = darkUi ? tok['--solid-paper'] : tok['--ink-strong'];
+  const top = darkUi ? tok['--ink-strong'] : tok['--solid-surface'];       // the lightest token: colors lift toward it
   const fg = darkUi ? tok['--ink'] : mix(top, ground, 0.1);
   const tone = (c: Rgb) => readable(c, ground, top, 4.5);
   const bright = (c: Rgb) => mix(tone(c), top, 0.3);
@@ -78,7 +84,7 @@ export function terminalColors(read: (token: string) => string): TermColors | nu
     selectionBackground: `${hex(tone(blue))}59`, selectionInactiveBackground: `${hex(tone(blue))}40`,
     scrollbarSliderBackground: `${hex(fg)}33`, scrollbarSliderHoverBackground: `${hex(fg)}55`,
     scrollbarSliderActiveBackground: `${hex(fg)}77`, overviewRulerBorder: hex(ground),
-    black: hex(darkUi ? tok['--rule-strong'] : tok['--ink']), brightBlack: hex(readable(tok['--slate'], ground, top, 3.5)),
+    black: hex(darkUi ? tok['--solid-rule'] : tok['--ink']), brightBlack: hex(readable(tok['--solid-slate'], ground, top, 3.5)),
     white: hex(mix(fg, ground, 0.12)), brightWhite: hex(top),
   };
   for (const [name, c] of Object.entries(ansi)) {

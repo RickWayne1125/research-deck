@@ -14,7 +14,7 @@
 .ex-cell { color: var(--slate); }
 
 /* ---------------------------------------------------------------- toolbar and filters */
-.ex-toolbar { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 8px 18px; border-bottom: var(--line) solid var(--rule); background: var(--paper); }
+.ex-toolbar { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 8px 18px; border-bottom: var(--line) solid var(--rule); background: var(--paper-solid); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
 .ex-search { position: relative; display: flex; align-items: center; min-width: 0; }
 .ex-search > svg { position: absolute; left: 8px; color: var(--faint); pointer-events: none; }
 .ex-search .input { padding-left: 27px; width: 240px; max-width: 100%; min-height: 28px; font-size: var(--fs-sm); }
@@ -61,7 +61,7 @@
 .ex-meter-fill.warn { background: var(--warn); }
 
 /* ---------------------------------------------------------------- drawer */
-.ex-drawer { position: absolute; top: 0; right: 0; bottom: 0; z-index: 10; width: min(560px, 100%); display: flex; flex-direction: column; background: var(--surface); border-left: var(--line) solid var(--rule); box-shadow: var(--shadow-pop); }
+.ex-drawer { position: absolute; top: 0; right: 0; bottom: 0; z-index: 10; width: min(560px, 100%); display: flex; flex-direction: column; background: var(--color-panel-solid); border-left: var(--line) solid var(--rule); box-shadow: var(--shadow-pop); }
 .ex-drawer-head { display: flex; align-items: flex-start; gap: 8px; padding: 12px 14px 10px 18px; border-bottom: var(--line) solid var(--rule); }
 .ex-drawer-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 14px 18px 24px; display: flex; flex-direction: column; gap: 14px; }
 .ex-sec { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
@@ -108,7 +108,7 @@
 .ex-form { gap: 12px; }
 .ex-json { min-height: 110px; font-size: 12px; }
 .ex-json.invalid { border-color: var(--accent-line); }
-.ex-bad { color: var(--accent); }
+.ex-bad { color: var(--accent-text); }
 .ex-fieldset { border: var(--line) solid var(--rule); border-radius: var(--r-md); padding: 8px 12px 12px; margin: 0; min-width: 0; }
 .ex-fieldset > legend { padding: 0 4px; }
 .ex-grid4 { display: grid; grid-template-columns: 1.3fr 1.3fr .6fr 1.3fr; gap: 8px; }

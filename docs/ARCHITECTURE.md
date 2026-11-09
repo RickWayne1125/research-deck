@@ -43,12 +43,17 @@ research-deck/
               sign-in window on macOS: the system's WebKit, built once with xcrun swiftc), login.py (the same window
               elsewhere: Chromium through Playwright), session.py (which window, building it, renewal), sync.py
               (binding, one-way sync, conflicts, the scan), api.py
+    appearance.py              Settings → Appearance: the Radix theme and the background (settings.json), an uploaded
+                               background picture in ~/.research-deck/backgrounds/
     vault.py                   secrets Research Deck obtains itself, in ~/.research-deck/secrets/ (0700, files 0600)
     mcp_server.py              stdio MCP server exposing the dashboard to Codex/Claude (proxies the HTTP API)
   web/src/                     React 18 + TypeScript + Vite
     App.tsx state/ api/client.ts types.ts i18n/ styles/ components/   shell + shared (core)
-    state/                     app.tsx (route, project, events), today.tsx (what needs a decision, the outline, the
-                               task being worked on), stages.ts, views.ts
+    state/                     app.tsx (route, project, events, light or dark), appearance.ts (the Radix theme on
+                               <html>, cached for the first paint), today.tsx (what needs a decision, the outline,
+                               the task being worked on), stages.ts, views.ts
+    styles/                    tokens.css (the app's names over the Radix Themes tokens in vendor/), base.css (the
+                               shared classes, drawn as Radix components), shell.css, backdrop.css (the art behind)
     agent/                     AgentDock (the project conversation), useAgentRun (core hook), parts
     start/                     the new-project dialog, the survey card (on the outline page), Settings → New projects
     pools/                     Settings → Resource pools, the add/edit wizard, price and cost formatting
@@ -121,7 +126,13 @@ research-deck/
   (its `kind` and `views`).
   Panel CSS goes in `panels/<view>/<view>.css`, classes prefixed (`.td-`, `.ov-`, `.dg-`, `.dl-`, `.ex-`, `.wr-`, `.vz-`,
   `.cd-`, `.st-`),
-  colors only through the tokens in `styles/tokens.css` (light + dark).
+  colors only through the tokens in `styles/tokens.css`. Those are names over Radix Themes 3.3's tokens
+  (`styles/vendor/radix-themes-tokens.css`, MIT): `<html>` is the Radix theme root (`radix-themes light|dark`,
+  `data-accent-color`, `data-gray-color`, `data-radius`), so every view follows Settings → Appearance and light or
+  dark. The shared classes in `styles/base.css` (`.btn`, `.seg`, `.badge`, `.card`, `.input`, `.dialog`, …) are drawn
+  as the Radix components with those tokens. The page shows background art (`components/Backdrop.tsx`): the
+  navigation, the conversation and the agent pill are frosted glass (`--glass`), a view's sheet is `--paper`
+  (translucent), what floats over content uses `--color-panel-solid`.
 - **Language**: the UI is fully bilingual (zh default, en). Paper text, code and labels inside figures are never
   translated by the UI.
 - **Safety** (security review 2026-11-02; regression tests in tests/test_security.py):

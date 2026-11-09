@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from . import __version__, actors, config, events, projects, system
+from . import __version__, actors, appearance, config, events, projects, system
 
 log = logging.getLogger("research_deck")
 
@@ -85,6 +85,7 @@ def create_app() -> FastAPI:
     app.include_router(events.router)
     app.include_router(actors.router)
     app.include_router(system.router)
+    app.include_router(appearance.router)
     app.include_router(projects.router)
     for pkg in PANEL_PACKAGES:
         try:

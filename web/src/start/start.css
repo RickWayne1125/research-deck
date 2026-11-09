@@ -11,7 +11,7 @@
 .np-link { border: 0; background: none; padding: 0; color: var(--info); cursor: pointer; font: inherit; text-align: left; }
 .np-link:hover { text-decoration: underline; }
 .np-small { font-size: var(--fs-xs); }
-.np-error { font-size: var(--fs-xs); color: var(--accent); }
+.np-error { font-size: var(--fs-xs); color: var(--accent-text); }
 .np-row { gap: 14px; align-items: flex-start; }
 .np-kind { min-height: 34px; }
 .np-where { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
@@ -37,7 +37,7 @@
 .sv-small { font-size: var(--fs-xs); }
 .sv-chip.is-running { color: var(--info); border-color: color-mix(in srgb, var(--info) 45%, transparent); background: var(--info-wash); }
 .sv-chip.is-done { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, transparent); background: var(--ok-wash); }
-.sv-chip.is-error { color: var(--accent); border-color: var(--accent-line); background: var(--accent-wash); }
+.sv-chip.is-error { color: var(--accent-text); border-color: var(--accent-line); background: var(--accent-wash); }
 .sv-note { margin: 10px 16px 0; }
 .sv-steps { list-style: none; margin: 0; padding: 6px 16px 10px; display: flex; flex-direction: column; }
 .sv-step { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; font-size: var(--fs-sm); }
@@ -47,7 +47,7 @@
 .sv-meta { flex: none; font-size: var(--fs-xs); }
 .sv-mark {
   flex: none; width: 15px; height: 15px; margin-top: 2px; border-radius: 50%; border: 1.5px solid var(--rule-strong);
-  display: inline-grid; place-items: center; color: var(--paper);
+  display: inline-grid; place-items: center; color: white;
 }
 .sv-mark.is-done { background: var(--ok); border-color: var(--ok); }
 .sv-mark.is-error { background: var(--accent); border-color: var(--accent); }

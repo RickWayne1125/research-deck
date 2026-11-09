@@ -111,7 +111,7 @@
 .ag-queue-head { font: 500 9.5px/1.8 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--slate); }
 .ag-queue-item { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: var(--fs-sm); color: var(--faint); }
 .ag-queue-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); min-width: 0; }
-.ag-queue-btn { border: 0; background: none; padding: 2px 5px; border-radius: var(--r-xs); font-size: var(--fs-xs); color: var(--accent); cursor: pointer; flex: none; }
+.ag-queue-btn { border: 0; background: none; padding: 2px 5px; border-radius: var(--r-xs); font-size: var(--fs-xs); color: var(--accent-text); cursor: pointer; flex: none; }
 .ag-queue-btn:hover { background: var(--wash); }
 
 /* ---------------------------------------------------------------- bind dialog */
