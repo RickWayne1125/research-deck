@@ -46,6 +46,18 @@ interface AppValue {
 
 const AppContext = createContext<AppValue | null>(null);
 
+/** Which project to show: the route's (also while the project list has not loaded, and until a list fetched again
+ *  says it is not registered: a link to a project made in another tab must not bounce); else the last one shown, if
+ *  it is still registered; else the first; null when there is none. A removed project, a stale link or a remembered
+ *  id thus never leaves the page on "unknown project". */
+export function pickProject(route: string | null, last: string, projects: readonly { id: string }[],
+  { listed, missing }: { listed: boolean; missing: string | null }): string | null {
+  const registered = (id: string) => projects.some(p => p.id === id);
+  if (route && (!listed || registered(route) || missing !== route)) return route;
+  if (!listed) return null;
+  return registered(last) ? last : projects[0]?.id ?? null;
+}
+
 function readLocal<T extends string>(key: string, fallback: T): T {
   try { return (localStorage.getItem(key) as T) || fallback; } catch { return fallback; }
 }
@@ -53,6 +65,8 @@ function readLocal<T extends string>(key: string, fallback: T): T {
 export function AppProvider({ children }: { children: ReactNode }) {
   const [route, setRoute] = useState<Route>(parseHash);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [listed, setListed] = useState(false);                     // the project list has loaded at least once
+  const [missing, setMissing] = useState<string | null>(null);     // a route's project a fresh list does not have
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [theme, setThemeState] = useState<Theme>(() => readLocal<Theme>('rd.theme', 'auto'));
   const [health, setHealth] = useState<Health | null>(null);
@@ -70,9 +84,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const reloadProjects = useCallback(async () => {
-    try { setProjects(await get<ProjectSummary[]>('/api/projects')); setOnline(true); } catch { setOnline(false); }
+    try { setProjects(await get<ProjectSummary[]>('/api/projects')); setListed(true); setOnline(true); } catch { setOnline(false); }
   }, []);
   useEffect(() => { reloadProjects(); }, [reloadProjects]);
+
+  // The route names a project the list does not have: fetch the list once more (the project may be new) and only then
+  // let pickProject give way to a registered one.
+  const checked = useRef<string | null>(null);
+  useEffect(() => {
+    const id = route.projectId;
+    if (!listed || !id || projects.some(p => p.id === id) || checked.current === id) return;
+    checked.current = id;
+    get<ProjectSummary[]>('/api/projects').then(list => {
+      setProjects(list);
+      if (!list.some(p => p.id === id)) setMissing(id);
+    }).catch(() => { checked.current = null; });
+  }, [listed, route.projectId, projects]);
 
   // The session cookie marks this browser as the researcher (human-only DAG operations need it; see actors.py).
   useEffect(() => { get('/api/session').catch(() => {}); }, []);
@@ -82,12 +109,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     get<AgentCatalog>('/api/agents/catalog').then(setCatalog).catch(() => {});
   }, []);
 
-  // Default to the last project, else the first one.
-  const projectId = route.projectId ?? (projects.length ? (readLocal('rd.project', '') || projects[0].id) : null);
+  // The route's project, else the last one, else the first (pickProject); the address follows, replacing a project that
+  // is gone so that Back does not return to it.
+  const projectId = pickProject(route.projectId, readLocal('rd.project', ''), projects, { listed, missing });
   useEffect(() => {
-    if (!route.projectId && projectId) location.replace(`#/${encodeURIComponent(projectId)}/${route.view}`);
-    if (projectId) try { localStorage.setItem('rd.project', projectId); } catch { /* ignore */ }
-  }, [projectId, route.projectId, route.view]);
+    if (projectId && projectId !== route.projectId) location.replace(`#/${encodeURIComponent(projectId)}/${route.view}`);
+    else if (!projectId && route.projectId && listed && missing === route.projectId) location.replace('#/');
+    if (projectId && projects.some(p => p.id === projectId)) try { localStorage.setItem('rd.project', projectId); } catch { /* ignore */ }
+  }, [projectId, route.projectId, route.view, listed, missing, projects]);
 
   const reloadProject = useCallback(async () => {
     if (!projectId) { setProject(null); return; }
