@@ -33,7 +33,7 @@ import { ClaimCard, DocsDrawer, NoDoc, Preview } from './Parts';
 import { KEYS, MAC, baseName, docKind, lineEdits, wordCount } from './text';
 
 const AUTOSAVE_MS = 1200;
-const NARROW_PX = 1100;
+const NARROW_PX = 1060;      // the body's content box (inside the cards' 20 px margins)
 // The documents list is resizable (components/resize.tsx) up to 30 % of the body; when narrow it floats over the text.
 const DOCS = { initial: 248, min: 180, max: 420, share: 0.3 };
 /** The proofreading passes: spelling and grammar, the project's terms, then wording. */
@@ -579,9 +579,13 @@ export function WritingView() {
     askAgent(t(sel ? 'wr.ask.selection' : 'wr.ask.doc'), { file: doc.path, ...(sel ? { selection: sel } : {}) });
   };
   const showRestored = !!restored && (saveState === 'dirty' || saveState === 'saved');   // a conflict or an error says more
+  // the rail's two faces, as Radix tabs at the top of its card
   const leftSwitch = (
-    <Segmented<'outline' | 'docs'> value={left} onChange={setLeft} ariaLabel={t('wr.docs')}
-      options={[{ value: 'outline', label: t('ol.rail.tab.outline') }, { value: 'docs', label: t('ol.rail.tab.docs') }]} />
+    <div className="tabs" role="tablist" aria-label={t('wr.docs')}>
+      {(['outline', 'docs'] as const).map(k => (
+        <button key={k} type="button" role="tab" className="tab" aria-selected={left === k} onClick={() => setLeft(k)}>{t(`ol.rail.tab.${k}`)}</button>
+      ))}
+    </div>
   );
   const statusLabel = showRestored ? t('wr.status.restored') : t(`wr.status.${saveState}`);
 

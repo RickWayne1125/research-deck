@@ -159,8 +159,14 @@ kbd {
 
 /* panel frame: every main panel is a .panel with a .panel-head and a .panel-body; the head sits on the art */
 .panel { display: flex; flex-direction: column; height: 100%; min-height: 0; min-width: 0; }
-.panel-head { flex: none; display: flex; align-items: center; gap: var(--gap-3); padding: 12px 20px; border-bottom: var(--line) solid var(--gray-a4); min-height: 56px; background: transparent; }
+.panel-head { flex: none; display: flex; align-items: center; gap: var(--gap-3); padding: 18px var(--view-pad) 14px; min-height: 64px; background: transparent; }
 .panel-head .h1 { font-size: var(--font-size-5); line-height: var(--line-height-5); letter-spacing: var(--letter-spacing-5); }
+/* the head's icon buttons are Radix's soft gray IconButton, as tall as its other controls */
+.panel-head .icon-btn { width: var(--space-6); height: var(--space-6); background: var(--gray-a3); color: var(--gray-12); }
+.panel-head .icon-btn:hover { background: var(--gray-a4); }
+.panel-head .icon-btn[aria-pressed="true"] { background: var(--accent-a4); color: var(--accent-a11); }
+/* tabs right under a view's head (Code, Experiments) line up with its cards */
+.panel > .tabs { margin: 0 var(--view-pad) 12px; padding: 0; }
 .panel-body { flex: 1 1 auto; min-height: 0; overflow: auto; }
 .empty { display: grid; place-items: center; gap: 6px; padding: 40px 20px; text-align: center; color: var(--muted); }
 .empty .h3 { color: var(--ink); }
@@ -210,10 +216,12 @@ html.rd-resizing, html.rd-resizing * { cursor: col-resize !important; user-selec
 html.rd-resizing iframe { pointer-events: none !important; }
 @media (prefers-reduced-motion: reduce) { .rs-handle::after { transition: none; } }
 
-/* two panes with a draggable divider (Split in components/ui.tsx) */
-.split { display: flex; height: 100%; min-height: 0; min-width: 0; }
-.split-a { position: relative; flex: none; width: var(--split-w, 320px); min-width: 0; min-height: 0; border-right: var(--line) solid var(--rule); }
-.split-scroll { height: 100%; overflow: auto; }
+/* two cards with a draggable divider in the gap between them (Split in components/ui.tsx) */
+.split { display: flex; gap: var(--view-gap); height: 100%; min-height: 0; min-width: 0; padding: 0 var(--view-pad) var(--view-pad); }
+.split-a, .split-b { background: var(--sheet); border-radius: var(--sheet-radius); box-shadow: var(--sheet-shadow); }
+.split-a { position: relative; flex: none; width: var(--split-w, 320px); min-width: 0; min-height: 0; }
+.split-a > .rs-handle[data-edge="right"] { right: calc(var(--view-gap) / -2 - 4px); }
+.split-scroll { height: 100%; overflow: auto; border-radius: inherit; }
 .split-b { flex: 1 1 auto; min-width: 0; min-height: 0; overflow: auto; }
 
 /* code and diffs */

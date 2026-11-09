@@ -8,7 +8,8 @@
 /* ---------------------------------------------------------------- dock frame */
 .ag-dock { display: flex; flex-direction: column; height: 100%; min-height: 0; min-width: 0; }
 .ag-pad { padding: 12px; }
-.ag-head { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-bottom: var(--line) solid var(--rule); background: var(--surface); flex: none; }
+.ag-head { display: flex; flex-direction: column; gap: 8px; padding: 14px 14px 8px 16px; flex: none; }
+.ag-head .h3 { font-size: var(--font-size-3); line-height: var(--line-height-3); font-weight: 700; letter-spacing: var(--letter-spacing-3); }
 .ag-head-note { font-weight: 400; font-size: var(--fs-sm); }
 .ag-running { display: inline-flex; padding: 0 4px; }
 .ag-running .dot { animation: ag-pulse 1.4s ease-in-out infinite; }
@@ -17,14 +18,15 @@
 .ag-head-row { gap: 6px; }
 
 /* the model pill and its popover; the session menu */
+/* drawn as a Radix Select trigger (surface) */
 .ag-pill {
   display: inline-flex; align-items: center; gap: 5px; max-width: 190px; height: 28px; padding: 0 8px;
-  border: var(--line) solid var(--rule-strong); border-radius: var(--r-md); background: var(--surface); color: var(--ink);
-  font: 500 var(--fs-sm)/1 var(--sans); cursor: pointer; min-width: 0; flex: 0 1 auto;
+  border: 0; border-radius: var(--r-btn); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--gray-a7); color: var(--gray-12);
+  font: 500 var(--fs-sm)/1 var(--sans); cursor: pointer; min-width: 0; flex: 0 1 auto; transition: box-shadow .12s;
 }
-.ag-pill:hover { border-color: var(--slate); }
+.ag-pill:hover { box-shadow: inset 0 0 0 1px var(--gray-a8); }
 .ag-pill-model { min-width: 0; }
-.ag-pill-effort { font: 500 10.5px/1 var(--mono); color: var(--slate); flex: none; }
+.ag-pill-effort { font: 500 10.5px/1 var(--sans); color: var(--gray-a10); flex: none; }
 .ag-pill-pop { width: 270px; padding: 10px; gap: 10px; }
 .ag-pill-pop .seg { align-self: flex-start; }
 .ag-pill-hint { margin: 0; font-size: var(--fs-xs); line-height: 1.4; }
@@ -44,25 +46,26 @@
 .seg > button[aria-pressed="true"] .ag-mark { color: currentColor; }
 
 
-.ag-fake { font-size: var(--fs-xs); color: var(--muted); background: var(--plate); border-radius: var(--r-sm); padding: 4px 8px; }
+.ag-fake { font-size: var(--fs-xs); color: var(--gray-a11); background: var(--gray-a3); border-radius: var(--radius-3); padding: 6px 9px; }
 
 /* ---------------------------------------------------------------- conversation */
-.ag-log { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 8px 12px 14px; display: flex; flex-direction: column; gap: 12px; background: var(--paper); }
+.ag-log { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 8px 14px 14px 16px; display: flex; flex-direction: column; gap: 14px; }
 .ag-empty { text-align: center; padding: 24px 8px; font-size: var(--fs-sm); }
 .ag-notice { font-size: var(--fs-xs); color: var(--muted); text-align: center; }
 
 .ag-msg { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .ag-msg.user { align-items: flex-end; }
+/* the researcher's message: the accent's soft fill (Radix), as in a chat */
 .ag-bubble {
-  max-width: 88%; padding: 7px 11px; border-radius: var(--r-lg) var(--r-lg) var(--r-xs) var(--r-lg); background: var(--surface);
-  border: var(--line) solid var(--rule); white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-md); line-height: 1.5;
+  max-width: 88%; padding: 9px 12px; border-radius: var(--radius-4); background: var(--accent-a3); color: var(--gray-12);
+  border: var(--line) solid transparent; white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-md); line-height: 1.5;
 }
 .ag-msg.assistant { padding-left: 2px; }
 .ag-answer { font-size: var(--fs-md); }
 .ag-msg.imported { opacity: .78; }
-.ag-msg.imported .ag-bubble { border-style: dashed; background: transparent; }
-.ag-msg.assistant.imported { border-left: 2px dashed var(--rule-strong); padding-left: 9px; }
-.ag-imported { font: 500 10px/1 var(--mono); letter-spacing: .04em; text-transform: uppercase; }
+.ag-msg.imported .ag-bubble { border-style: dashed; border-color: var(--gray-a7); background: transparent; }
+.ag-msg.assistant.imported { border-left: 2px dashed var(--gray-a7); padding-left: 9px; }
+.ag-imported { font: 500 10.5px/1 var(--sans); }
 .ag-meta { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: 10.5px; color: var(--faint); }
 .ag-meta.right { justify-content: flex-end; }
 .ag-tool { font-size: 11px; line-height: 1.5; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -77,9 +80,9 @@
 .ag-usage { font-size: 10.5px; color: var(--faint); }
 .ag-thinking { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: var(--fs-sm); }
 /* messages steered into a running answer: read (in place) and not read yet (at the bottom) */
-.ag-msg.user.steered .ag-bubble { border-color: var(--accent-line); }
+.ag-msg.user.steered .ag-bubble { border-color: var(--accent-a7); }
 .ag-msg.user.pending { opacity: .62; }
-.ag-msg.user.pending .ag-bubble { border-style: dashed; background: transparent; }
+.ag-msg.user.pending .ag-bubble { border-style: dashed; border-color: var(--accent-a7); background: transparent; }
 .ag-msg.user.pending .ag-meta { gap: 4px; }
 .ag-cut { color: var(--muted); }
 .ag-cut.error { color: var(--warn); }
@@ -87,7 +90,7 @@
 .ag-error .notice { align-self: stretch; }
 
 /* system lines: backend switches and agents' notes */
-.ag-sys { border-top: var(--line) solid var(--rule); border-bottom: var(--line) solid var(--rule); padding: 4px 0; }
+.ag-sys { border-top: var(--line) solid var(--gray-a4); border-bottom: var(--line) solid var(--gray-a4); padding: 4px 0; }
 .ag-sys > summary { display: flex; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--muted); cursor: pointer; list-style: none; padding: 2px 0; }
 .ag-sys > summary::-webkit-details-marker { display: none; }
 .ag-sys > summary:hover { color: var(--ink); }
@@ -95,11 +98,11 @@
 .ag-sys-file { font-size: 10.5px; margin-top: 6px; overflow-wrap: anywhere; }
 
 /* ---------------------------------------------------------------- composer */
-.ag-compose { display: flex; flex-direction: column; gap: 6px; padding: 8px 12px 12px; border-top: var(--line) solid var(--rule); background: var(--surface); flex: none; }
+.ag-compose { display: flex; flex-direction: column; gap: 8px; padding: 8px 14px 14px 16px; flex: none; }
 .ag-chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .ag-ctx { max-width: 100%; gap: 5px; padding-right: 3px; }
 .ag-ctx.route { border-style: dashed; }
-.ag-ctx-kind { font: 500 9.5px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--slate); flex: none; }
+.ag-ctx-kind { font: 500 10.5px/1 var(--sans); color: var(--gray-a10); flex: none; }
 .ag-ctx .mono { max-width: 190px; color: var(--ink); }
 .ag-ctx-x { display: inline-grid; place-items: center; width: 15px; height: 15px; border: 0; border-radius: 50%; background: none; color: var(--faint); cursor: pointer; padding: 0; flex: none; }
 .ag-ctx-x:hover { background: var(--wash); color: var(--ink); }
@@ -107,12 +110,18 @@
 .ag-compose-foot { gap: 6px; }
 
 /* messages waiting for the answer in progress to end */
-.ag-queue { display: flex; flex-direction: column; gap: 1px; border: var(--line) solid var(--rule); border-radius: var(--r-md); padding: 4px 4px 4px 8px; background: var(--paper); max-height: 30vh; overflow: auto; }
-.ag-queue-head { font: 500 9.5px/1.8 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--slate); }
-.ag-queue-item { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: var(--fs-sm); color: var(--faint); }
-.ag-queue-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); min-width: 0; }
-.ag-queue-btn { border: 0; background: none; padding: 2px 5px; border-radius: var(--r-xs); font-size: var(--fs-xs); color: var(--accent-text); cursor: pointer; flex: none; }
-.ag-queue-btn:hover { background: var(--wash); }
+/* messages waiting their turn: a soft box with Radix soft buttons (send now, edit) */
+.ag-queue { display: flex; flex-direction: column; gap: 6px; border: var(--line) solid var(--gray-a4); border-radius: var(--radius-4); padding: 9px 10px 10px 12px; background: var(--gray-a2); max-height: 30vh; overflow: auto; }
+.ag-queue-head { font: 500 var(--fs-xs)/1.4 var(--sans); color: var(--gray-a11); }
+.ag-queue-item { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: var(--fs-md); color: var(--faint); }
+.ag-queue-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--gray-12); min-width: 0; }
+.ag-queue-btn {
+  border: 0; background: var(--accent-a3); padding: 0 8px; min-height: var(--space-5); border-radius: var(--r-btn-sm);
+  font: 500 var(--fs-xs)/1 var(--sans); color: var(--accent-a11); cursor: pointer; flex: none; transition: background-color .12s;
+}
+.ag-queue-btn:hover { background: var(--accent-a4); }
+.ag-queue-btn + .ag-queue-btn { background: var(--gray-a3); color: var(--gray-12); }
+.ag-queue-btn + .ag-queue-btn:hover { background: var(--gray-a4); }
 
 /* ---------------------------------------------------------------- bind dialog */
 .ag-bind-list { border: var(--line) solid var(--rule); border-radius: var(--r-md); max-height: 52vh; overflow: auto; }

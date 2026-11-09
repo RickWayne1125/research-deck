@@ -18,6 +18,13 @@
   --wash: var(--gray-a3);
   --glass: var(--color-panel-translucent);
   --glass-filter: blur(40px) saturate(1.6);
+  /* a view's content floats on the art in cards (Radix Card, surface): their fill, radius and shadow, the margin
+     around them and the gap between them */
+  --sheet: color-mix(in oklab, var(--color-panel-solid) 78%, transparent);
+  --sheet-radius: var(--radius-5);
+  --sheet-shadow: 0 0 0 1px var(--gray-a4), 0 1px 1px var(--black-a1), 0 14px 38px -14px var(--accent-a5), 0 4px 14px -6px var(--black-a2);
+  --view-pad: 20px;
+  --view-gap: 16px;
   /* solid colors for what cannot draw translucent tokens (the log terminal, panels/experiments/termTheme.ts) */
   --solid-paper: var(--color-background);
   --solid-surface: var(--color-panel-solid);

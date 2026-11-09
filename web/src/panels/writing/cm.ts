@@ -67,8 +67,8 @@ export const proseTheme = EditorView.theme({
   '&.cm-focused': { outline: 'none' },
   '.cm-gutters': { backgroundColor: 'transparent', color: 'var(--faint)', border: 'none', fontFamily: 'var(--mono)', fontSize: '10.5px' },
   '.cm-lineNumbers .cm-gutterElement': { padding: '0 6px 0 10px', lineHeight: 'inherit', minWidth: '34px' },
-  '.cm-activeLineGutter': { backgroundColor: 'transparent', color: 'var(--muted)' },
-  '.cm-activeLine': { backgroundColor: 'color-mix(in srgb, var(--wash) 45%, transparent)' },
+  '.cm-activeLineGutter': { backgroundColor: 'var(--accent-a3)', color: 'var(--accent-11)' },
+  '.cm-activeLine': { backgroundColor: 'var(--accent-a3)' },
   '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection':
     { backgroundColor: 'color-mix(in srgb, var(--accent) 16%, transparent)' },
   '.cm-matchingBracket, &.cm-focused .cm-matchingBracket': { backgroundColor: 'var(--wash)', outline: '1px solid var(--rule-strong)' },

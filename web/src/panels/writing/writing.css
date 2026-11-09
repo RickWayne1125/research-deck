@@ -2,36 +2,47 @@
    a card over a tinted passage, findings in a side list. Colors only through tokens. */
 
 /* ---------------------------------------------------------------- frame */
-.wr-subtitle { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
-.wr-subtitle .mono { font-size: 11px; color: var(--faint); }
-.wr-status { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); white-space: nowrap; }
-.wr-status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); flex: none; transition: background-color .3s; }
-.wr-status.saved .wr-status-dot { background: var(--ok); }
-.wr-status.dirty .wr-status-dot { background: var(--warn); animation: wr-pulse 1.6s ease-in-out infinite; }
-.wr-status.saving .wr-status-dot { background: var(--info); }
-.wr-status.error, .wr-status.conflict { color: var(--accent-text); }
-.wr-status.error .wr-status-dot, .wr-status.conflict .wr-status-dot { background: var(--accent); }
+/* under the title: the save state as a Radix soft badge, the path as a soft code chip, the word count */
+.wr-subtitle { display: inline-flex; align-items: center; gap: 8px; min-width: 0; margin-top: 4px; }
+.wr-subtitle .mono {
+  font-size: 11.5px; color: var(--gray-a11); background: var(--gray-a3); padding: 1px 6px; min-width: 0;
+  border-radius: calc(var(--radius-factor) * 4px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wr-status {
+  display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; white-space: nowrap; font-weight: 500;
+  border-radius: max(var(--radius-1), var(--radius-full)); background: var(--gray-a3); color: var(--gray-a11);
+}
+.wr-status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+.wr-status.saved { background: var(--green-a3); color: var(--green-a11); }
+.wr-status.dirty { background: var(--amber-a3); color: var(--amber-a11); }
+.wr-status.dirty .wr-status-dot { animation: wr-pulse 1.6s ease-in-out infinite; }
+.wr-status.saving { background: var(--blue-a3); color: var(--blue-a11); }
+.wr-status.error, .wr-status.conflict { background: var(--red-a3); color: var(--red-a11); }
 @keyframes wr-pulse { 50% { opacity: .35; } }
 @media (prefers-reduced-motion: reduce) { .wr-status.dirty .wr-status-dot { animation: none; } }
 .wr-small { font-size: var(--fs-sm); }
 
 /* --wr-docs-w and --wr-findings-w: resizable columns, set on .wr-body (index.tsx, components/resize.tsx) */
-.wr-body { display: grid; grid-template-columns: minmax(0, 1fr); overflow: hidden; }
+.wr-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--view-gap); padding: 2px var(--view-pad) var(--view-pad); overflow: hidden; }
 .wr-body.with-docs { grid-template-columns: var(--wr-docs-w, 248px) minmax(0, 1fr); }
 .wr-body { position: relative; }
-.wr-docs.floating { position: absolute; z-index: 20; left: 0; top: 0; bottom: 0; width: var(--wr-docs-w, 272px); box-shadow: var(--shadow-pop); background: var(--color-panel-solid); }
-.wr-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.wr-docs.floating { position: absolute; z-index: 20; left: var(--view-pad); top: 2px; bottom: var(--view-pad); width: var(--wr-docs-w, 272px); box-shadow: var(--shadow-5); background: var(--color-panel-solid); }
+.wr-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
+.wr-docs, .wr-main { border-radius: var(--sheet-radius); background: var(--sheet); box-shadow: var(--sheet-shadow); }
+.wr-docs > .rs-handle[data-edge="right"] { right: calc(var(--view-gap) / -2 - 4px); }
 .wr-banner { display: flex; align-items: center; gap: 8px; margin: 10px 16px 0; }
 .wr-banner > .notice { flex: 1; }
-.wr-sheet { flex: 1 1 auto; min-height: 0; overflow: auto; background: var(--paper); }
+.wr-sheet { flex: 1 1 auto; min-height: 0; overflow: auto; }
 .wr-page { max-width: 830px; margin: 0 auto; }
 .wr-cm .cm-editor { background: transparent; }
 .wr-cm .cm-content:focus-visible, .wr-merge-host .cm-content:focus-visible { box-shadow: none; }   /* the caret shows focus */
 .wr-empty { margin: 8px 2px; color: var(--muted); font-size: var(--fs-sm); line-height: 1.55; }
 
 /* ---------------------------------------------------------------- documents drawer */
-.wr-docs { position: relative; display: flex; flex-direction: column; min-height: 0; border-right: var(--line) solid var(--rule); background: var(--paper); }
-.wr-docs-head { display: flex; align-items: center; gap: 4px; padding: 8px 8px 6px 14px; }
+.wr-docs { position: relative; display: flex; flex-direction: column; min-height: 0; }
+.wr-docs-head { display: flex; align-items: center; gap: 4px; padding: 10px 10px 6px 14px; }
+.wr-docs-head .tabs { flex: 1 1 auto; padding: 0; }
+.wr-docs-list, .ol-rail .ol-rail-body { border-radius: 0 0 var(--sheet-radius) var(--sheet-radius); }
 .wr-docs-filter { padding: 0 10px 8px; }
 .wr-docs-filter .input { width: 100%; }
 .wr-docs-list { flex: 1; overflow: auto; padding: 0 6px 12px; }

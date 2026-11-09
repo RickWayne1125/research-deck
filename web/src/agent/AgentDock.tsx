@@ -391,7 +391,7 @@ function DockBody({ pid }: { pid: string }) {
           {running && (
             <Button icon="stop" variant={typed ? 'ghost' : undefined} onClick={stop} disabled={!live?.runId} title={t('ag.stopHint')}>{t('agent.cancel')}</Button>
           )}
-          {running && typed && <Button icon="hourglass" onClick={queueInput} title={t('ag.queue.hint')}>{t('ag.queue.add')}</Button>}
+          {running && typed && <Button variant="soft" icon="hourglass" onClick={queueInput} title={t('ag.queue.hint')}>{t('ag.queue.add')}</Button>}
           {running && typed && (
             <Button variant="accent" icon="send" onClick={submit} disabled={!live?.runId}
               title={t(steerable ? 'ag.steer.hint' : 'ag.steer.restartHint', { agent: liveAgent })}>

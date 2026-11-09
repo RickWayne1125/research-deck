@@ -10,11 +10,13 @@
 .is-strike { text-decoration: line-through; text-decoration-color: var(--slate); }
 
 /* ---------------------------------------------------------------- frame */
-.dg-toolbar { display: flex; align-items: center; gap: 12px; padding: 6px 18px; border-bottom: var(--line) solid var(--rule); background: var(--paper); min-height: 42px; }
-.dg-body { display: flex; min-height: 0; overflow: hidden; }
-.dg-canvas { position: relative; flex: 1 1 auto; min-width: 0; min-height: 0; background: var(--paper); }
+.dg-toolbar { display: flex; align-items: center; gap: 12px; padding: 0 var(--view-pad) 12px; min-height: 42px; }
+.dg-body { display: flex; gap: var(--view-gap); min-height: 0; overflow: hidden; padding: 0 var(--view-pad) var(--view-pad); }
+.dg-canvas { position: relative; flex: 1 1 auto; min-width: 0; min-height: 0; overflow: hidden; border-radius: var(--sheet-radius); background: var(--sheet); box-shadow: var(--sheet-shadow); }
 /* --dg-side-w: resizable (index.tsx, components/resize.tsx); the guard keeps some map when a stored width is too wide */
-.dg-side { position: relative; width: var(--dg-side-w); max-width: calc(100% - 200px); flex: none; min-height: 0; border-left: var(--line) solid var(--rule); background: var(--surface); display: flex; flex-direction: column; }
+.dg-side { position: relative; width: var(--dg-side-w); max-width: calc(100% - 200px); flex: none; min-height: 0; border-radius: var(--sheet-radius); background: var(--sheet); box-shadow: var(--sheet-shadow); display: flex; flex-direction: column; }
+.dg-side > .rs-handle[data-edge="left"] { left: calc(var(--view-gap) / -2 - 4px); }
+.dg-side-scroll { border-radius: 0 0 var(--sheet-radius) var(--sheet-radius); }
 .dg-side-inner { display: flex; flex-direction: column; min-height: 0; height: 100%; }
 .dg-side-head { display: flex; align-items: flex-start; gap: 8px; padding: 12px 14px 10px; border-bottom: var(--line) solid var(--rule); }
 .dg-side-sub { font-size: var(--fs-xs); line-height: 1.4; }
@@ -44,7 +46,7 @@
 /* ---------------------------------------------------------------- the map */
 .dg-flow { position: absolute; inset: 0; }
 .dg-flow .react-flow {
-  --xy-background-color: var(--paper);
+  --xy-background-color: transparent;
   --xy-edge-stroke: var(--slate);
   --xy-edge-label-background-color: var(--surface);
   --xy-edge-label-color: var(--ink);
@@ -367,8 +369,8 @@
 .dg-filter.on { background: var(--ink); border-color: var(--ink); color: var(--gray-1); }
 .dg-filter.on .num { color: color-mix(in srgb, var(--gray-1) 70%, transparent); }
 .dg-filter:disabled { opacity: .45; cursor: default; }
-.dg-canvas.is-list { overflow: auto; background: var(--paper); }
-.dl-list { max-width: 980px; margin: 0 auto; padding: 14px 24px 32px; display: flex; flex-direction: column; gap: 18px; }
+.dg-canvas.is-list { overflow: auto; background: transparent; box-shadow: none; border-radius: 0; }
+.dl-list { max-width: 980px; margin: 0 auto; padding: 2px 0 32px; display: flex; flex-direction: column; gap: 20px; }
 .dl-list-empty { padding: 48px; text-align: center; }
 .dl-list-keys { font-size: var(--fs-xs); text-align: center; }
 .dl-group { display: flex; flex-direction: column; gap: 6px; }
@@ -376,7 +378,7 @@
 .dl-group-title { margin: 0; font: 600 var(--fs-md)/1.3 var(--sans); color: var(--ink-strong); }
 .dl-group-gate { border: 0; background: none; padding: 0; color: var(--info); font-size: var(--fs-sm); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .dl-group-none { font-size: var(--fs-sm); padding: 4px 2px; }
-.dl-rows { list-style: none; margin: 0; padding: 0; background: var(--surface); border: var(--line) solid var(--rule); border-radius: var(--r-lg); overflow: hidden; }
+.dl-rows { list-style: none; margin: 0; padding: 0; background: var(--sheet); border-radius: var(--sheet-radius); box-shadow: var(--sheet-shadow); overflow: hidden; }
 .dl-row + .dl-row { border-top: var(--line) solid var(--rule); }
 .dl-row.dead { opacity: .7; }
 .dl-row-head {

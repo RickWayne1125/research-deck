@@ -131,8 +131,10 @@ research-deck/
   `data-accent-color`, `data-gray-color`, `data-radius`), so every view follows Settings → Appearance and light or
   dark. The shared classes in `styles/base.css` (`.btn`, `.seg`, `.badge`, `.card`, `.input`, `.dialog`, …) are drawn
   as the Radix components with those tokens. The page shows background art (`components/Backdrop.tsx`): the
-  navigation, the conversation and the agent pill are frosted glass (`--glass`), a view's sheet is `--paper`
-  (translucent), what floats over content uses `--color-panel-solid`.
+  navigation, the conversation (a floating card) and the agent pill are frosted glass (`--glass`); a view's head sits
+  on the art and its content in floating cards (`--sheet`, `--sheet-radius`, `--sheet-shadow`, `--view-pad` around
+  them, `--view-gap` between them; `Split` draws its two panes that way); what floats over content uses
+  `--color-panel-solid`.
 - **Language**: the UI is fully bilingual (zh default, en). Paper text, code and labels inside figures are never
   translated by the UI.
 - **Safety** (security review 2026-11-02; regression tests in tests/test_security.py):
