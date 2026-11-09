@@ -29,7 +29,9 @@ Most of these are also in **Settings**.
 
 ## Appearance
 
-**Settings → Appearance** sets the look of the whole dashboard. It is built on
+Settings is in four tabs: **General** (Appearance, the integrations found, About), **New projects** (with the outline
+templates), **Resource pools**, and **Literature & notes** (Zotero, Docmost). **Settings → Appearance** sets the look
+of the whole dashboard. It is built on
 [Radix Themes](https://www.radix-ui.com/themes):
 
 - **Theme.** Radix red (the default), Radix indigo and Radix teal are radix-ui.com's own looks: an accent, a matching
@@ -38,7 +40,8 @@ Most of these are also in **Settings**.
 - **Background** (custom). The Radix art in your accent, ribbons, a gradient, a glow, a plain fill, or a picture of
   your own: **Upload a picture…** takes PNG, JPEG, WebP, GIF or AVIF up to 15 MB, and **Picture blur** softens it. The
   picture is kept in `~/.research-deck/backgrounds/` (one at a time; a new one replaces it), never in a project.
-- **Light or dark** (or follow the system) is chosen per browser; everything else is the same in all your browsers.
+- **Light or dark** (or follow the system) and the **interface size** (Radix's scaling, 90 % to 110 %; 100 % is Radix's
+  own size) are chosen per browser; everything else is the same in all your browsers.
 - **Reset to default** goes back to Radix red; an uploaded picture stays available until you remove it.
 
 The navigation, the conversation and the agent pill (it floats over the view while an answer is being written and

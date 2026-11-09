@@ -86,9 +86,12 @@ tasks are done, or (without tasks) its evidence is confirmed, and its sub-items 
 
 ## Phases and leaving one
 
-The outline groups its sections by phase. A passed phase folds away unless something in it no longer holds; the
-current one says what leaving it takes. **Leave this phase** opens a check: the phase's items that do not hold yet,
-then the map's gates. Passing it saves a snapshot and moves the project on.
+Each section is a card with its phase and how many of its items hold. By phase, a passed phase folds into chips
+under the cards (**The other sections**; click one to open its phase) unless something in it no longer holds. The
+right column shows each phase's progress (how many of its items hold) and, under it, what leaving the current phase
+takes. Clicking that opens **Leave this phase**: a check of the phase's items that do not hold yet, then the map's
+gates. Passing it saves a snapshot and moves the project on. Below the phases, the **Tasks** card counts the tasks by
+state and lists the ones in play; **Task board** opens all of them.
 
 ## Forks and the research tree
 
@@ -100,7 +103,7 @@ directions, what each produced and why each was given up.
 
 ## What waits for you
 
-The strip above the outline counts the tasks by state and lists what needs you: forks to choose, items an agent added
+The line above the outline lists what needs you: forks to choose, items an agent added
 (they stay dashed until you accept them), blocked tasks, tasks an agent suggested, agent proposals, drafts to review,
 runs to start, failed runs. ++j++ / ++k++ move between them, ++y++ takes an item's first action and ++n++ its second.
 

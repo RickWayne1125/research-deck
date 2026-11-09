@@ -64,13 +64,34 @@ export function resolve(s: AppearanceSettings): Resolved {
   return { accent: s.custom.accent, gray: grayFor(s.custom.accent), radius: s.custom.radius, background, palette: background === 'radix' ? 'accent' : null };
 }
 
+const listeners = new Set<() => void>();
+
+/** The interface size (Radix's scaling): per browser, like light or dark; 100 % is Radix's own size. */
+export const SCALINGS = ['90%', '95%', '100%', '105%', '110%'] as const;
+export type Scaling = (typeof SCALINGS)[number];
+const SCALING_KEY = 'rd.scaling';
+
+export function readScaling(): Scaling {
+  try {
+    const v = localStorage.getItem(SCALING_KEY);
+    if ((SCALINGS as readonly string[]).includes(v ?? '')) return v as Scaling;
+  } catch { /* storage unavailable */ }
+  return '100%';
+}
+
+export function setScaling(v: Scaling, el: HTMLElement = document.documentElement) {
+  try { localStorage.setItem(SCALING_KEY, v); } catch { /* storage unavailable */ }
+  el.dataset.scaling = v;
+  listeners.forEach(fn => fn());
+}
+
 /** Put the theme on <html> (the Radix theme root). index.html does the same from the cache before React starts. */
 export function applyTheme(r: Resolved, el: HTMLElement = document.documentElement) {
   el.classList.add('radix-themes');
   el.dataset.accentColor = r.accent;
   el.dataset.grayColor = r.gray;
   el.dataset.radius = r.radius;
-  el.dataset.scaling = '100%';
+  el.dataset.scaling = readScaling();
   el.dataset.panelBackground = 'translucent';
   el.dataset.hasBackground = 'false';
   el.dataset.background = r.background;
@@ -111,7 +132,6 @@ export function normalize(v: unknown): AppearanceSettings {
 }
 
 let state: AppearanceSettings = typeof window === 'undefined' ? DEFAULTS : readCache();
-const listeners = new Set<() => void>();
 
 function set(next: AppearanceSettings) {
   state = next;
@@ -123,6 +143,11 @@ function set(next: AppearanceSettings) {
 }
 
 const subscribe = (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; };
+
+/** The interface size, following setScaling. */
+export function useScaling(): Scaling {
+  return useSyncExternalStore(subscribe, readScaling, () => '100%');
+}
 const snapshot = () => state;
 
 let loaded: Promise<void> | null = null;

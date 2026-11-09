@@ -16,6 +16,7 @@ import { OutlineProvider, useOl } from './ctx';
 import { allItems, outlinePending, outlineText } from './model';
 import { Story } from './Story';
 import { Inspector } from './Inspector';
+import { PhasesCard, TasksCard } from './Side';
 import { Board } from './Board';
 import { Tree } from './Tree';
 import { Focus } from './Focus';
@@ -46,7 +47,7 @@ function OutlinePage() {
   const t = useT();
   const { sub, navigate, askAgent, projectId } = useApp();
   const today = useToday();
-  const { o, lang, select, showAbandoned, setShowAbandoned, error, setError, note } = useOl();
+  const { o, lang, sel, select, showAbandoned, setShowAbandoned, error, setError, note } = useOl();
   const view: View = sub === '@tasks' ? 'tasks' : sub === '@tree' ? 'tree' : sub?.startsWith('@focus/') ? 'focus' : 'story';
   const focusId = view === 'focus' ? sub!.slice('@focus/'.length) : null;
   const [order, setOrder] = useLocal<'phase' | 'paper'>('rd.outline.order', 'phase');
@@ -86,7 +87,7 @@ function OutlinePage() {
                   {view === 'story' && <Segmented<'phase' | 'paper'> value={order} onChange={setOrder} ariaLabel={t('ol.order')}
                     options={[{ value: 'phase', label: t('ol.order.phase') }, { value: 'paper', label: t('ol.order.paper') }]} />}
                 </>}
-                <Button size="sm" icon="robot" onClick={evaluate}>{t('ol.evaluate')}</Button>
+                <Button variant="soft" icon="robot" onClick={evaluate}>{t('ol.evaluate')}</Button>
                 {o.file?.path && <button type="button" className="ol-link" title={t('ol.fileTitle', { path: o.file.path })}
                   onClick={() => navigate('writing', o.file!.path)}>{t('ol.file')}</button>}
                 <button type="button" className="ol-link" title={t('ol.mapTitle')} onClick={() => navigate('dag')}>{t('ol.map')}</button>
@@ -117,7 +118,14 @@ function OutlinePage() {
           ) : view === 'tasks' ? <Board /> : view === 'tree' ? <Tree /> : (
             <div className="ol-main">
               {view === 'focus' && focusId ? <Focus id={focusId} /> : <Story order={order} />}
-              <Inspector />
+              {/* the right column: the inspector on top while something is selected, the phases and the tasks, and
+                  (nothing selected) the outliner's keys */}
+              <div className="ol-side">
+                {sel && <Inspector />}
+                <PhasesCard />
+                <TasksCard />
+                {!sel && <Inspector />}
+              </div>
             </div>
           )}
           <OutlineDialogs />

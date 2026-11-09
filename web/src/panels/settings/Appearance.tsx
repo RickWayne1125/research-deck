@@ -9,8 +9,8 @@ import { Icon } from '../../components/icons';
 import { Ribbons } from '../../components/Backdrop';
 import { fileBase64 } from '../../start/api';
 import {
-  ACCENTS, BACKGROUNDS, PRESETS, RADII, THEMES, appearanceApi, customChange, useAppearance,
-  type Accent, type CustomBackground, type Radius, type ThemeId,
+  ACCENTS, BACKGROUNDS, PRESETS, RADII, SCALINGS, THEMES, appearanceApi, customChange, setScaling, useAppearance, useScaling,
+  type Accent, type CustomBackground, type Radius, type Scaling, type ThemeId,
 } from '../../state/appearance';
 import '../../styles/backdrop.css';
 
@@ -21,6 +21,7 @@ export function AppearanceSection() {
   const { lang, setLang } = useI18n();
   const { theme: mode, setTheme: setMode } = useApp();
   const { settings, resolved } = useAppearance();
+  const scaling = useScaling();
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const file = useRef<HTMLInputElement>(null);
@@ -55,8 +56,6 @@ export function AppearanceSection() {
 
   return (
     <div className="col st-look">
-      <p className="st-lead">{t('st.app.lead')}</p>
-
       <Row label={t('st.app.lang')} hint={t('st.app.langHint')}>
         <Segmented ariaLabel={t('st.app.lang')} value={lang} onChange={setLang}
           options={[{ value: 'zh', label: t('lang.zh') }, { value: 'en', label: t('lang.en') }]} />
@@ -78,6 +77,11 @@ export function AppearanceSection() {
       <Row label={t('st.app.mode')} hint={t('st.app.modeHint')}>
         <Segmented<Theme> ariaLabel={t('st.app.mode')} value={mode} onChange={setMode}
           options={[{ value: 'light', label: t('theme.light') }, { value: 'dark', label: t('theme.dark') }, { value: 'auto', label: t('theme.auto') }]} />
+      </Row>
+
+      <Row label={t('st.app.size')} hint={t('st.app.sizeHint')}>
+        <Segmented<Scaling> ariaLabel={t('st.app.size')} value={scaling} onChange={setScaling}
+          options={SCALINGS.map(v => ({ value: v, label: v }))} />
       </Row>
 
       <div className="st-look-block">

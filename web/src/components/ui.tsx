@@ -31,8 +31,10 @@ export function Segmented<T extends string>({ value, options, onChange, ariaLabe
   );
 }
 
-export function Badge({ tone, children, title }: { tone?: 'process' | 'data' | 'ok' | 'emphasis' | 'warn' | 'stale' | 'accent' | 'solid'; children: ReactNode; title?: string }) {
-  return <span className={`badge ${tone ?? ''}`} title={title}>{children}</span>;
+export type BadgeTone = 'process' | 'data' | 'ok' | 'emphasis' | 'warn' | 'stale' | 'danger' | 'accent' | 'solid' | 't-lit' | 't-code' | 't-fig' | 't-exp';
+/** A Radix Badge (styles/base.css .badge): soft by default, or the surface or outline variant; the tone picks the color. */
+export function Badge({ tone, variant, children, title }: { tone?: BadgeTone; variant?: 'surface' | 'outline'; children: ReactNode; title?: string }) {
+  return <span className={['badge', tone, variant].filter(Boolean).join(' ')} title={title}>{children}</span>;
 }
 
 /** The Radix spinner: eight leaves fading in turn (an empty .spinner elsewhere is a plain ring). */
@@ -55,11 +57,15 @@ export function Empty({ icon = 'info', title, children, action }: { icon?: IconN
   );
 }
 
-export function PanelHead({ title, subtitle, children }: { title: ReactNode; subtitle?: ReactNode; children?: ReactNode }) {
+/** A view's head: its title (Radix Heading 7; size "doc" is a document's or a figure's title, Heading 5), a badge
+ *  beside the title, a line under it, and the view's controls on the right. */
+export function PanelHead({ title, subtitle, badge, size, children }: {
+  title: ReactNode; subtitle?: ReactNode; badge?: ReactNode; size?: 'doc'; children?: ReactNode;
+}) {
   return (
-    <div className="panel-head">
+    <div className={size ? `panel-head ${size}` : 'panel-head'}>
       <div className="col" style={{ gap: 2, minWidth: 0 }}>
-        <h1 className="h1 ellipsis">{title}</h1>
+        <div className="panel-head-title"><h1 className="h1 ellipsis">{title}</h1>{badge}</div>
         {subtitle && <div className="muted ellipsis" style={{ fontSize: 'var(--fs-sm)' }}>{subtitle}</div>}
       </div>
       <div className="grow" />

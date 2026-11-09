@@ -87,7 +87,7 @@ export function FiguresView() {
 
   return (
     <div className="panel vz">
-      <PanelHead
+      <PanelHead size="doc"
         title={figure || sub ? (
           <span className="vz-crumbs">
             <button type="button" className="vz-crumb" onClick={toGallery}>{t('wr.tab.figures')}</button>

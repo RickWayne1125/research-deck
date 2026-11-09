@@ -69,7 +69,9 @@
   --sans: var(--default-font-family);
   --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Songti SC", "Noto Serif CJK SC", Georgia, serif;
   --mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, "PingFang SC", monospace;
-  --fs-xs: 11px; --fs-sm: 12px; --fs-md: 13px; --fs-lg: 15px; --fs-xl: 18px; --fs-2xl: 24px;
+  /* Radix's type scale: body text is size 2 (14 px at 100 %); everything follows the interface size (data-scaling) */
+  --fs-xs: calc(11px * var(--scaling)); --fs-sm: var(--font-size-1); --fs-md: var(--font-size-2); --fs-lg: var(--font-size-3);
+  --fs-xl: var(--font-size-5); --fs-2xl: var(--font-size-6);
 
   /* geometry: Radix radii (they follow Settings → Appearance → Radius), 4/8 px rhythm */
   --r-xs: var(--radius-1); --r-sm: var(--radius-2); --r-md: var(--radius-3); --r-lg: var(--radius-4);

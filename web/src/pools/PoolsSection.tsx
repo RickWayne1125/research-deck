@@ -239,7 +239,7 @@ function PoolRow({ v, here, busy, onToggle, onEdit, onRefresh, onDelete }: {
       </div>
       <div className="col pl-row-side">
         <label className="row pl-here">
-          <input type="checkbox" checked={here} disabled={busy === `here:${def.id}`} onChange={e => onToggle(e.target.checked)} />{t('pl.here')}
+          <input type="checkbox" className="switch" checked={here} disabled={busy === `here:${def.id}`} onChange={e => onToggle(e.target.checked)} />{t('pl.here')}
         </label>
         <div className="row wrap pl-acts">
           <Button size="sm" onClick={onEdit}>{t('pl.edit')}</Button>

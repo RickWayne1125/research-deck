@@ -22,7 +22,9 @@
         d.setAttribute('data-gray-color', String(r.gray));
         d.setAttribute('data-radius', String(r.radius));
         d.setAttribute('data-background', String(r.background));
-        d.setAttribute('data-scaling', '100%');
+        var sc = '100%';
+        try { sc = localStorage.getItem('rd.scaling') || '100%'; } catch (e) { /* storage unavailable */ }
+        d.setAttribute('data-scaling', /^(90|95|100|105|110)%$/.test(sc) ? sc : '100%');
         d.setAttribute('data-panel-background', 'translucent');
         d.setAttribute('data-has-background', 'false');
       })();

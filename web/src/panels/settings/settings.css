@@ -1,11 +1,18 @@
 /* Settings. Layout only; colors come from the tokens. */
 .st-body { display: flex; align-items: flex-start; gap: 0; }
-.st-main { flex: 1 1 auto; min-width: 0; max-width: 900px; padding: 2px var(--view-pad) 48px; display: flex; flex-direction: column; gap: var(--view-gap); }
+/* a tab's sections: cards (Radix Card, size 3) in a two-column grid; the wide ones take the whole row */
+.st-main {
+  flex: 1 1 auto; min-width: 0; max-width: 1240px; padding: 2px var(--view-pad) 48px;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr)); gap: var(--view-gap); align-items: start;
+}
 .st-sec {
-  padding: 20px 24px 24px; scroll-margin-top: 8px; display: flex; flex-direction: column; gap: 12px;
+  padding: 22px 24px 24px; scroll-margin-top: 8px; display: flex; flex-direction: column; gap: 16px; min-width: 0;
   border-radius: var(--sheet-radius); background: var(--sheet); box-shadow: var(--sheet-shadow);
 }
-.st-sec-title { margin-bottom: 2px; }
+.st-sec.wide { grid-column: 1 / -1; }
+.st-sec-top { display: flex; flex-direction: column; gap: 4px; }
+.st-sec-desc { color: var(--gray-a11); font-size: var(--fs-md); }
+.st-sec-title { margin: 0; font-size: var(--font-size-4); line-height: var(--line-height-4); letter-spacing: var(--letter-spacing-4); font-weight: 700; color: var(--gray-12); }
 .st-lead { margin: 0; color: var(--muted); max-width: 760px; line-height: 1.55; }
 .st-hint { margin: 0; color: var(--faint); font-size: var(--fs-xs); line-height: 1.5; max-width: 760px; }
 .st-flush { margin: 0; }
@@ -28,7 +35,7 @@
 .seg > button[aria-pressed="true"] .ag-mark { color: currentColor; }
 .st-select { min-height: 26px; padding: 2px 6px; font-size: var(--fs-sm); max-width: 160px; }
 .st-fast { width: 26px; height: 26px; border: var(--line) solid var(--rule-strong); background: var(--surface); }
-.st-fast[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--gray-1); }
+.st-fast[aria-pressed="true"] { background: var(--accent-a4); border-color: transparent; color: var(--accent-a11); }
 .st-fast:disabled { opacity: .4; cursor: default; }
 .st-sid { gap: 2px; font-size: 11.5px; }
 
@@ -91,21 +98,4 @@
 .st-look-accent:hover { transform: scale(1.1); }
 .st-look-accent[aria-checked="true"], .st-look-accent:focus-visible { box-shadow: 0 0 0 2px var(--color-background), 0 0 0 4px var(--accent-9); }
 .st-look-slider { display: flex; flex-direction: column; gap: 8px; max-width: 420px; font-size: var(--fs-md); }
-.st-look-slider input[type="range"] {
-  -webkit-appearance: none; appearance: none; width: 100%; height: 20px; margin: 0; background: transparent; cursor: pointer;
-}
-.st-look-slider input[type="range"]::-webkit-slider-runnable-track {
-  height: 6px; border-radius: max(var(--radius-1), var(--radius-full));
-  background: linear-gradient(var(--accent-track), var(--accent-track)) 0 / var(--value, 0%) 100% no-repeat, var(--gray-a3);
-  box-shadow: inset 0 0 0 1px var(--gray-a5);
-}
-.st-look-slider input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none; width: 16px; height: 16px; margin-top: -5px; border-radius: max(calc(var(--radius-factor) * 4px), var(--radius-full));
-  background: white; box-shadow: 0 0 0 1px var(--black-a4), 0 1px 3px var(--black-a3);
-}
-.st-look-slider input[type="range"]::-moz-range-track { height: 6px; border-radius: 9999px; background: var(--gray-a3); box-shadow: inset 0 0 0 1px var(--gray-a5); }
-.st-look-slider input[type="range"]::-moz-range-progress { height: 6px; border-radius: 9999px; background: var(--accent-track); }
-.st-look-slider input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border: 0; border-radius: 50%; background: white; box-shadow: 0 0 0 1px var(--black-a4), 0 1px 3px var(--black-a3); }
-.st-look-slider input[type="range"]:focus-visible { box-shadow: none; outline: none; }
-.st-look-slider input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 1px var(--black-a4), 0 0 0 4px var(--focus-a6); }
 @media (max-width: 720px) { .st-look-bgs { grid-template-columns: repeat(3, minmax(0, 1fr)); } .st-look-themes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

@@ -56,7 +56,7 @@
 .pl-step { display: inline-flex; align-items: center; gap: 6px; }
 .pl-step b { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 999px; border: var(--line) solid var(--rule-strong); font-size: 10.5px; }
 .pl-step.on { color: var(--ink-strong); }
-.pl-step.on b { background: var(--ink); color: var(--gray-1); border-color: var(--ink); }
+.pl-step.on b { background: var(--accent-9); color: var(--accent-contrast); border-color: var(--accent-9); }
 .pl-step.done { color: var(--muted); }
 .pl-w-error { margin-bottom: 10px; }
 .pl-w-grid { display: grid; grid-template-columns: 220px minmax(0, 1.1fr) minmax(0, 1fr); gap: 0; margin: -16px -18px; min-height: 420px; }

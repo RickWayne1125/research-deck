@@ -32,19 +32,11 @@ export function StatusStrip({ open, onToggle }: { open: boolean; onToggle: () =>
   const n = Math.max(today.count, all.length);
   const words = all.slice(0, 2);
   const rest = all.length - words.length;
-  const c = o.counts;
+  // the tasks by state are in the tasks card (Side.tsx); the strip is what waits for the researcher
   return (
     <div className="ol-strip">
-      {o.has_outline && <>
-        <span className="ol-hint">{t('ol.tasksN', { n: c.total })}</span>
-        <span className="ol-stat done">{t('ol.task.done')} <b>{c.done}</b></span>
-        <span className="ol-stat doing">{t('ol.task.doing')} <b>{c.doing}</b></span>
-        <span className="ol-stat">{t('ol.task.todo')} <b>{c.todo}</b></span>
-        <span className="ol-stat blocked">{t('ol.task.blocked')} <b>{c.blocked}</b></span>
-      </>}
-      <span className="grow" />
       <button type="button" className="ol-pend-btn" aria-expanded={open} onClick={onToggle}>
-        <span className={`chip ol-chip${n ? ' warn' : ''}`}>{n ? t('ol.pendingN', { n }) : t('ol.pendingNone')}</span>
+        <span className={`badge lg${n ? ' warn' : ''}`}>{n ? t('ol.pendingN', { n }) : t('ol.pendingNone')}</span>
         {n > 0 && <span>{[...words, ...(rest > 0 ? [t('ol.pend.more', { n: rest })] : [])].join(' · ')}</span>}
         <Icon name={open ? 'chevronDown' : 'chevronRight'} size={12} />
       </button>

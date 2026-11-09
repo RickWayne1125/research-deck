@@ -1,88 +1,93 @@
-// The outline itself, two ways: by phase (the stage line: one node per phase, its sections beside it, a passed phase
-// folded unless something in it does not hold; the current one with what leaving it takes) or in paper order. With
-// an item selected (not editing): ↵ edits it, ⌥↵ starts a parallel item, Tab / ⇧Tab indent and outdent, ⌥↑ / ⌥↓ move
-// it, ↑ / ↓ select the item above or below, ⌘. folds, Esc lets go.
+// The outline itself, two ways: by phase or in paper order, each section a card (Radix Card) with its phase and how many
+// of its items hold. By phase, a passed phase is folded into the chips under the cards ("the other sections") unless
+// something in it does not hold; the phases' progress and what leaving the current one takes are in the right column
+// (Side.tsx). With an item selected (not editing): ↵ edits it, ⌥↵ starts a parallel item, Tab / ⇧Tab indent and
+// outdent, ⌥↑ / ⌥↓ move it, ↑ / ↓ select the item above or below, ⌘. folds, Esc lets go.
 import { useEffect, useState } from 'react';
 import { useT } from '../../i18n';
 import type { Group, Section } from './api';
 import { useOl } from './ctx';
 import { Chain } from './Chain';
-import { bi, pathTo, phaseIndex, phaseMark } from './model';
-import { usePhaseLabel, usePhaseName } from './parts';
-
-const GROUP_TONE: Record<Group['state'], string> = { done: 'ok', current: 'run', later: 'off', summary: 'dash' };
+import { bi, pathTo } from './model';
+import { usePhaseLabel } from './parts';
 
 export function Story({ order }: { order: 'phase' | 'paper' }) {
   useOutlinerKeys();
   const { o } = useOl();
-  if (order === 'paper') return <div className="col" style={{ gap: 12 }}>{o.sections.map(s => <SectionBox key={s.id} s={s} paper />)}</div>;
-  return <StageLine />;
+  const groups = new Map<string, Group>();
+  for (const g of o.groups) for (const id of g.sections) groups.set(id, g);
+  if (order === 'paper') return <div className="ol-secs">{o.sections.map(s => <SectionBox key={s.id} s={s} group={groups.get(s.id)} />)}</div>;
+  return <PhaseStory />;
 }
 
-function StageLine() {
+function PhaseStory() {
   const t = useT();
-  const { o, sel, openDialog } = useOl();
-  const phaseName = usePhaseName();
+  const { o, sel, lang } = useOl();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const secs = new Map(o.sections.map(s => [s.id, s]));
   const selSection = sel ? (secs.has(sel) ? sel : pathTo(o, sel)?.section.id ?? null) : null;
-  const lastPhase = [...o.groups].reverse().find(g => g.state !== 'summary')?.phase;
+  const shown: { s: Section; g: Group; fold?: () => void }[] = [];
+  const folded: { s: Section; g: Group }[] = [];
+  for (const g of o.groups) {
+    const ss = g.sections.map(id => secs.get(id)).filter((x): x is Section => !!x);
+    const passed = g.state === 'done' && g.missing.length === 0;
+    const open = expanded[g.phase] ?? (!passed || ss.some(x => x.id === selSection));
+    for (const s of ss) {
+      if (open) shown.push({ s, g, fold: passed ? () => setExpanded(x => ({ ...x, [g.phase]: false })) : undefined });
+      else folded.push({ s, g });
+    }
+  }
   return (
-    <ol className="ol-line">
-      {o.groups.map(g => {
-        const ss = g.sections.map(id => secs.get(id)).filter((s): s is Section => !!s);
-        const names = ss.map(s => `§${s.num}`).join(t('ol.secSep'));
-        const fold = g.state === 'done' && g.missing.length === 0;
-        const open = expanded[g.phase] ?? (!fold || ss.some(s => s.id === selSection));
-        const mark = g.state === 'done' ? '✓' : g.state === 'summary' ? '∑' : String(phaseIndex(g.phase) + 1);
-        const name = g.phase === 'summary' ? t('ol.group.summaryName') : `${phaseMark(g.phase)} ${phaseName(g.phase)}`;
-        const progress = g.phase === 'summary' ? t('ol.group.progressSum', { h: g.holds, n: g.items })
-          : t('ol.group.progress', { h: g.holds, n: g.items, d: g.tasks_done, t: g.tasks });
-        const shown = g.missing.slice(0, 4).join(t('ol.secSep')) + (g.missing.length > 4 ? '…' : '');
-        return (
-          <li key={g.phase} className={`ol-sl ${g.state}`}>
-            <span className="ol-node" aria-hidden="true">{mark}</span>
-            <div className="ol-sbox">
-              <div className="ol-sbox-head">
-                <h2>{name}</h2>
-                <span className={`chip ol-chip ${GROUP_TONE[g.state]}`}>{t(`ol.group.${g.state}`)}</span>
-                <span className="ol-hint">{names} · {progress}</span>
-                <span className="grow" />
-                {g.state === 'current' && (
-                  <button type="button" className="ol-gate" onClick={() => openDialog({ kind: 'leave', phase: g.phase })}>
-                    {g.missing.length ? t('ol.group.leaveMissing', { nums: shown })
-                      : t(g.phase === lastPhase ? 'ol.group.leaveLast' : 'ol.group.leave', { secs: names })}
-                  </button>
-                )}
-                {g.state === 'later' && o.stage_mode !== 'free' && <span className="chip ol-chip off">{t('ol.group.waits')}</span>}
-                {g.state === 'summary' && <span className="ol-hint">{t('ol.group.noTasks')}</span>}
-                {(g.state === 'done' || !open) && (
-                  <button type="button" className="ol-link" onClick={() => setExpanded(x => ({ ...x, [g.phase]: !open }))}>{t(open ? 'ol.collapse' : 'ol.expand')}</button>
-                )}
-              </div>
-              {open && ss.map(s => <SectionBox key={s.id} s={s} />)}
-            </div>
-          </li>
-        );
-      })}
-    </ol>
+    <div className="ol-secs">
+      {shown.map(({ s, g, fold }) => <SectionBox key={s.id} s={s} group={g} onFold={fold} />)}
+      {folded.length > 0 && (
+        <div className="ol-rest">
+          <span className="ol-hint">{t('ol.side.rest')}</span>
+          {folded.map(({ s, g }) => (
+            <button key={s.id} type="button" className="badge surface lg" title={t('ol.expand')}
+              onClick={() => setExpanded(x => ({ ...x, [g.phase]: true }))}>
+              §{s.num} {bi(s.title, lang)} · {s.counts.items ? `${s.counts.holds}/${s.counts.items}` : t('ol.side.noItems')}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
-export function SectionBox({ s, paper = false }: { s: Section; paper?: boolean }) {
+/** How a section's count reads: all hold (green), the current phase's (amber), in progress (blue), nothing yet (gray). */
+function holdsTone(s: Section, g: Group | undefined): string {
+  if (!s.counts.items) return '';
+  if (s.counts.holds === s.counts.items) return 'ok';
+  return g?.state === 'current' ? 'warn' : 'process';
+}
+
+export function SectionBox({ s, group, onFold }: { s: Section; group?: Group; onFold?: () => void }) {
   const t = useT();
-  const { lang, sel, select, editing, setEditing } = useOl();
+  const { lang, sel, select, editing, setEditing, o } = useOl();
   const phaseLabel = usePhaseLabel();
   const adding = editing?.kind === 'new' && editing.parent === s.id && !('after' in editing.at) && !('parallel' in editing.at) && !('first' in editing.at);
+  const current = group?.state === 'current';
+  const waits = group?.state === 'later' && o.stage_mode !== 'free';
   return (
-    <section className={`ol-sec${sel === s.id ? ' sel' : ''}`} id={`ol-i-${s.id}`} aria-label={`§${s.num} ${bi(s.title, lang)}`}
+    <section className={`ol-sec${sel === s.id ? ' sel' : ''}${current ? ' cur' : ''}`} id={`ol-i-${s.id}`} aria-label={`§${s.num} ${bi(s.title, lang)}`}
       onClick={() => select(s.id)}>
       <div className="ol-sec-head">
-        <h3>§{s.num} {bi(s.title, lang)}</h3>
-        {paper ? <span className={`chip ol-chip${s.phase === 'summary' ? ' dash' : ''}`}>{phaseLabel(s.phase)}</span>
-          : s.phase === 'summary' && <span className="chip ol-chip dash">{t('ol.sec.summary')}</span>}
-        {s.role && <span className="ol-sec-role">{s.role}</span>}
+        <span className="ol-sec-num">§{s.num}</span>
+        <h3>{bi(s.title, lang)}</h3>
+        <span className={`badge${current ? ' accent' : ''}${s.phase === 'summary' ? ' outline' : ''}`}>
+          {phaseLabel(s.phase)}{current ? ` · ${t('ol.side.current')}` : ''}
+        </span>
+        {waits && <span className="badge outline" title={t('ol.group.waits')}>{t('ol.group.later')}</span>}
+        <span className="grow" />
+        {onFold && (
+          <button type="button" className="ol-link" onClick={(e) => { e.stopPropagation(); onFold(); }}>{t('ol.collapse')}</button>
+        )}
+        {s.counts.items > 0 && (
+          <span className={`badge ${holdsTone(s, group)}`}>{t('ol.side.holds', { h: s.counts.holds, n: s.counts.items })}</span>
+        )}
       </div>
+      {s.role && <p className="ol-sec-role">{s.role}</p>}
       <Chain steps={s.items} parent={s.id} depth={0} />
       {!adding && (
         <button type="button" className="btn sm ghost ol-sec-add" onClick={(e) => { e.stopPropagation(); setEditing({ kind: 'new', parent: s.id, at: {} }); }}>

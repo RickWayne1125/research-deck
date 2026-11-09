@@ -102,18 +102,29 @@ kbd {
   border: var(--line) solid var(--gray-a6); background: var(--gray-surface); font: 500 var(--fs-xs)/1 var(--sans); color: var(--gray-a11); white-space: nowrap;
 }
 .badge {
-  --b-bg: var(--gray-a3); --b-fg: var(--gray-a11);
+  --b-bg: var(--gray-a3); --b-fg: var(--gray-a11); --b-line: var(--gray-a7); --b-surface: var(--gray-surface);
   display: inline-flex; align-items: center; flex-shrink: 0; gap: 4px; height: fit-content; padding: 2px 6px;
   border-radius: max(var(--radius-1), var(--radius-full)); background: var(--b-bg); color: var(--b-fg);
-  font: 500 var(--font-size-1)/14px var(--sans); letter-spacing: var(--letter-spacing-1); white-space: nowrap;
+  font: 500 var(--font-size-1)/16px var(--sans); letter-spacing: var(--letter-spacing-1); white-space: nowrap;
 }
+.badge.lg { padding: 4px 8px; }
+.badge.surface { background: var(--b-surface); box-shadow: inset 0 0 0 1px var(--b-line); }
+.badge.outline { background: transparent; box-shadow: inset 0 0 0 1px var(--b-line); }
 .badge.mono { font-family: var(--mono); font-size: 11px; }
-.badge.process { --b-bg: var(--blue-a3); --b-fg: var(--blue-a11); }
-.badge.data, .badge.ok { --b-bg: var(--green-a3); --b-fg: var(--green-a11); }
-.badge.emphasis { --b-bg: var(--tomato-a3); --b-fg: var(--tomato-a11); }
-.badge.warn, .badge.stale { --b-bg: var(--amber-a3); --b-fg: var(--amber-a11); }
-.badge.accent { --b-bg: var(--accent-a3); --b-fg: var(--accent-a11); }
+.badge.process, .badge.t-lit { --b-bg: var(--blue-a3); --b-fg: var(--blue-a11); --b-line: var(--blue-a7); --b-surface: var(--blue-surface); }
+.badge.data, .badge.ok { --b-bg: var(--green-a3); --b-fg: var(--green-a11); --b-line: var(--green-a7); --b-surface: var(--green-surface); }
+.badge.emphasis { --b-bg: var(--tomato-a3); --b-fg: var(--tomato-a11); --b-line: var(--tomato-a7); --b-surface: var(--tomato-surface); }
+.badge.warn, .badge.stale { --b-bg: var(--amber-a3); --b-fg: var(--amber-a11); --b-line: var(--amber-a7); --b-surface: var(--amber-surface); }
+.badge.danger { --b-bg: var(--red-a3); --b-fg: var(--red-a11); --b-line: var(--red-a7); --b-surface: var(--red-surface); }
+.badge.accent { --b-bg: var(--accent-a3); --b-fg: var(--accent-a11); --b-line: var(--accent-a7); --b-surface: var(--accent-surface); }
+.badge.t-code { --b-bg: var(--cyan-a3); --b-fg: var(--cyan-a11); --b-line: var(--cyan-a7); --b-surface: var(--cyan-surface); }
+.badge.t-fig { --b-bg: var(--purple-a3); --b-fg: var(--purple-a11); --b-line: var(--purple-a7); --b-surface: var(--purple-surface); }
+.badge.t-exp { --b-bg: var(--orange-a3); --b-fg: var(--orange-a11); --b-line: var(--orange-a7); --b-surface: var(--orange-surface); }
 .badge.solid { --b-bg: var(--gray-12); --b-fg: var(--gray-1); }
+.badge.solid.ok { --b-bg: var(--green-9); --b-fg: var(--green-contrast); }
+.badge.solid.accent { --b-bg: var(--accent-9); --b-fg: var(--accent-contrast); }
+button.badge { border: 0; cursor: pointer; font-family: var(--sans); }
+button.badge:hover { filter: brightness(.97); }
 .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--gray-a8); flex: none; }
 .dot.ok { background: var(--green-9); } .dot.warn { background: var(--amber-9); } .dot.accent { background: var(--accent-9); } .dot.info { background: var(--blue-9); }
 
@@ -126,13 +137,14 @@ kbd {
 .list-item:last-child { border-bottom: 0; }
 .list-item:hover { background: var(--gray-a2); }
 .list-item.active { background: var(--accent-a3); box-shadow: inset 2px 0 0 var(--accent-9); }
-.kv { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; }
-.kv dt { color: var(--gray-a11); font: 500 var(--fs-sm)/1.45 var(--sans); }
+/* key–value lists (Radix DataList, horizontal): the label in gray, the value in the text color */
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 12px 16px; margin: 0; }
+.kv dt { color: var(--gray-a11); font: 400 var(--fs-md)/1.45 var(--sans); }
 .kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 /* tables (Radix Table) */
 .table { width: 100%; border-collapse: collapse; font-size: var(--fs-md); }
-.table th { text-align: left; font: 600 var(--fs-sm)/1.3 var(--sans); color: var(--gray-12); padding: 8px 10px; border-bottom: var(--line) solid var(--gray-a6); white-space: nowrap; }
-.table td { padding: 8px 10px; border-bottom: var(--line) solid var(--gray-a5); vertical-align: middle; }
+.table th { text-align: left; font: 700 var(--fs-md)/1.3 var(--sans); color: var(--gray-12); padding: 10px 12px; background: var(--gray-a2); border-bottom: var(--line) solid var(--gray-a5); white-space: nowrap; }
+.table td { padding: 10px 12px; border-bottom: var(--line) solid var(--gray-a5); vertical-align: middle; }
 .table tr:hover td { background: var(--gray-a2); }
 
 /* tabs (Radix Tabs): the chosen tab is underlined in the accent */
@@ -157,10 +169,68 @@ kbd {
 .input[aria-invalid="true"], .textarea[aria-invalid="true"] { border-color: var(--red-a8); }
 .field { display: flex; flex-direction: column; gap: 4px; }
 
+/* checkboxes, radios and switches (Radix Checkbox, Radio and Switch, surface, size 2), drawn on the native inputs; a
+   checkbox with .switch is a switch. Checkmark and chevron: Radix Icons (MIT, WorkOS). */
+input[type="checkbox"], input[type="radio"] {
+  -webkit-appearance: none; appearance: none; position: relative; flex: none; display: inline-grid; place-content: center;
+  width: var(--space-4); height: var(--space-4); margin: 0; vertical-align: -3px; cursor: pointer; color: var(--accent-contrast);
+  background-color: var(--color-surface); box-shadow: inset 0 0 0 1px var(--gray-a7); transition: background-color .12s, box-shadow .12s;
+}
+input[type="checkbox"] { border-radius: var(--radius-1); }
+input[type="radio"] { border-radius: 50%; }
+input[type="checkbox"]:checked, input[type="checkbox"]:indeterminate, input[type="radio"]:checked { background-color: var(--accent-indicator); box-shadow: none; }
+input[type="checkbox"]:checked::before {
+  content: ""; width: calc(12px * var(--scaling)); height: calc(12px * var(--scaling)); background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 15'%3E%3Cpath fill='black' d='M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 15'%3E%3Cpath fill='black' d='M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+input[type="checkbox"]:indeterminate::before { content: ""; width: 8px; height: 2px; border-radius: 1px; background-color: currentColor; }
+input[type="radio"]:checked::before { content: ""; width: calc(var(--space-4) * .4); height: calc(var(--space-4) * .4); border-radius: 50%; background-color: currentColor; }
+input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { outline: 2px solid var(--focus-8); outline-offset: 2px; }
+input[type="checkbox"]:disabled, input[type="radio"]:disabled { cursor: not-allowed; background-color: var(--gray-a3); box-shadow: inset 0 0 0 1px var(--gray-a6); color: var(--gray-a8); }
+input[type="checkbox"].switch {
+  --sw-h: calc(var(--space-5) * 5 / 6); --sw-w: calc(var(--sw-h) * 1.75);
+  width: var(--sw-w); height: var(--sw-h); place-content: center start; padding: 0 1px; border-radius: max(var(--radius-2), var(--radius-thumb));
+  background-color: var(--gray-a3); box-shadow: inset 0 0 0 1px var(--gray-a5);
+}
+input[type="checkbox"].switch::before {
+  content: ""; width: calc(var(--sw-h) - 2px); height: calc(var(--sw-h) - 2px); background-color: white; -webkit-mask: none; mask: none;
+  border-radius: calc(max(var(--radius-2), var(--radius-thumb)) - 1px); box-shadow: 0 0 1px 1px var(--black-a2), 0 1px 1px var(--black-a1), 0 2px 4px -1px var(--black-a1);
+  transition: transform 140ms cubic-bezier(.45, .05, .55, .95);
+}
+input[type="checkbox"].switch:checked { background-color: var(--accent-track); box-shadow: none; }
+input[type="checkbox"].switch:checked::before { transform: translateX(calc(var(--sw-w) - var(--sw-h))); }
+input[type="checkbox"].switch:disabled { background-color: var(--gray-a3); box-shadow: inset 0 0 0 1px var(--gray-a5); opacity: .55; }
+@media (prefers-reduced-motion: reduce) { input[type="checkbox"].switch::before { transition: none; } }
+/* a select is drawn as a Radix Select trigger (its chevron in the gray of the theme's icons) */
+select.select, select.input {
+  -webkit-appearance: none; appearance: none; padding-right: 30px; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 9'%3E%3Cpath fill='%2380838d' d='M0.135232 3.15803C0.324102 2.95657 0.640521 2.94637 0.841971 3.13523L4.5 6.56464L8.158 3.13523C8.3595 2.94637 8.6759 2.95657 8.8648 3.15803C9.0536 3.35949 9.0434 3.67591 8.842 3.86477L4.84197 7.61477C4.64964 7.79507 4.35036 7.79507 4.15803 7.61477L0.158031 3.86477C-0.0434285 3.67591 -0.0536285 3.35949 0.135232 3.15803Z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 11px center; background-size: 9px 9px;
+}
+/* a range is a Radix Slider (surface, size 2): the accent's track up to the value; set --value: <percent> on it */
+input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 20px; margin: 0; background: transparent; cursor: pointer; }
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px; border-radius: max(var(--radius-1), var(--radius-full)); box-shadow: inset 0 0 0 1px var(--gray-a5);
+  background: linear-gradient(var(--accent-track), var(--accent-track)) 0 / var(--value, 0%) 100% no-repeat, var(--gray-a3);
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 16px; height: 16px; margin-top: -5px; border-radius: max(calc(var(--radius-factor) * 4px), var(--radius-full));
+  background: white; box-shadow: 0 0 0 1px var(--black-a4), 0 1px 3px var(--black-a3);
+}
+input[type="range"]::-moz-range-track { height: 6px; border-radius: 9999px; background: var(--gray-a3); box-shadow: inset 0 0 0 1px var(--gray-a5); }
+input[type="range"]::-moz-range-progress { height: 6px; border-radius: 9999px; background: var(--accent-track); }
+input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border: 0; border-radius: 50%; background: white; box-shadow: 0 0 0 1px var(--black-a4), 0 1px 3px var(--black-a3); }
+input[type="range"]:focus-visible { box-shadow: none; outline: none; }
+input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 1px var(--black-a4), 0 0 0 4px var(--focus-a6); }
+/* a label row with a control: the text, then the control (Radix's settings rows) */
+.check { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+
 /* panel frame: every main panel is a .panel with a .panel-head and a .panel-body; the head sits on the art */
 .panel { display: flex; flex-direction: column; height: 100%; min-height: 0; min-width: 0; }
 .panel-head { flex: none; display: flex; align-items: center; gap: var(--gap-3); padding: 18px var(--view-pad) 14px; min-height: 64px; background: transparent; }
-.panel-head .h1 { font-size: var(--font-size-5); line-height: var(--line-height-5); letter-spacing: var(--letter-spacing-5); }
+/* a view's title is Radix Heading size 7; a document's or a figure's (Paper) size 5 */
+.panel-head .h1 { font-size: var(--font-size-7); line-height: var(--line-height-7); letter-spacing: var(--letter-spacing-7); font-weight: 700; }
+.panel-head.doc .h1 { font-size: var(--font-size-5); line-height: var(--line-height-5); letter-spacing: var(--letter-spacing-5); }
+.panel-head-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
 /* the head's icon buttons are Radix's soft gray IconButton, as tall as its other controls */
 .panel-head .icon-btn { width: var(--space-6); height: var(--space-6); background: var(--gray-a3); color: var(--gray-12); }
 .panel-head .icon-btn:hover { background: var(--gray-a4); }
@@ -174,6 +244,7 @@ kbd {
 .notice { display: flex; gap: 8px; align-items: flex-start; padding: 9px 12px; border-radius: var(--radius-3); background: var(--gray-a3); color: var(--gray-a11); font-size: var(--fs-sm); }
 .notice.warn { background: var(--amber-a3); color: var(--amber-a11); }
 .notice.accent { background: var(--red-a3); color: var(--red-a11); }
+.notice.soft { background: var(--accent-a3); color: var(--accent-a11); }
 
 /* dialogs and popovers (Radix Dialog and DropdownMenu, soft items) */
 .scrim { position: fixed; inset: 0; background: var(--color-overlay); z-index: 60; display: grid; place-items: center; padding: 24px; animation: rd-fade-in .16s var(--ease); }

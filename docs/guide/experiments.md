@@ -27,7 +27,9 @@ Each record shows its **freshness** from the map:
 | unknown | no map node, or no trace of what it read |
 
 Open a run to see why it is stale (which file or value changed, from what to what) and to follow its log in a
-read-only terminal.
+read-only terminal: its card opens beside the records and stays in view as the page scrolls. Above the records, the
+project's resource pools show at a glance (GPUs in use, the agents' budget for today, a failed read and why);
+**All resources** opens the Resources tab with every machine.
 
 ## The run plan
 

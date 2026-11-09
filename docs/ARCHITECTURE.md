@@ -6,7 +6,8 @@ A local research dashboard over one or more project folders. It runs on the rese
 A research project works from its **outline** (`panels/outline`, the home page): the paper's sections, each a chain
 of numbered items that argue what the section makes the reader accept; the phases (idea, insight, design, evaluation)
 group the sections, and the work is tasks hung on items (literature, code, figures, experiments) whose outputs come back
-as the items' evidence. Above it sits what waits for the researcher (Today's list); beside it the inspector; its other
+as the items' evidence. Above it sits what waits for the researcher (Today's list); beside it a column with the
+inspector (while something is selected), the phases' progress and the tasks (`panels/outline/Side.tsx`); its other
 views are the task board, the research tree of every fork, and any item as the root (focus). The other views are
 **Experiments**, **Paper** (`panels/writing`: the text, with the outline of the section at the cursor beside it, and
 the figures from `panels/visualization`), **Code** (`panels/coding`) and Settings (with the outline templates); the

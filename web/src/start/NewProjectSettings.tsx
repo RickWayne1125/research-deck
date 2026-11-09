@@ -53,7 +53,7 @@ export function NewProjectSettingsSection() {
 
       <dt>{t('np.st.onCreate')}</dt>
       <dd>
-        <label className="row np-check"><input type="checkbox" checked={s.git_init} onChange={e => save({ git_init: e.target.checked })} /><span>{t('np.st.git')}</span></label>
+        <label className="row np-check"><input type="checkbox" className="switch" checked={s.git_init} onChange={e => save({ git_init: e.target.checked })} /><span>{t('np.st.git')}</span></label>
       </dd>
 
       <dt>{t('np.st.lit')}</dt>
@@ -86,7 +86,7 @@ export function NewProjectSettingsSection() {
           <span>{t('np.st.keepTail')}</span>
         </div>
         <label className="row np-check" style={{ alignItems: 'center' }}>
-          <input type="checkbox" checked={s.survey.download_pdfs} onChange={e => save({ survey: { download_pdfs: e.target.checked } })} />
+          <input type="checkbox" className="switch" checked={s.survey.download_pdfs} onChange={e => save({ survey: { download_pdfs: e.target.checked } })} />
           <span>{t('np.st.pdfs')}</span>
           <input className="input mono np-st-pdfdir" value={papers} aria-label={t('np.st.pdfDir')} onChange={e => setPapers(e.target.value)}
             onBlur={() => papers.trim() !== s.survey.papers_dir && save({ survey: { papers_dir: papers.trim() } })}

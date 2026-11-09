@@ -11,6 +11,7 @@ import { exApi } from './api';
 import { NewExperimentDialog } from './NewExperimentDialog';
 import { RerunPlanView } from './RerunPlanView';
 import { ResourcesView } from './ResourcesView';
+import { PoolStrip } from './PoolStrip';
 import { RunDrawer } from './RunDrawer';
 import { RunsView } from './RunsView';
 import './experiments.css';
@@ -74,7 +75,9 @@ export default function ExperimentsPanel() {
 
   return (
     <div className="panel ex-panel">
-      <PanelHead title={t('nav.experiments')} subtitle={records ? t('ex.subtitle', { n: records.length, stale }) : t('ex.subtitleNone')}>
+      <PanelHead title={t('nav.experiments')}
+        badge={<span className="badge surface lg">{records ? t('ex.subtitle', { n: records.length, stale }) : t('ex.subtitleNone')}</span>}>
+        <Button icon="refresh" onClick={list.reload}>{t('common.refresh')}</Button>
         <Button icon="plus" variant="primary" onClick={() => setCreating(true)}>{t('ex.new')}</Button>
       </PanelHead>
       <div className="tabs" role="tablist">
@@ -94,6 +97,8 @@ export default function ExperimentsPanel() {
             <RerunPlanView pid={pid} records={records} />
           </div>
         )}
+        {/* Runs, as in the Radix preview: the pools at a glance, then the records with the open one's card beside them */}
+        {!plan && tab === 'runs' && <PoolStrip pid={pid} onAll={() => setTab('resources')} />}
         {!plan && tab === 'runs' && toRun > 0 && (
           <div className="notice warn ex-torun" role="status">
             <span className="grow">{t('ex.plan.bar', { n: toRun })}</span>
@@ -101,11 +106,16 @@ export default function ExperimentsPanel() {
           </div>
         )}
         {!plan && tab === 'runs' && (
-          <RunsView records={records} loading={list.loading} error={list.error} onRetry={list.reload}
-            onOpen={open} onNew={() => setCreating(true)} selected={openId} />
+          <section className="ex-sec" aria-labelledby="ex-runs-h">
+            <div className="ex-sec-head"><h2 id="ex-runs-h">{t('ex.records')}</h2></div>
+            <div className="ex-split">
+              <RunsView records={records} loading={list.loading} error={list.error} onRetry={list.reload}
+                onOpen={open} onNew={() => setCreating(true)} selected={openId} />
+              {openId && <RunDrawer key={openId} pid={pid} id={openId} summary={summary} onClose={close} />}
+            </div>
+          </section>
         )}
         {!plan && tab === 'resources' && <ResourcesView pid={pid} />}
-        {!plan && tab === 'runs' && openId && <RunDrawer key={openId} pid={pid} id={openId} summary={summary} onClose={close} />}
       </div>
       {creating && (
         <NewExperimentDialog pid={pid} initialNode={newFor || null} initialTitle={newFor !== null ? task?.title : undefined}

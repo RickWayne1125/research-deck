@@ -7,6 +7,15 @@ registerStrings({
     
     'st.sec.integrations': '集成',
     'st.sec.appearance': '外观',
+    'st.tab.general': '常规', 'st.tab.new': '新项目', 'st.tab.pools': '资源池', 'st.tab.lit': '文献与笔记',
+    'st.desc.appearance': 'Radix Themes 的主题：配色、圆角和背景，整个界面一起变',
+    'st.desc.integrations': '这台电脑上找到的命令行工具和画图应用',
+    'st.desc.about': '版本、后端地址和文件位置',
+    'st.desc.newProjects': '新项目放在哪里、建好后做什么，早期调研和阶段规则',
+    'st.desc.templates': '提纲有哪些节、每节属于哪个阶段、要让读者接受什么',
+    'st.desc.pools': '实验能跑在哪些机器上，各自的读取方式、额度和价格',
+    'st.desc.zotero': '文献放在 Zotero，项目里只留 references.bib',
+    'st.desc.docmost': 'notes/ 下的笔记单向同步到绑定的 Docmost 页面',
     'st.sec.about': '关于',
     
     
@@ -48,6 +57,8 @@ registerStrings({
     'st.app.theme.custom': '自定义',
     'st.app.mode': '明暗',
     'st.app.modeHint': '只对这个浏览器生效；其余外观所有浏览器共用。',
+    'st.app.size': '界面大小',
+    'st.app.sizeHint': 'Radix 的缩放：100% 是它的标准大小，90% 更紧凑；只对这个浏览器生效。',
     'st.app.accent': '强调色',
     'st.app.radius': '圆角',
     'st.app.radius.none': '无',
@@ -84,6 +95,15 @@ registerStrings({
     
     'st.sec.integrations': 'Integrations',
     'st.sec.appearance': 'Appearance',
+    'st.tab.general': 'General', 'st.tab.new': 'New projects', 'st.tab.pools': 'Resource pools', 'st.tab.lit': 'Literature & notes',
+    'st.desc.appearance': 'The Radix Themes theme: colors, radius and background, for the whole interface',
+    'st.desc.integrations': 'The command-line tools and figure apps found on this computer',
+    'st.desc.about': 'Version, server address and where files live',
+    'st.desc.newProjects': 'Where new projects go, what happens when one is made, the early survey and the stage rules',
+    'st.desc.templates': "The outline's sections, the phase of each and what it makes the reader accept",
+    'st.desc.pools': 'Where experiments can run: how each pool is read, its budget and its prices',
+    'st.desc.zotero': 'Papers live in Zotero; the project keeps only references.bib',
+    'st.desc.docmost': 'Notes under notes/ are synced one way to a bound Docmost page',
     'st.sec.about': 'About',
     
     
@@ -125,6 +145,8 @@ registerStrings({
     'st.app.theme.custom': 'Custom',
     'st.app.mode': 'Light or dark',
     'st.app.modeHint': 'For this browser only; the rest of the appearance is the same in all your browsers.',
+    'st.app.size': 'Interface size',
+    'st.app.sizeHint': "Radix's scaling: 100 % is its own size, 90 % is denser; for this browser only.",
     'st.app.accent': 'Accent',
     'st.app.radius': 'Radius',
     'st.app.radius.none': 'None',

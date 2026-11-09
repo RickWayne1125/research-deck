@@ -1,8 +1,31 @@
 /* Experiments view. Colors only through tokens (styles/tokens.css); shared classes come from styles/base.css.
    DAG freshness is drawn by dag/encoding.tsx (FreshBadge); run status here is a dot + a word. */
-.ex-body { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 12px; padding: 0 var(--view-pad) var(--view-pad); }
-.ex-body > .ex-runs, .ex-body > .ex-res, .ex-body > .ex-plan { flex: 1 1 auto; min-height: 0; overflow: auto; }
-.ex-body > .ex-runs, .ex-body > .ex-plan { border-radius: var(--sheet-radius); background: var(--sheet); box-shadow: var(--sheet-shadow); }
+/* the view scrolls as a page: sections (a Radix Heading 4 and its cards) one under another */
+.ex-body { position: relative; overflow: auto; display: flex; flex-direction: column; gap: 20px; padding: 0 var(--view-pad) var(--view-pad); }
+.ex-body > * { flex: none; }
+.ex-sec { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.ex-sec-head { display: flex; align-items: baseline; gap: 10px; }
+.ex-sec-head h2 { margin: 0; font-size: var(--font-size-4); line-height: var(--line-height-4); letter-spacing: var(--letter-spacing-4); font-weight: 700; color: var(--gray-12); }
+.ex-sec-link { border: 0; background: none; padding: 0; font: inherit; font-size: var(--fs-md); color: var(--accent-11); cursor: pointer; text-underline-offset: 2px; }
+.ex-sec-link:hover { text-decoration: underline; text-decoration-color: var(--accent-a6); }
+/* the records card and, beside it, the open record's card (it stays in view while the page scrolls) */
+.ex-split { display: flex; align-items: flex-start; gap: var(--view-gap); min-width: 0; }
+.ex-split > .ex-runs { flex: 1 1 auto; min-width: 0; }
+.ex-runs, .ex-plan { border-radius: var(--sheet-radius); background: var(--sheet); box-shadow: var(--sheet-shadow); }
+.ex-runs > .ex-toolbar { border-radius: var(--sheet-radius) var(--sheet-radius) 0 0; }
+/* the pools at a glance (PoolStrip.tsx): Radix Cards with an icon tile, a state badge and progress bars */
+.ex-pools { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: var(--view-gap); }
+.ex-pool { display: flex; flex-direction: column; gap: 14px; padding: 18px 20px; border-radius: var(--sheet-radius); background: var(--sheet); box-shadow: var(--sheet-shadow); min-width: 0; }
+.ex-pool-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ex-pool-icon { display: grid; place-items: center; width: 36px; height: 36px; flex: none; border-radius: var(--radius-3); background: var(--gray-a3); color: var(--gray-a11); }
+.ex-pool-icon.on { background: var(--accent-a3); color: var(--accent-11); }
+.ex-pool-name { font-size: var(--fs-lg); font-weight: 500; color: var(--gray-12); }
+.ex-pool-err { font-size: var(--fs-sm); }
+.ex-pool-foot { gap: 8px; min-height: 24px; }
+.ex-bar { display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-md); }
+.ex-progress { height: 6px; border-radius: max(var(--radius-1), var(--radius-full)); background: var(--gray-a3); overflow: hidden; }
+.ex-progress > i { display: block; height: 100%; width: var(--v, 0%); border-radius: inherit; background: var(--accent-9); transition: width .3s var(--ease); }
+.ex-progress.gray > i { background: var(--gray-8); }
 .ex-tab-badge { margin-left: 6px; vertical-align: 1px; }
 .ex-pad { padding: 14px 18px 24px; display: flex; flex-direction: column; gap: 12px; }
 .ex-pad-x { padding: 8px 18px 0; }
@@ -62,7 +85,11 @@
 .ex-meter-fill.warn { background: var(--warn); }
 
 /* ---------------------------------------------------------------- drawer */
-.ex-drawer { position: absolute; top: 0; right: var(--view-pad); bottom: var(--view-pad); z-index: 10; width: min(560px, calc(100% - 2 * var(--view-pad))); display: flex; flex-direction: column; background: var(--color-panel-solid); border-radius: var(--sheet-radius); box-shadow: 0 0 0 1px var(--gray-a4), var(--shadow-5); }
+/* the open record: a card beside the records, in view while the page scrolls (its left edge resizes it) */
+.ex-drawer {
+  position: sticky; top: 0; z-index: 2; flex: none; max-height: calc(100vh - 150px); min-height: 360px; display: flex; flex-direction: column;
+  background: var(--sheet); border-radius: var(--sheet-radius); box-shadow: var(--sheet-shadow);
+}
 .ex-drawer-body { border-radius: 0 0 var(--sheet-radius) var(--sheet-radius); }
 .ex-drawer-head { display: flex; align-items: flex-start; gap: 8px; padding: 12px 14px 10px 18px; border-bottom: var(--line) solid var(--rule); }
 .ex-drawer-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 14px 18px 24px; display: flex; flex-direction: column; gap: 14px; }
@@ -81,7 +108,7 @@
 .ex-live.ex-retrying { color: var(--warn); }
 
 /* the drawer's left edge resizes it (RunDrawer.tsx, drawerWidth.ts) */
-.ex-drawer-resize { position: absolute; top: 0; bottom: 0; left: -4px; width: 8px; z-index: 2; cursor: col-resize; touch-action: none; }
+.ex-drawer-resize { position: absolute; top: 0; bottom: 0; left: -12px; width: 8px; z-index: 2; cursor: col-resize; touch-action: none; }
 .ex-drawer-resize::after { content: ""; position: absolute; top: 0; bottom: 0; left: 3px; width: 2px; background: transparent; transition: background-color .12s; }
 .ex-drawer-resize:hover::after, .ex-drawer-resize.dragging::after { background: var(--rule-strong); }
 .ex-drawer-resize:focus-visible { box-shadow: none; }
@@ -162,3 +189,8 @@
 .ex-plan { display: flex; flex-direction: column; min-height: 0; height: 100%; overflow: auto; }
 .ex-plan-head { padding: 10px 16px 0; }
 .ex-torun { margin: 10px 16px 0; }
+
+/* the Resources tab: its toolbar on the art, the platforms as cards */
+.ex-res > .ex-toolbar { position: static; padding: 0 0 4px; border: 0; background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.ex-res > .ex-pad { padding: 8px 0 0; }
+.card.ex-plat { border: 0; border-radius: var(--sheet-radius); background: var(--sheet); box-shadow: var(--sheet-shadow); }

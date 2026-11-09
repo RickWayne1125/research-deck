@@ -1,7 +1,7 @@
 // Settings: how new projects start (folder, survey, stage rules), the outline templates, the resource pools, the integrations Research Deck found (Claude Code and
 // Codex CLIs, the figure apps), appearance, and where things live. Model, effort and permission belong to the
 // conversation (its header).
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useApp } from '../../state/app';
 import { useT } from '../../i18n';
 import { ErrorNote, PanelHead, Spinner, useLoad } from '../../components/ui';
@@ -18,38 +18,73 @@ import './i18n';
 
 const SECTIONS = ['newProjects', 'templates', 'pools', 'zotero', 'docmost', 'integrations', 'appearance', 'about'] as const;
 type Section = (typeof SECTIONS)[number];
+/** The tabs (Radix Tabs, as in the preview) and the sections on each, in the order they show. */
+const TABS = { general: ['appearance', 'integrations', 'about'], new: ['newProjects', 'templates'], pools: ['pools'], lit: ['zotero', 'docmost'] } as const;
+type Tab = keyof typeof TABS;
+const TAB_KEY = 'rd.st.tab';
+const tabOf = (s: string | null | undefined): Tab | null =>
+  (Object.keys(TABS) as Tab[]).find(k => (TABS[k] as readonly string[]).includes(s ?? '')) ?? null;
+/** Sections wide enough to take the whole row */
+const WIDE = new Set<Section>(['newProjects', 'templates', 'pools']);
 
 export default function SettingsPanel() {
   const { projectId, project, sub } = useApp();
   const t = useT();
   const pid = projectId!;
-  // #/<p>/settings/<section>: open at that section
+  const [tab, setTabState] = useState<Tab>(() => {
+    const fromRoute = tabOf(sub);
+    if (fromRoute) return fromRoute;
+    try { const v = localStorage.getItem(TAB_KEY) as Tab | null; return v && v in TABS ? v : 'general'; } catch { return 'general'; }
+  });
+  const setTab = (next: Tab) => { setTabState(next); try { localStorage.setItem(TAB_KEY, next); } catch { /* storage unavailable */ } };
+  // #/<p>/settings/<section>: its tab, scrolled to it
   useEffect(() => {
-    if (sub && (SECTIONS as readonly string[]).includes(sub)) window.setTimeout(() => document.getElementById(`st-${sub}`)?.scrollIntoView({ block: 'start' }), 80);
+    const at = tabOf(sub);
+    if (!at) return;
+    setTabState(at);
+    window.setTimeout(() => document.getElementById(`st-${sub}`)?.scrollIntoView({ block: 'start' }), 80);
   }, [sub]);
+  const shows = (id: Section) => (TABS[tab] as readonly string[]).includes(id) && (id !== 'templates' || project?.kind !== 'engineering');
+  const body: Record<Section, () => ReactNode> = {
+    newProjects: () => <NewProjectSettingsSection />,
+    templates: () => <OutlineTemplatesSection />,
+    pools: () => <PoolsSection />,
+    zotero: () => <ZoteroSection />,
+    docmost: () => <DocmostSection />,
+    integrations: () => <IntegrationsSection />,
+    appearance: () => <AppearanceSection />,
+    about: () => <AboutSection pid={pid} />,
+  };
+  const title: Record<Section, string> = {
+    newProjects: t('np.st.title'), templates: t('ol.tpl.title'), pools: t('pl.title'), zotero: t('ig.zotero'), docmost: t('ig.docmost'),
+    integrations: t('st.sec.integrations'), appearance: t('st.sec.appearance'), about: t('st.sec.about'),
+  };
   return (
     <div className="panel st">
       <PanelHead title={t('nav.settings')} subtitle={project ? `${project.name} · ${t('st.subtitle')}` : t('st.subtitle')} />
-      <div className="panel-body st-body">
+      <div className="tabs st-tabs" role="tablist" aria-label={t('nav.settings')}>
+        {(Object.keys(TABS) as Tab[]).map(k => (
+          <button key={k} type="button" role="tab" className="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{t(`st.tab.${k}`)}</button>
+        ))}
+      </div>
+      <div className="panel-body st-body" role="tabpanel">
         <div className="st-main">
-          <Section id="newProjects" title={t('np.st.title')}><NewProjectSettingsSection /></Section>
-          {project?.kind !== 'engineering' && <Section id="templates" title={t('ol.tpl.title')}><OutlineTemplatesSection /></Section>}
-          <Section id="pools" title={t('pl.title')}><PoolsSection /></Section>
-          <Section id="zotero" title={t('ig.zotero')}><ZoteroSection /></Section>
-          <Section id="docmost" title={t('ig.docmost')}><DocmostSection /></Section>
-          <Section id="integrations" title={t('st.sec.integrations')}><IntegrationsSection /></Section>
-          <Section id="appearance" title={t('st.sec.appearance')}><AppearanceSection /></Section>
-          <Section id="about" title={t('st.sec.about')}><AboutSection pid={pid} /></Section>
+          {(TABS[tab] as readonly Section[]).filter(shows).map(id => (
+            <Section key={id} id={id} title={title[id]} desc={t(`st.desc.${id}`)} wide={WIDE.has(id)}>{body[id]()}</Section>
+          ))}
         </div>
       </div>
     </div>
   );
 }
 
-function Section({ id, title, children }: { id: Section; title: string; children: ReactNode }) {
+function Section({ id, title, desc, wide, children }: { id: Section; title: string; desc?: string; wide?: boolean; children: ReactNode }) {
   return (
-    <section id={`st-${id}`} className="st-sec" aria-labelledby={`st-${id}-h`}>
-      <h2 id={`st-${id}-h`} className="h2 st-sec-title">{title}</h2>
+    <section id={`st-${id}`} className={`st-sec${wide ? ' wide' : ''}`} aria-labelledby={`st-${id}-h`}>
+      <div className="st-sec-top">
+        <h2 id={`st-${id}-h`} className="st-sec-title">{title}</h2>
+        {desc && <span className="st-sec-desc">{desc}</span>}
+      </div>
       {children}
     </section>
   );

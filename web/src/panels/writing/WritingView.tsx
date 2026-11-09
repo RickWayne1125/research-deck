@@ -591,7 +591,7 @@ export function WritingView() {
 
   return (
     <div className="panel wr">
-      <PanelHead
+      <PanelHead size="doc"
         title={doc ? (docInfo?.title ?? baseName(doc.path)) : t('nav.writing')}
         subtitle={doc ? (
           <span className="wr-subtitle">
