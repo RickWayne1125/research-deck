@@ -16,8 +16,13 @@ markers point; or pick one) and, for each of its items, how far the text has got
 | In another file | the paper covers it elsewhere |
 | Not yet | nothing covers it |
 
-Click an item to jump to its paragraph, or, when it is not written yet, to start one: a marker goes in at the
-cursor, and the paragraph under it belongs to that item.
+Click an item to go to its paragraph in this file; an item that is not written here opens the outline file
+(`notes/outline.md`, see [the outline as a Markdown file](outline.md#the-outline-as-a-markdown-file)) at its line. A
+click never changes the text. To start an item's paragraph, put the cursor where it goes and click the item's **pin**:
+a marker goes in at the cursor, and the paragraph under it belongs to that item.
+
+In the outline file itself the pane is the file's contents: clicking an item or picking a section goes to its line, the
+item at the cursor is highlighted, and each item shows its state on the outline instead.
 
 ```latex
 % rd:sec sec.motivation

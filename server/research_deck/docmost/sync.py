@@ -87,19 +87,34 @@ def note_paths(pid: str) -> list[str]:
 
 
 H1 = re.compile(r"^#\s+(.+?)\s*#*\s*$")
+RD_TAG = re.compile(r"[ \t]*<!--\s*rd:[^>]*?-->")
+
+
+def _without_tags(text: str) -> str:
+    """Research Deck's own tags (<!-- rd:sec … -->, <!-- rd:item … -->, <!-- rd:describes … -->) stay out of Docmost:
+    a line that held only tags goes too."""
+    out = []
+    for line in text.split("\n"):
+        if RD_TAG.search(line):
+            line = RD_TAG.sub("", line)
+            if not line.strip():
+                continue
+        out.append(line)
+    return "\n".join(out)
 
 
 def split_title(text: str, rel: str) -> tuple[str, str]:
-    """The page title (the note's first heading, or its file name) and the text to push (without that heading)."""
+    """The page title (the note's first heading, or its file name) and the text to push (without that heading or
+    Research Deck's tags)."""
     lines = text.replace("\r\n", "\n").split("\n")
     for i, line in enumerate(lines):
         if not line.strip():
             continue
         m = H1.match(line)
         if m:
-            return m.group(1).strip()[:250], "\n".join(lines[i + 1:]).strip("\n") + "\n"
+            return m.group(1).strip()[:250], _without_tags("\n".join(lines[i + 1:]).strip("\n") + "\n")
         break
-    return (Path(rel).stem.replace("-", " ").replace("_", " ").strip() or rel)[:250], text
+    return (Path(rel).stem.replace("-", " ").replace("_", " ").strip() or rel)[:250], _without_tags(text)
 
 
 def _norm(md: str) -> str:
@@ -280,6 +295,9 @@ def resolve(pid: str, rel: str, action: str) -> dict:
         return status(pid)
     if action in ("push", "recreate"):
         return sync(pid, only={rel}, force={rel})
+    from ..outline import doc as outline_doc  # noqa: PLC0415
+    if outline_doc.is_outline_file(pid, rel):
+        raise dm.DocmostError("the outline file follows the outline: push it, or change the outline in Research Deck", 409)
     # take: Docmost's version becomes the note
     remote = (n.get("conflict") or {}).get("remote")
     if remote is None:

@@ -205,3 +205,15 @@ button.ol-chip:hover { border-color: var(--slate); }
 .ol-rail-text:hover { text-decoration: underline; text-decoration-color: var(--faint); }
 .ol-rail .ol-nr.off .ol-rail-text { color: var(--muted); }
 .wr-docs-head .seg { flex: none; }
+/* the outline file: the item at the cursor, the pin that marks a paragraph, the way to the file, what a save did */
+.ol-rail .ol-nr.cur > .ol-nb { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.ol-rail .ol-nr.cur > .ol-nt > .ol-rail-text, .ol-rail .ol-kids.cur > .ol-rail-dir { font-weight: 600; }
+.ol-rail-chips { gap: 6px; align-items: center; }
+.ol-rail-dir { color: var(--muted); }
+.ol-rail-mark { display: inline-grid; place-items: center; width: 20px; height: 20px; padding: 0; border-radius: 10px; border: var(--line) solid var(--rule-strong); background: var(--surface); color: var(--muted); cursor: pointer; opacity: .6; }
+.ol-rail-mark:hover, .ol-rail-mark:focus-visible { opacity: 1; color: var(--ink-strong); border-color: var(--slate); }
+.ol-rail-file { display: flex; align-items: center; gap: 6px; width: 100%; padding: 6px 8px; border: var(--line) solid var(--rule); border-radius: var(--r-md); background: var(--plate); font: inherit; font-size: var(--fs-sm); color: var(--info); text-align: left; cursor: pointer; }
+.ol-rail-file:hover { border-color: var(--slate); }
+.ol-rail-file .mono { color: var(--muted); font-size: var(--fs-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.ol-rail-sync { font-size: var(--fs-sm); }
+.ol-rail-sync ul { margin: 4px 0 0; padding-left: 18px; }

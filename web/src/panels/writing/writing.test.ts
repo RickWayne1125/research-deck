@@ -1,7 +1,7 @@
 // Pure parts of the Writing panel: locating a finding's quote (mirrors writing/findings.py), word counts (mirrors
 // writing/docs.py) and the light LaTeX preview.
 import { describe, expect, it } from 'vitest';
-import { lineAt, locate, wordCount } from './text';
+import { lineAt, lineEdits, locate, wordCount } from './text';
 import { renderTex, type TexLabels } from './texPreview';
 
 const TEXT = 'Alpha beta the cache.\nThe cache is   warm here and the cache\nis cold.\n';
@@ -72,5 +72,25 @@ describe('renderTex', () => {
     expect(part).toContain('<h2>Design</h2>');
     expect(part).toContain('<code>Prefetcher</code>');
     expect(part).toContain('Input: sections/eval');
+  });
+});
+
+describe('lineEdits', () => {
+  const apply = (a: string, edits: { from: number; to: number; insert: string }[]) =>
+    [...edits].reverse().reduce((t, e) => t.slice(0, e.from) + e.insert + t.slice(e.to), a);
+
+  it('touches only what differs within each line', () => {
+    const a = '## 3 Design\n- **3.2** Ties\n- **3.1** Policy\n- New <!-- rd:item claim.n -->';
+    const b = '## 3 Design\n- **3.1** Ties\n- **3.2** Policy\n- **3.3** New <!-- rd:item claim.n -->';
+    const edits = lineEdits(a, b);
+    expect(apply(a, edits)).toBe(b);
+    expect(edits).toEqual([
+      { from: 18, to: 19, insert: '1' }, { from: 33, to: 34, insert: '2' }, { from: 46, to: 46, insert: '**3.3** ' },
+    ]);
+  });
+
+  it('falls back to one stretch when the lines do not line up, and to nothing when equal', () => {
+    expect(apply('a\nb\nc', lineEdits('a\nb\nc', 'a\nc'))).toBe('a\nc');
+    expect(lineEdits('same', 'same')).toEqual([]);
   });
 });

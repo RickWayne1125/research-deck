@@ -35,7 +35,7 @@ research-deck/
     survey/   the early survey: search arXiv / Semantic Scholar / OpenAlex, download open-access PDFs, BibTeX, draft nodes
     outline/  the paper outline: model.py (the outline as the page shows it), ops.py (outline ops → map ops), service.py,
               tasks.py (.research/outline/tasks.json), templates.py (+ templates/*.yaml), structure.py (a written outline
-              → a draft of sections and items)
+              → a draft of sections and items), doc.py (the outline as notes/outline.md, kept in step both ways)
     literature/  where a project keeps its papers: zotero.py (this computer's Zotero connection and a client for the
               app's local API and the zotero.org Web API), backend.py (files or a Zotero collection; references.bib
               exported from it), api.py
@@ -83,6 +83,10 @@ research-deck/
   facets (docs/DAG.md § The paper outline). The outline page never edits the map directly: `outline/ops.py` plans outline
   ops locally and writes one batch of map ops (the researcher's apply at once; an agent's adds apply as proposed nodes
   and anything else becomes one proposal).
+- The outline file (`notes/outline.md`, `outline/doc.py`) is a view of that copy that can be edited: every map change
+  rewrites it (`dag/service.publish` → `doc.sync`), and a save through PUT …/file is diffed against the text last
+  synced and applied as outline changes through the same Plan. Tags at the line ends (`<!-- rd:item <id> -->`) carry
+  the identity; the editor tags new lines before it saves, so no line is ever matched by its text.
 - Tasks are a separate store (`.research/outline/tasks.json`); a task serves one or more items and links what it makes
   (a map node, a figure, a survey). Its shown state is derived from that link where it can be (an experiment node's
   runs, a survey). Templates are data: built-ins in `outline/templates/*.yaml`, the researcher's in

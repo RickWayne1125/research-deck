@@ -233,10 +233,15 @@ export interface DocMarks {
   regions: { sec: string; line: number; end: number }[];
   describes: Map<string, number>;
   headings: { title: string; label: string | null; line: number }[];
+  /** The outline file's own tags (outline/doc.py): `<!-- rd:item <id> -->` at the end of an item's line. */
+  items: Map<string, number>;
   lines: number;
 }
 
 const SEC_LINE = /^\s*(?:%|<!--)\s*rd:sec\s+([^\s>]+)/;
+/** The outline file's section heading: `## 1 Title <!-- rd:sec <id> -->` (the section runs to the next one). */
+const SEC_HEAD_TAG = /^ {0,3}##(?!#).*?<!--\s*rd:sec\s+([^\s>]+?)\s*-->/;
+const ITEM_TAG = /<!--\s*rd:item\s+([^\s>]+?)\s*-->/;
 const END_LINE = /^\s*(?:%|<!--)\s*rd:end\b/;
 const DESCRIBES = /(?:%|<!--)\s*rd:describes\s+([^\s>]+)|\\rdref\{([^}]+)\}/g;
 const HEADING = /^\s*(?:\\section\*?\{([^}]*)\}(?:\s*\\label\{([^}]*)\})?|#{1,2}\s+(.+))/;
@@ -246,6 +251,7 @@ export function docMarks(text: string): DocMarks {
   const regions: DocMarks['regions'] = [];
   const describes = new Map<string, number>();
   const headings: DocMarks['headings'] = [];
+  const items = new Map<string, number>();
   let open: { sec: string; line: number } | null = null;
   lines.forEach((raw, i) => {
     const n = i + 1;
@@ -256,6 +262,13 @@ export function docMarks(text: string): DocMarks {
       return;
     }
     if (END_LINE.test(raw)) { if (open) regions.push({ ...open, end: n }); open = null; return; }
+    const head = SEC_HEAD_TAG.exec(raw);
+    if (head) {
+      if (open) regions.push({ ...open, end: n - 1 });
+      open = { sec: head[1], line: n };
+    }
+    const tag = ITEM_TAG.exec(raw);
+    if (tag && !items.has(tag[1])) items.set(tag[1], n);
     for (const m of raw.matchAll(DESCRIBES)) {
       const id = (m[1] || m[2]).replace(/^node:/, '');
       if (!describes.has(id)) describes.set(id, n);
@@ -264,7 +277,7 @@ export function docMarks(text: string): DocMarks {
     if (h) headings.push({ title: (h[1] ?? h[3] ?? '').trim().replace(/^§?\s*\d+(?:\.\d+)*\.?\s+/, ''), label: h[2] ?? null, line: n });
   });
   if (open) regions.push({ ...(open as { sec: string; line: number }), end: lines.length });
-  return { regions, describes, headings, lines: lines.length };
+  return { regions, describes, headings, items, lines: lines.length };
 }
 
 /** The outline section the line is in: its `% rd:sec` region, else the heading above it (by title or by
@@ -311,4 +324,101 @@ export function markerLines(path: string | null, marks: { sec?: string; describe
   const md = !!path && /\.(md|markdown)$/i.test(path);
   const line = (body: string) => (md ? `<!-- ${body} -->` : `% ${body}`);
   return [...(marks.sec ? [line(`rd:sec ${marks.sec}`)] : []), line(`rd:describes ${marks.describes}`)];
+}
+
+// ------------------------------------------------------------------ the outline file (outline/doc.py)
+
+/** Where an item or a section is in the outline file: the line of its tag, or null. */
+export function lineOf(marks: DocMarks, id: string): number | null {
+  return marks.items.get(id) ?? marks.regions.find(r => r.sec === id)?.line ?? null;
+}
+
+/** In the outline file, the item at the cursor: the nearest tagged line of the section at or above it. */
+export function itemAt(section: Section, marks: DocMarks, cursor: number): string | null {
+  let best = 0, at: string | null = null;
+  for (const it of walk(section.items)) {
+    const line = marks.items.get(it.id);
+    if (line && line <= cursor && line > best) { best = line; at = it.id; }
+  }
+  return at;
+}
+
+export interface TextEdit { from: number; to: number; insert: string }
+
+const FILE_HEAD = /^ {0,3}##(?:[ \t]+(.*?))?[ \t]*$/;
+const ANY_TAG = /[ \t]*<!--\s*rd:(sec|item)\s+([^\s>]+?)\s*-->/g;
+const SEC_ID = /^sec\.[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const ITEM_ID = /^claim\.[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const DIRECTION = /^↳[ \t]*(?:(?:direction|方向)[ \t]*\d*[ \t]*)?(?:[(（][ \t]*(?:chosen|选定|已选)[ \t]*[)）][ \t]*)?[:：]?[ \t]*/i;
+const TAG_END = /[ \t]*[(（][ \t]*(?:derived|推导|proposed|agent 提议|提议)[ \t]*[)）][ \t]*$/i;
+
+/** What an item line says, without its bullet, number, ‖, ↳ label, tags and (derived) / (proposed): empty while a
+ *  line is only being started. The same rules as outline/doc.py parse(). */
+export function itemText(body: string): string {
+  let b = body.replace(ANY_TAG, '').trim().replace(/^(?:[-*+]|\d+[.)])(?:[ \t]+|$)/, '');
+  if (b.startsWith('↳')) b = b.replace(DIRECTION, '');
+  b = b.replace(/^\*\*\d+(?:\.\d+)*\*\*\s*/, '').replace(/^[‖∥][ \t]*/, '');
+  for (let m = TAG_END.exec(b); m && m.index > 0; m = TAG_END.exec(b)) b = b.slice(0, m.index);
+  return b.trim();
+}
+
+function randomItemId(): string {
+  const bytes = new Uint8Array(4);
+  crypto.getRandomValues(bytes);
+  return `claim.i${[...bytes].map(b => b.toString(16).padStart(2, '0')).join('')}`;
+}
+
+/** The edits that give the outline file's untagged lines (and lines repeating a tag above them) a tag of their own,
+ *  before a save: a new heading `<!-- rd:sec sec.<slug> -->`, a new item `<!-- rd:item claim.i<hex> -->`. A line
+ *  keeps its item from one save to the next this way. `known` holds the ids already in use. */
+export function outlineTags(text: string, known: Set<string>, newItemId: () => string = randomItemId): TextEdit[] {
+  const edits: TextEdit[] = [];
+  const seen = new Set<string>();
+  const taken = () => new Set([...known, ...seen]);
+  let inSection = false, hasItem = false, pos = 0;
+  const tagAt = (raw: string, start: number, kind: string, id: string | null, fresh: string) => {
+    if (id) {
+      const m = [...raw.matchAll(ANY_TAG)].find(x => x[1] === kind && x[2] === id)!;
+      const from = start + m.index! + m[0].indexOf(id);
+      edits.push({ from, to: from + id.length, insert: fresh });
+    } else {
+      const end = raw.replace(/[ \t]+$/, '').length;
+      edits.push({ from: start + end, to: start + raw.length, insert: ` <!-- rd:${kind} ${fresh} -->` });
+    }
+  };
+  for (const raw of text.split('\n')) {
+    const start = pos;
+    pos += raw.length + 1;
+    const h = FILE_HEAD.exec(raw);
+    if (h) {
+      const body = h[1] ?? '';
+      const id = [...body.matchAll(ANY_TAG)].find(m => m[1] === 'sec')?.[2] ?? null;
+      const title = body.replace(ANY_TAG, '').trim().replace(/^(?:§\s*)?\d+(?:\.\d+)*\.?\s+/, '').trim();
+      if (!title && !id) continue;                         // "## " being typed: not a section yet
+      inSection = true;
+      hasItem = false;
+      if (id && SEC_ID.test(id) && !seen.has(id)) { seen.add(id); continue; }
+      const fresh = slugId('sec', title, taken());
+      seen.add(fresh);
+      tagAt(raw, start, 'sec', id, fresh);
+      continue;
+    }
+    if (!inSection || !raw.trim()) continue;
+    let body = raw.trim();
+    const q = /^>[ \t]?(.*)$/.exec(body);
+    if (q) {
+      const inner = q[1].trim();
+      if (/^[‖∥]/.test(inner) || !hasItem) continue;      // a group's note, or the section's role
+      body = inner;
+    }
+    const id = [...body.matchAll(ANY_TAG)].find(m => m[1] === 'item')?.[2] ?? null;
+    if (!id && !itemText(body)) continue;
+    hasItem = true;
+    if (id && ITEM_ID.test(id) && !seen.has(id)) { seen.add(id); continue; }
+    let fresh = newItemId();
+    while (seen.has(fresh) || known.has(fresh)) fresh = newItemId();
+    seen.add(fresh);
+    tagAt(raw, start, 'item', id, fresh);
+  }
+  return edits;
 }

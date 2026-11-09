@@ -63,7 +63,8 @@ The last reading of each pool is cached in `pools/.cache/<id>.json`; a removed p
 
 Name, kind (`research` or `engineering`), `views`, summary, venue, deadline, stage, language, and where the paper
 (`paper.main`, `paper.dir`), code (`code.roots`), figures and experiment records live. `resources.pools: [ids]` limits
-the resource pools the project uses (absent: all of them).
+the resource pools the project uses (absent: all of them). `outline.file` moves the outline's Markdown file (default
+`notes/outline.md`).
 
 ## A project's map: `.research/dag/config.yaml`
 

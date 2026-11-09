@@ -278,7 +278,9 @@ def build_server(project: str | None = None, http: httpx.Client | None = None, *
         "join|split}, {op:remove_item, item}, {op:set_note, parent, step, text}, {op:fork, item, question?, directions:"
         "[…]}, {op:add_direction, item, text}, {op:choose_direction|abandon_direction, item, direction, reason?}, "
         "{op:link, item, to:<node id>, type:basis|evidence|cites}. Items you add come in proposed; anything else you "
-        "change becomes ONE proposal for the researcher (the answer says which)."))
+        "change becomes ONE proposal for the researcher (the answer says which). The outline is also the file "
+        "notes/outline.md, which Research Deck rewrites from the outline: change the outline with these ops; an edit "
+        "you make to that file directly becomes a proposal too, and the file goes back to the outline as it is."))
     async def rd_outline_ops(ops: list[dict]) -> str:
         return _compact(await call("POST", "/outline/ops", body={"ops": ops, "lang": "en"}))
 

@@ -44,3 +44,22 @@ describe('links in a project document', () => {
     expect(renderMarkdown('[a](b.pdf)')).toContain('href="b.pdf"');
   });
 });
+
+describe('HTML in a document', () => {
+  it('drops comments, the outline file\'s tags included, and keeps other HTML as text', () => {
+    const html = renderMarkdown([
+      '# Outline', '', '<!-- one line of help', 'across two lines -->', '',
+      '## 1 Intro <!-- rd:sec sec.intro -->', '', '- **1.1** One. <!-- rd:item claim.a -->',
+      '', 'A <b>bold</b> claim and `<!-- kept in code -->`.', '', '<!-- not closed',
+    ].join('\n'));
+    expect(html).not.toContain('rd:item');
+    expect(html).not.toContain('rd:sec');
+    expect(html).not.toContain('one line of help');
+    expect(html).not.toContain('<p></p>');
+    expect(html).toContain('<h2>1 Intro </h2>');
+    expect(html).toContain('<li><strong>1.1</strong> One. </li>');
+    expect(html).toContain('A &lt;b&gt;bold&lt;/b&gt; claim');
+    expect(html).toContain('<code>&lt;!-- kept in code --&gt;</code>');
+    expect(html).toContain('&lt;!-- not closed');
+  });
+});

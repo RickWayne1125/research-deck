@@ -87,6 +87,8 @@ function OutlinePage() {
                     options={[{ value: 'phase', label: t('ol.order.phase') }, { value: 'paper', label: t('ol.order.paper') }]} />}
                 </>}
                 <Button size="sm" icon="robot" onClick={evaluate}>{t('ol.evaluate')}</Button>
+                {o.file?.path && <button type="button" className="ol-link" title={t('ol.fileTitle', { path: o.file.path })}
+                  onClick={() => navigate('writing', o.file!.path)}>{t('ol.file')}</button>}
                 <button type="button" className="ol-link" title={t('ol.mapTitle')} onClick={() => navigate('dag')}>{t('ol.map')}</button>
               </div>
             ) : <span className="ol-hint" style={{ maxWidth: 640 }}>{t('ol.c.lead')}</span>}

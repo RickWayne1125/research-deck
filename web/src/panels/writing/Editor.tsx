@@ -2,7 +2,7 @@
 // gutter. The parent owns saving and the review state; it drives the editor through the handle below.
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { minimalSetup } from 'codemirror';
-import { EditorState } from '@codemirror/state';
+import { EditorState, Transaction } from '@codemirror/state';
 import { EditorView, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers } from '@codemirror/view';
 import { bracketMatching } from '@codemirror/language';
 import type { DocClaim, WrFinding } from './api';
@@ -26,6 +26,9 @@ export interface EditorHandle {
   cursor: () => number;
   /** Put whole lines before the cursor's line (one undoable change) and leave the cursor after them. */
   insertLines: (lines: string[]) => void;
+  /** Small edits Research Deck makes itself (the outline file's tags and numbers): one change, outside the undo
+   *  history, the caret moved along with the text. */
+  patch: (changes: { from: number; to: number; insert: string }[]) => void;
   /** Mark these findings in the text (locating each by quote + before); returns the ids that are not in the text any more. */
   syncMarks: (findings: Placeable[]) => string[];
   dropMarks: (ids: string[]) => void;
@@ -148,6 +151,11 @@ export const WritingEditor = forwardRef<EditorHandle, { kind: 'tex' | 'md'; init
         return { text, start_line: v.state.doc.lineAt(from).number, end_line: v.state.doc.lineAt(Math.max(from, to - 1)).number };
       },
       cursor: () => view.current?.state.selection.main.head ?? 0,
+      patch: (changes) => {
+        const v = view.current;
+        if (!v || !changes.length) return;
+        v.dispatch({ changes, annotations: Transaction.addToHistory.of(false), userEvent: 'input.complete' });
+      },
       insertLines: (lines) => {
         const v = view.current;
         if (!v || !lines.length) return;

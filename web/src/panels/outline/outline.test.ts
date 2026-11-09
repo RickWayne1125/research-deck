@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Draft, Item, Outline, Step, Task, Template } from './api';
-import { arrangeDraft, boardColumns, docMarks, forks, itemIndex, liveSteps, markerLines, outlinePending, outlineText, pathTo, sectionAt, writeStates } from './model';
+import { arrangeDraft, boardColumns, docMarks, forks, itemAt, itemIndex, itemText, lineOf, liveSteps, markerLines, outlinePending, outlineTags, outlineText, pathTo, sectionAt, writeStates } from './model';
 
 function item(id: string, num: string, extra: Partial<Item> = {}): Item {
   return {
@@ -136,5 +136,74 @@ describe('the outline in a paper file', () => {
     expect(st.get('claim.ties')).toBe('written');
     expect(st.get('claim.mods')).toBe('todo');
     expect(writeStates(outline.sections[0], docMarks(tex), 6).get('claim.ties')).toBe('here');
+  });
+});
+
+describe('the outline file', () => {
+  const file = [
+    '# Outline: Demo',
+    '',
+    '<!-- Research Deck keeps this file … -->',
+    '',
+    '## 3 Design <!-- rd:sec sec.design -->',
+    '',
+    '> How it works',
+    '',
+    '- **3.1** Which policy? <!-- rd:item claim.policy -->',
+    '  - ↳ Direction 1 (chosen): Lookahead <!-- rd:item claim.look -->',
+    '    - **3.1.1** Reads the queue <!-- rd:item claim.look-a -->',
+    '> ‖ two parts',
+    '- **3.2** Ties in LRU order <!-- rd:item claim.ties -->',
+    '- **3.3** ‖ Modules by name <!-- rd:item claim.mods -->',
+  ].join('\n');
+
+  it('finds each section and item by its tag', () => {
+    const m = docMarks(file);
+    expect(m.regions).toEqual([{ sec: 'sec.design', line: 5, end: 14 }]);
+    expect(m.items.get('claim.look-a')).toBe(11);
+    expect(lineOf(m, 'sec.design')).toBe(5);
+    expect(lineOf(m, 'claim.mods')).toBe(14);
+    expect(lineOf(m, 'claim.nope')).toBeNull();
+    expect(sectionAt(outline, m, 12)).toBe('sec.design');
+  });
+
+  it('knows the item at the cursor', () => {
+    const m = docMarks(file);
+    const sec = outline.sections[0];
+    expect(itemAt(sec, m, 8)).toBeNull();                  // above the first item
+    expect(itemAt(sec, m, 11)).toBe('claim.look-a');
+    expect(itemAt(sec, m, 12)).toBe('claim.look-a');       // the note belongs to no item
+    expect(itemAt(sec, m, 13)).toBe('claim.ties');
+  });
+
+  it('reads an item line as outline/doc.py does', () => {
+    expect(itemText('- **3.3** ‖ Modules by name (derived) <!-- rd:item claim.mods -->')).toBe('Modules by name');
+    expect(itemText('  - ↳ Direction 1 (chosen): Lookahead <!-- rd:item claim.look -->')).toBe('Lookahead');
+    expect(itemText('- ')).toBe('');
+    expect(itemText('-')).toBe('');
+    expect(itemText('- **3.4**')).toBe('');
+    expect(itemText('3 GPUs are enough')).toBe('3 GPUs are enough');
+  });
+
+  it('tags new lines and repeated tags before a save, and nothing else', () => {
+    let n = 0;
+    const next = () => `claim.inew${++n}`;
+    const text = [
+      '# Outline', '', '- not an item: above the first section', '',
+      '## 3 Design <!-- rd:sec sec.design -->', '> How it works', '- **3.1** Kept <!-- rd:item claim.a -->',
+      '- A new item', '> ‖ a note', '> a quote after an item is an item', '- ', '  - pasted <!-- rd:item claim.a -->',
+      '## Threat model', '## ',
+    ].join('\n');
+    const edits = outlineTags(text, new Set(['claim.a', 'sec.design']), next);
+    let out = text;
+    for (const e of [...edits].reverse()) out = out.slice(0, e.from) + e.insert + out.slice(e.to);
+    expect(out.split('\n')).toEqual([
+      '# Outline', '', '- not an item: above the first section', '',
+      '## 3 Design <!-- rd:sec sec.design -->', '> How it works', '- **3.1** Kept <!-- rd:item claim.a -->',
+      '- A new item <!-- rd:item claim.inew1 -->', '> ‖ a note', '> a quote after an item is an item <!-- rd:item claim.inew2 -->',
+      '- ', '  - pasted <!-- rd:item claim.inew3 -->',
+      '## Threat model <!-- rd:sec sec.threat-model -->', '## ',
+    ]);
+    expect(outlineTags(out, new Set(), next)).toEqual([]);   // tagged once, nothing to do the next time
   });
 });

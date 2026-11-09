@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..actors import actor_of
 from ..events import hub
+from ..outline import doc as outline_doc
 from . import context, docs, fakes, review, store, versions
 
 router = APIRouter(prefix="/api/projects/{pid}/writing", tags=["writing"])
@@ -28,6 +29,7 @@ Status = Literal["accepted", "rejected", "open"]
 
 @router.get("/docs")
 def list_docs(pid: str):
+    outline_doc.sync(pid)                       # the outline file is there and up to date
     out = []
     for rel in docs.doc_files(pid):
         d = docs.describe(pid, rel, context.claims_for(pid, rel))

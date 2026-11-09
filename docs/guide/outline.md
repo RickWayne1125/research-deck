@@ -37,6 +37,39 @@ Then edit it in place, like an outliner:
 Select a section to rename it, change its role or phase, move it, add a section after it or remove it. Removing an
 item marks it abandoned on the map; nothing is deleted.
 
+## The outline as a Markdown file
+
+The outline is also a file in the project, `notes/outline.md` (set `outline.file` in `.research/project.yaml` to keep
+it elsewhere). Research Deck writes it when the project has an outline, and keeps it and the outline page in step both
+ways: what you change on the page is written to the file, and what you change in the file changes the outline. Open it
+with **As Markdown** on the outline page, or from the **Outline** pane of **Paper**.
+
+```markdown
+## 2 Background and Motivation <!-- rd:sec sec.motivation -->
+
+> The bottleneck is real, existing methods fall short, and there is an opportunity
+
+- **2.1** On-demand loading waits 58% of the time. <!-- rd:item claim.icf705944 -->
+> ‖ two measurements
+- **2.2** Layer-wise prediction hits 61%. <!-- rd:item claim.if1a02388 -->
+- **2.3** ‖ Adjacent tokens share experts. <!-- rd:item claim.icd68f622 -->
+  - **2.3.1** Within a batch, 70% of tokens share an expert. (derived) <!-- rd:item claim.i5b0e91d2 -->
+```
+
+- One line is one item; indent a line to put it under the one above. A `## ` heading is a section; `>` lines right
+  under it are its role.
+- `‖` puts an item in parallel with the one before it; a `> ‖ …` line names the group that starts below it.
+- `(derived)` marks an item that is argued rather than measured. `↳ Direction 1: …` lines are the directions of a fork.
+- The `<!-- rd:… -->` tag at the end of a line ties it to its item. Keep it: the editor gives a new line its own tag
+  when it saves, and the numbers are brought up to date after each save.
+
+A save in **Paper** changes the outline at once. Delete a line and its item is abandoned (with what was under it,
+unless you moved that elsewhere); put the line back and the item comes back. Tasks, evidence and forks are managed on
+the outline page: in the file you can change a direction's text and add one under an item that already forks, but a
+direction is given up or chosen on the page. Edits made to the file outside Research Deck, in another editor or by an
+agent's own tools, become a proposal for you to approve, and the file shows the outline as it is until then. What a
+save could not apply (a locked item, say) is shown in the Outline pane, and your text stays in the file.
+
 ## Tasks
 
 Each item can get tasks of four kinds: **Literature**, **Code**, **Figure** and **Experiment**. One task can serve

@@ -60,6 +60,8 @@ export interface Outline {
   counts: { done: number; doing: number; todo: number; blocked: number; total: number; abandoned: number; suggested: number };
   pending: Pending[];
   loose: { id: string; kind: string; title: string; status: string }[];
+  /** The outline as a Markdown file in the project (outline/doc.py), and what its last save could not apply. */
+  file?: { path: string; error: string | null; warnings: string[] } | null;
 }
 
 export interface TemplateSection { key: string; title: Bi; role: Bi | string; phase: SectionPhase; tasks?: TaskType[] }

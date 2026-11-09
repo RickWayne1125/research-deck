@@ -97,7 +97,7 @@ def test_history_and_the_uncommitted_change(built):
     assert "sorted(self.blocks)" in git(root, "show", "HEAD~2:toycache/lookahead.py")
     # machine-local state is ignored, the rest of .research/ is committed
     assert (root / ".research" / ".gitignore").read_text().split() == [
-        "sessions.json", "context/", "writing/reviews/", "writing/snapshots/", "figures/", "dag/.cache/"]
+        "sessions.json", "context/", "writing/reviews/", "writing/snapshots/", "figures/", "dag/.cache/", "outline/file.json"]
     tracked = git(root, "ls-files").split()
     assert ".research/dag/nodes/sol.lfu.yaml" in tracked and ".research/experiments/lookahead.json" in tracked
     assert not any(t.startswith(".research/dag/.cache") for t in tracked)
@@ -208,7 +208,11 @@ def test_figures_render_and_link(deck):
 def test_writing_and_coding_panels(deck):
     client, pid, root = deck
     docs = {d["path"]: d for d in client.get(f"/api/projects/{pid}/writing/docs").json()}
-    assert "paper/main.md" in docs
+    assert "paper/main.md" in docs and "notes/outline.md" in docs
+    # the outline file came with the demo, exactly as the first sync writes it
+    assert client.get(f"/api/projects/{pid}/outline").json()["file"]["path"] == "notes/outline.md"
+    assert "notes/outline.md" not in git(root, "status", "--porcelain")
+    assert "↳ Direction 1 (chosen): Lookahead" in (root / "notes" / "outline.md").read_text()
     terms = client.get(f"/api/projects/{pid}/writing/glossary").json()["terms"]
     assert {t["preferred"] for t in terms} >= {"lookahead"}
     paper = (root / "paper" / "main.md").read_text()

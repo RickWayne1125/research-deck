@@ -29,6 +29,11 @@ export interface DocClaim {
   outline?: string;
 }
 
+/** What a save of the outline file did to the outline (outline/doc.py saved). */
+export interface OutlineSync { applied: boolean; proposal?: boolean; error?: string | null; warnings: string[] }
+/** PUT …/file: the file as it is now when Research Deck changed it (the outline file's numbers and tags). */
+export interface SaveResult { path: string; sha: string; mtime: number; content?: string; outline?: OutlineSync }
+
 export interface WrVersion extends DocVersion { author?: string; words?: number; auto?: boolean }
 export interface WrRule extends LearnedRule { example?: { kind?: string; quote?: string; replacement?: string } }
 
@@ -39,7 +44,7 @@ export const writingApi = {
   docs: (pid: string) => get<WritingDoc[]>(w(pid, '/docs')),
   file: (pid: string, path: string) => get<FileContent>(p(pid, '/file'), { path }),
   save: (pid: string, path: string, content: string, base_sha?: string | null) =>
-    put<{ path: string; sha: string; mtime: number }>(p(pid, '/file'), { path, content, base_sha: base_sha ?? undefined }),
+    put<SaveResult>(p(pid, '/file'), { path, content, base_sha: base_sha ?? undefined }),
   review: (pid: string, body: { path: string; passes: ReviewPass[]; text?: string; range?: { start_line: number; end_line: number }; lang?: string }) =>
     post<WrReview>(w(pid, '/review'), body),
   getReview: (pid: string, id: string) => get<WrReview>(w(pid, `/review/${enc(id)}`)),

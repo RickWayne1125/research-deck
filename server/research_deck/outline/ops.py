@@ -64,6 +64,7 @@ class Plan:
         self.retarget: dict[str, str] = {}     # tasks of item -> item (a fork moves them to direction 1)
         self.removed: set[str] = set()
         self.dead: set[str] = set()            # abandoned by this plan (not on the map yet)
+        self.revived: set[str] = set()         # abandoned on the map, live again after this plan
         self.last_created: str | None = None
         self.last_section: str | None = None
 
@@ -171,8 +172,15 @@ class Plan:
         self.notes[parent] = moved
 
     def is_dead(self, nid: str) -> bool:
-        """Abandoned on the map, or by an earlier op of this plan."""
-        return nid in self.dead or self.node(nid).get("status") in DEAD
+        """Abandoned on the map (and not revived by this plan), or by an earlier op of this plan."""
+        return nid in self.dead or (self.node(nid).get("status") in DEAD and nid not in self.revived)
+
+    def revive(self, nid: str, reason: str) -> None:
+        """An abandoned node comes back (the outline file names it again)."""
+        if nid in self.revived or nid in self.created or self.node(nid).get("status") not in DEAD:
+            return
+        self.statuses.append({"op": "set_status", "node": nid, "to": "active", "reason": reason})
+        self.revived.add(nid)
 
     def kill(self, nid: str, reason: str, note: str | None) -> None:
         """Abandon a node that exists on the map (once, however many ops reach it)."""
@@ -202,8 +210,8 @@ class Plan:
 
     def sections(self) -> list[dict]:
         secs = [self.node(i) for i in set(self.nodes) | set(self.created)]
-        secs = [s for s in secs if s.get("kind") == "section" and s.get("status") not in DEAD
-                and isinstance(self.order_of(s), int) and s["id"] not in self.removed]
+        secs = [s for s in secs if s.get("kind") == "section" and (s.get("status") not in DEAD or s["id"] in self.revived)
+                and isinstance(self.order_of(s), int) and s["id"] not in self.removed and s["id"] not in self.dead]
         return sorted(secs, key=lambda s: (self.order_of(s), s["id"]))
 
     def order_of(self, s: dict) -> Any:

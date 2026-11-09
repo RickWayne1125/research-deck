@@ -1,6 +1,7 @@
 """Outline routes (docs/API.md § Outline).
 
-GET    /api/projects/{pid}/outline                 the outline as the page shows it (outline/model.py)
+GET    /api/projects/{pid}/outline                 the outline as the page shows it (outline/model.py), with
+                                                   file: {path, error, warnings}, the outline file (outline/doc.py)
 POST   /api/projects/{pid}/outline/ops             {ops: [outline op…], lang?}: applied in one batch (agents: proposals)
 POST   /api/projects/{pid}/outline/init            {template, lang?, structure?}: a new outline from a template
 POST   /api/projects/{pid}/outline/structure       {text, template, lang?, agent?}: a structured draft (nothing written)
@@ -20,14 +21,15 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
-from .. import actors
+from .. import actors, projects
 from ..agents import runner
 from ..events import hub
-from . import model, service, structure, templates
+from . import doc, model, service, structure, templates
 from . import tasks as task_store
 
 router = APIRouter(tags=["outline"])
 runner.register_fake("outline-structure", structure.fake_answer)
+projects.FILE_HOOKS.append(doc.saved)          # the outline file: a save changes the outline
 
 
 def _human(request: Request) -> str:
@@ -39,7 +41,8 @@ def _human(request: Request) -> str:
 
 @router.get("/api/projects/{pid}/outline")
 def get_outline(pid: str, lang: str = "zh"):
-    return model.build(pid, "en" if lang == "en" else "zh")
+    doc.sync(pid)
+    return {**model.build(pid, "en" if lang == "en" else "zh"), "file": doc.info(pid)}
 
 
 class OpsBody(BaseModel):

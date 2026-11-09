@@ -30,7 +30,7 @@ from datetime import datetime
 from pathlib import Path
 
 from . import config
-from .util import read_json, write_json, write_text_atomic, write_yaml
+from .util import read_json, read_yaml, write_json, write_text_atomic, write_yaml
 
 log = logging.getLogger("research_deck.demo")
 
@@ -64,7 +64,7 @@ EARLIER = {("c3", "toycache/lookahead.py"): [(
 WORKTREE_EDIT = ("toycache/lru.py", "            self.blocks.move_to_end(block)\n",
                  "            # TODO: a CLOCK approximation would avoid reordering the dict on every hit.\n"
                  "            self.blocks.move_to_end(block)\n")
-RESEARCH_GITIGNORE = "sessions.json\ncontext/\nwriting/reviews/\nwriting/snapshots/\nfigures/\ndag/.cache/\n"
+RESEARCH_GITIGNORE = "sessions.json\ncontext/\nwriting/reviews/\nwriting/snapshots/\nfigures/\ndag/.cache/\noutline/file.json\n"
 
 SIM = ["toycache/__init__.py", "toycache/sim.py", "toycache/trace.py"]
 BASE_KEYS = ["policy", "cache.capacity_blocks", "trace.length", "trace.blocks", "trace.skew", "trace.drift_every",
@@ -214,9 +214,13 @@ def build(src: Path, dst: Path) -> dict:
     _outline(dst)
     _write_dag_config(dst, "strict")               # the history is in; from here on the demo follows the stage rules
     write_text_atomic(dst / ".research" / ".gitignore", RESEARCH_GITIGNORE)
+    # the outline as Markdown, as the first sync would write it
+    from .outline import doc as outline_doc  # noqa: PLC0415
+    name = str((read_yaml(dst / ".research" / "project.yaml", {}) or {}).get("name") or dst.name)
+    outline_file = outline_doc.write_in(dst, name)
     label, when, message = RESEARCH_COMMIT
     union = [".gitattributes"] if (dst / ".gitattributes").is_file() else []   # the DAG's merge=union lines
-    shas[label] = _commit(dst, [".research", *union], when, message)
+    shas[label] = _commit(dst, [".research", *union, *([outline_file] if outline_file else [])], when, message)
 
     rel, old, new = WORKTREE_EDIT                  # the uncommitted change the Coding panel shows
     text = (dst / rel).read_text(encoding="utf-8")

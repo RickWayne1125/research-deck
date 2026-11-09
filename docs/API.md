@@ -19,7 +19,7 @@ The research DAG's routes are in docs/DAG.md (§ HTTP API).
 | GET | /api/projects/{pid}/tree | `?dir=&depth=` | `TreeNode[]` |
 | GET | /api/projects/{pid}/file | `?path=` | `FileContent` |
 | GET | /api/projects/{pid}/raw | `?path=` | the file itself, for links and pictures in documents: PDFs and PNG/JPEG/GIF/WebP/SVG pictures open in the browser, other UTF-8 text as plain text, anything else downloads. Never served as a page of the dashboard: nosniff, and a `sandbox` CSP on everything but PDFs |
-| PUT | /api/projects/{pid}/file | `{path, content, base_sha?}` | `{path, sha, mtime}`; 409 `{message, sha}` if the file changed on disk |
+| PUT | /api/projects/{pid}/file | `{path, content, base_sha?}` | `{path, sha, mtime, content?, outline?}`; 409 `{message, sha}` if the file changed on disk. For the outline file (§ Outline file) `outline: {applied, proposal?, error?, warnings}` says what the save did to the outline, and `content` is the file as it is now when that differs from what was sent (numbers brought up to date) |
 
 ## New projects (start/)
 
@@ -58,7 +58,7 @@ and forks, on the map (docs/DAG.md § The paper outline); tasks hung on items; t
 
 | Method | Path | Body / query | Response |
 |---|---|---|---|
-| GET | /api/projects/{pid}/outline | `?lang=zh\|en` | `Outline`: `{has_outline, template, phases, project_phase, stage_mode, sections: [{id, num, title, role, phase, items: Step[], counts}], groups: [{phase, sections, state: done\|current\|later\|summary, items, holds, tasks, tasks_done, missing}], tasks, counts, pending, loose}`; a step is `{items: Item[], note}`, an item `{id, num, depth, section, parent, direction, text, status, state, derived, condition, summary_of, children, fork: {directions, chosen}, tasks, suggested, evidence, written, proposals, kids, why?, why_kind?, ended_at?}` |
+| GET | /api/projects/{pid}/outline | `?lang=zh\|en` | `Outline`: `{has_outline, template, phases, project_phase, stage_mode, file, sections: [{id, num, title, role, phase, items: Step[], counts}], groups: [{phase, sections, state: done\|current\|later\|summary, items, holds, tasks, tasks_done, missing}], tasks, counts, pending, loose}`; a step is `{items: Item[], note}`, an item `{id, num, depth, section, parent, direction, text, status, state, derived, condition, summary_of, children, fork: {directions, chosen}, tasks, suggested, evidence, written, proposals, kids, why?, why_kind?, ended_at?}` |
 | POST | /api/projects/{pid}/outline/ops | `{ops: [outline op…], lang?}` (ops: outline/ops.py docstring) | `{applied, created, last, proposal?}`; an agent's batch applies directly only when it only adds (items come in `proposed`), else it is one proposal |
 | POST | /api/projects/{pid}/outline/init | `{template, lang?, structure?: {sections: [{key?, title, items, notes?}]}}` | as ops; 409 when the project has an outline |
 | POST | /api/projects/{pid}/outline/structure | `{text, template, lang?, agent?: true}` | a draft `{sections, changes, by: agent\|parse}` (nothing written) |
@@ -79,6 +79,28 @@ live sub-items hold), doing, todo, blocked, locked, needs_tasks, choose (a fork 
 summary item whose items do not hold), proposed, abandoned. `evidence` lists the nodes its edges point at and, with
 `rel: "task"`, what its tasks produce. Changing the outline, tasks or templates is the researcher's (403 for agents),
 except outline ops and new tasks as above.
+
+### Outline file
+
+The outline as a Markdown file in the project (`outline/doc.py`): `notes/outline.md`, or project.yaml `outline.file`
+(when a file of the researcher's own already has the default name, the next free one, `notes/outline-2.md`). The GET
+above adds `file: {path, error, warnings}` once it exists. A `## ` heading is a section (`<!-- rd:sec <id> -->` at its
+end), `>` lines under it its role, every other line an item (`- **<num>** [‖ ]<text>[ (derived)] <!-- rd:item <id> -->`,
+indented under its parent; `‖` joins the step before, `> ‖ …` names the group below it, `- ↳ Direction <k>: …` is a
+fork's direction).
+
+- **Map → file:** after every change to the map, and when the outline or the documents are read, the file is written
+  again from the outline (the text before its first section is kept). Edits made to it outside Research Deck are
+  imported first, as `agent:unknown`: one proposal; the file shows the map until the proposal is approved.
+- **File → map:** a PUT of the file is a three-way diff, from the text last synced (`.research/outline/file.json`) to
+  the saved text, applied to the map as it is now. It covers text and `(derived)`, new items and sections (a line
+  without a tag gets one), removed items and sections (abandoned, except what moved elsewhere), moves, indents,
+  parallel groups and their notes, the order of sections, and the revival of an abandoned item whose tag comes back.
+  Forks are made, chosen and given up through outline ops. The researcher's save applies at once; an agent's becomes
+  one proposal and the file is written again from the map. When a save cannot be applied, the text stays as saved,
+  `error` says why and the file is not rewritten until a save applies.
+- Docmost receives notes without Research Deck's `<!-- rd:… -->` tags, and the outline file cannot take Docmost's
+  version (it follows the outline).
 
 ## Agents (agents/)
 

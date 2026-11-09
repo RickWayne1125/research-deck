@@ -54,7 +54,8 @@ sync runs on the server, also when no browser is open.
 
 **Bind a project** (Settings → Docmost → This project): paste the link of a Docmost page and click **Bind**. Every
 `.md` file under `notes/` becomes a page under it. A note's first `# ` heading is the page's title, or else its file
-name is.
+name is. Research Deck's own `<!-- rd:… -->` tags stay out of the pages; the outline file (`notes/outline.md`) is
+pushed like any note, but cannot take Docmost's version, since it follows the outline.
 
 **Sync** goes one way, notes → Docmost: right after binding, then every minute while you are signed in, and on
 **Sync now**. A page edited in Docmost since the last push is never overwritten. Its note shows **Conflict**, and

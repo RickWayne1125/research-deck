@@ -12,18 +12,21 @@ A project is any folder. Research Deck keeps its own state in <root>/.research/ 
 """
 from __future__ import annotations
 
+import logging
 import os
 import re
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from . import config, demo
+from .actors import actor_of
 from .events import hub
 from .util import now_iso, read_json, read_yaml, rel_to, safe_join, sha256_text, slugify, write_json, write_text_atomic, write_yaml
 
+log = logging.getLogger("research_deck")
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
 RESEARCH_DIR = ".research"
@@ -145,7 +148,7 @@ def init_research_dir(root: Path, name: str | None = None, state: str = RESEARCH
     if not ignore.exists():
         # Machine-local state: session ids point into this Mac's ~/.claude and ~/.codex; transcripts and caches are local.
         write_text_atomic(ignore, "sessions.json\ncontext/transcripts/\ncontext/pending/\nwriting/reviews/\n"
-                                  "figures/previews/\ndag/.cache/\n")
+                                  "figures/previews/\ndag/.cache/\noutline/file.json\n")
 
 
 # ---------------------------------------------------------------- routes
@@ -328,8 +331,13 @@ class WriteFile(BaseModel):
     base_sha: str | None = None   # the sha the editor loaded; a different sha on disk means someone else wrote it
 
 
+# Run after PUT …/file wrote a file: hook(pid, rel, content, actor) -> None, or, for a file Research Deck keeps in step
+# with something else (the outline file, outline/doc.py), {"content": the file as it is now, ...what to report}.
+FILE_HOOKS: list = []
+
+
 @router.put("/{pid}/file")
-def write_file(pid: str, body: WriteFile):
+def write_file(pid: str, body: WriteFile, request: Request):
     root = project_root(pid)
     target = safe_join(root, body.path)
     if body.base_sha and target.exists():
@@ -337,6 +345,20 @@ def write_file(pid: str, body: WriteFile):
         if current != body.base_sha:
             raise HTTPException(409, {"message": "the file changed on disk", "sha": current})
     write_text_atomic(target, body.content)
-    sha = sha256_text(body.content)
-    hub.publish(pid, "file", {"path": rel_to(root, target), "sha": sha})
-    return {"path": rel_to(root, target), "sha": sha, "mtime": target.stat().st_mtime}
+    rel = rel_to(root, target)
+    extra: dict = {}
+    for hook in FILE_HOOKS:
+        try:
+            extra = hook(pid, rel, body.content, actor_of(request)) or {}
+        except Exception:  # noqa: BLE001 — the file is written whatever a hook makes of it
+            log.exception("file hook failed for %s", rel)
+            extra = {}
+        if extra:
+            break
+    content = extra.pop("content", body.content)
+    sha = sha256_text(content)
+    hub.publish(pid, "file", {"path": rel, "sha": sha})
+    out = {"path": rel, "sha": sha, "mtime": target.stat().st_mtime, **extra}
+    if content != body.content:
+        out["content"] = content
+    return out

@@ -101,3 +101,25 @@ export function docKind(path: string): 'tex' | 'md' {
 
 /** "paper/sections/intro.tex" → "intro.tex" */
 export const baseName = (path: string) => path.split('/').pop() || path;
+
+/** The edits that turn `a` into `b`, line by line, each limited to what differs within its line (one stretch when the
+ *  number of lines differs), so a caret outside them stays where it is. */
+export function lineEdits(a: string, b: string): { from: number; to: number; insert: string }[] {
+  if (a === b) return [];
+  const span = (x: string, y: string, at: number) => {
+    let s = 0;
+    while (s < x.length && s < y.length && x[s] === y[s]) s++;
+    let e = 0;
+    while (e < x.length - s && e < y.length - s && x[x.length - 1 - e] === y[y.length - 1 - e]) e++;
+    return { from: at + s, to: at + x.length - e, insert: y.slice(s, y.length - e) };
+  };
+  const al = a.split('\n'), bl = b.split('\n');
+  if (al.length !== bl.length) return [span(a, b, 0)];
+  const out: { from: number; to: number; insert: string }[] = [];
+  let pos = 0;
+  al.forEach((x, i) => {
+    if (x !== bl[i]) out.push(span(x, bl[i], pos));
+    pos += x.length + 1;
+  });
+  return out;
+}

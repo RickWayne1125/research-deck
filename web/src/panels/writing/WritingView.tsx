@@ -7,6 +7,9 @@
 // shows its number there. In a research project the left pane switches between the outline (the items of the section
 // at the cursor and how far the text has got with each: panels/outline/Rail.tsx) and the documents; after a save that
 // changed the outline markers (% rd:sec, % rd:describes) the paper is synced to the map.
+// The outline file (notes/outline.md, outline/doc.py) is the outline itself: before it is saved, its new lines get their
+// rd: tags; the save changes the outline, and the file comes back with its numbers up to date (taken in when nothing was
+// typed meanwhile). Clicking an item in another file opens the outline file at that item.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './i18n';
 import './writing.css';
@@ -14,20 +17,20 @@ import { useApp } from '../../state/app';
 import { useToday } from '../../state/today';
 import { dagApi } from '../../dag/api';
 import { OutlineRail } from '../outline/Rail';
-import { allItems } from '../outline/model';
+import { allItems, docMarks, lineOf, outlineItemIds, outlineTags } from '../outline/model';
 import { useI18n } from '../../i18n';
 import { ApiError } from '../../api/client';
 import { Button, ErrorNote, IconButton, PanelHead, Segmented, Spinner, useLoad } from '../../components/ui';
 import { PaperTabs } from './PaperTabs';
 import { useResizableWidth } from '../../components/resize';
 import type { ReviewPass } from '../../types';
-import { writingApi, type DocClaim, type WrFinding, type WrReview } from './api';
+import { writingApi, type DocClaim, type OutlineSync, type WrFinding, type WrReview } from './api';
 import { WritingEditor, type EditorHandle } from './Editor';
 import { FindingCard, WHY_KEYS, type FindingActions } from './Findings';
 import { ReviewBar } from './Review';
 import { ConflictDialog, VersionsDialog } from './Dialogs';
 import { ClaimCard, DocsDrawer, NoDoc, Preview } from './Parts';
-import { KEYS, MAC, baseName, docKind, wordCount } from './text';
+import { KEYS, MAC, baseName, docKind, lineEdits, wordCount } from './text';
 
 const AUTOSAVE_MS = 1200;
 const NARROW_PX = 1100;
@@ -68,6 +71,14 @@ export function WritingView() {
   useEffect(() => writeLocal('rd.wr.left', left), [left]);
   const [railText, setRailText] = useState('');
   const [cursorLine, setCursorLine] = useState(1);
+  // The outline file: its path, the ids its new lines must not reuse, what its last save did, an item to open it at.
+  const outlineFile = research ? today.outline?.file?.path ?? null : null;
+  const outlineFileRef = useRef(outlineFile);
+  outlineFileRef.current = outlineFile;
+  const knownIds = useRef<Set<string>>(new Set());
+  knownIds.current = useMemo(() => outlineItemIds(today.outline), [today.outline]);
+  const [fileSync, setFileSync] = useState<OutlineSync | null>(null);
+  const jumpTo = useRef<string | null>(null);
   const railTimer = useRef<number | undefined>(undefined);
   // Below this width the documents list floats over the text instead of taking a column.
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -112,6 +123,8 @@ export function WritingView() {
   const [words, setWords] = useState(0);
   const [hasSelection, setHasSelection] = useState(false);
   const [mode, setMode] = useState<'edit' | 'preview'>('edit');
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
   const [previewText, setPreviewText] = useState('');
   const [toast, setToast] = useState<Toast | null>(null);
   const say = useCallback((text: string, action?: Toast['action']) => setToast(prev => ({ text, action, n: (prev?.n ?? 0) + 1 })), []);
@@ -121,7 +134,7 @@ export function WritingView() {
   useEffect(() => {
     if (!path) { setDoc(null); return; }
     let alive = true;
-    setDoc(null); setLoadError(null); setReview(null); setStale(new Set()); setCard(null); setClaimCard(null); setRestored(null);
+    setDoc(null); setLoadError(null); setReview(null); setStale(new Set()); setCard(null); setClaimCard(null); setRestored(null); setFileSync(null);
     setSaveState('saved'); setMode('edit');
     writingApi.file(pid, path).then(f => {
       if (!alive) return;
@@ -168,15 +181,31 @@ export function WritingView() {
     if (saving.current) await saving.current;
     if (saveStateRef.current === 'conflict') return;
     if (restoredRef.current && !explicit) return;
+    if (doc.path === outlineFileRef.current && editor.current) {
+      // the outline file: a new line gets its tag now, so it keeps its item from this save to the next
+      const tags = outlineTags(textRef.current, knownIds.current);
+      if (tags.length) {
+        editor.current.patch(tags);
+        textRef.current = editor.current.getText();
+        clearTimeout(timer.current);
+      }
+    }
     const content = textRef.current;
     if (content === lastSaved.current) { setSaveState('saved'); setRestored(null); return; }
     setSaveState('saving');
     const run = writingApi.save(pid, doc.path, content, baseSha.current).then(r => {
-      baseSha.current = r.sha; lastSaved.current = content; setRestored(null);
+      // the file as it is now: the outline file comes back with its numbers up to date
+      const disk = r.content ?? content;
+      baseSha.current = r.sha; lastSaved.current = disk; setRestored(null);
+      if (disk !== content && textRef.current === content) {
+        editor.current?.patch(lineEdits(content, disk));
+        textRef.current = disk;
+      }
+      if (r.outline) setFileSync(r.outline);
       const sig = markerSig(content);
       if (doc.kind === 'tex' && sig !== synced.current) { synced.current = sig; dagApi.paperSync(pid).catch(() => {}); }
-      setSaveState(textRef.current === content ? 'saved' : 'dirty');
-      if (textRef.current !== content) timer.current = window.setTimeout(() => save(), AUTOSAVE_MS);
+      setSaveState(textRef.current === disk ? 'saved' : 'dirty');
+      if (textRef.current !== disk) timer.current = window.setTimeout(() => save(), AUTOSAVE_MS);
     }).catch(async (e: unknown) => {
       if (e instanceof ApiError && e.status === 409) {
         setSaveState('conflict');
@@ -246,6 +275,27 @@ export function WritingView() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [onEvent, doc, pid, takeDisk, say, t]);
+
+  // ------------------------------------------------------------ the outline file at an item
+  const openItem = useCallback((id: string) => {
+    const file = outlineFileRef.current;
+    if (!file) { navigate('outline', id ? `@item/${id}` : null); return; }
+    if (docPath.current === file && doc?.path === file) {
+      const line = lineOf(docMarks(textRef.current), id);
+      if (line) goToLine(line);
+      return;
+    }
+    jumpTo.current = id;
+    navigate('writing', file);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doc, navigate]);
+  useEffect(() => {
+    const id = jumpTo.current;
+    if (!doc || !id || doc.path !== outlineFileRef.current) return;
+    jumpTo.current = null;
+    const line = lineOf(docMarks(doc.initial), id);
+    if (line) frames().then(() => editor.current?.goToLine(line));
+  }, [doc]);
 
   // ------------------------------------------------------------ claims gutter
   const [claims, setClaims] = useState<DocClaim[]>([]);
@@ -448,9 +498,9 @@ export function WritingView() {
   }), [decide, advance, focusFinding, say, t, navigate]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   const goToLine = (line: number) => {
-    const ed = editor.current;
-    if (!ed) return;
-    ed.goToLine(line);
+    if (!editor.current) return;
+    if (modeRef.current === 'preview') { setMode('edit'); frames().then(() => editor.current?.goToLine(line)); return; }
+    editor.current.goToLine(line);
   };
 
   // Accept all: every open suggestion with a replacement, as one edit (undo in the toast).
@@ -564,7 +614,8 @@ export function WritingView() {
         style={docsW.style}>
         {docsShown && (research && left === 'outline' ? (
           <OutlineRail head={leftSwitch} text={railText} cursor={cursorLine} path={doc?.path ?? null} floating={narrow} width={docsW}
-            onJump={(line) => editor.current?.goToLine(line)} onInsert={(lines) => editor.current?.insertLines(lines)} />
+            outlineFile={outlineFile} sync={fileSync} onOpenItem={openItem}
+            onJump={(line) => goToLine(line)} onInsert={(lines) => editor.current?.insertLines(lines)} />
         ) : (
           <DocsDrawer docs={docs.data} loading={docs.loading} current={path} onRefresh={docs.reload} floating={narrow} width={docsW}
             head={research ? leftSwitch : undefined}

@@ -91,10 +91,11 @@ def _worst(states: list[str]) -> str | None:
 
 
 class Builder:
-    def __init__(self, pid: str, st, project_step: int, mode: str, surveys: dict | None, lang: str):
+    def __init__(self, pid: str, st, project_step: int, mode: str, surveys: dict | None, lang: str,
+                 tasks: list[dict] | None = None):
         self.pid, self.st, self.project_step, self.mode, self.lang = pid, st, project_step, mode, lang
         self.nodes = st.nodes if st is not None else {}
-        self.tasks = task_store.load(pid)
+        self.tasks = task_store.load(pid) if tasks is None else tasks
         self.surveys = surveys or {}
         self.items: dict[str, dict] = {}            # id -> record (structure first, then state)
         self.phase_of: dict[str, int | None] = {}

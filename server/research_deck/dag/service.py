@@ -27,6 +27,8 @@ def publish(pid: str, store: DagStore, changed: list[str] | set[str]) -> None:
         hub.publish(pid, "dag", {"digest": current(store).digest, "changed": sorted({c for c in changed if c})})
     except Exception:  # noqa: BLE001 — a failed notification never fails the change
         log.exception("dag publish failed")
+    from ..outline import doc as outline_doc  # noqa: PLC0415 — the outline package builds on this one
+    outline_doc.sync(pid)                     # the outline file follows the map (it never raises)
 
 
 # ---------------------------------------------------------------- JSON builders shared with api.py

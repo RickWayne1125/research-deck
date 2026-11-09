@@ -1,11 +1,20 @@
 // Markdown with KaTeX math ($…$, $$…$$, \(…\), \[…\]). Used by the agent dock, previews and node notes.
-// HTML in the source is escaped (agents' answers and project files are data, not markup).
+// HTML in the source is escaped (agents' answers and project files are data, not markup); HTML comments are dropped.
 import MarkdownIt from 'markdown-it';
 import katex from 'katex';
 import { memo, useMemo } from 'react';
 import { p } from '../api/client';
 
 const md = new MarkdownIt({ html: false, linkify: true, breaks: false, typographer: false });
+// An HTML comment shows as nothing, as in any Markdown viewer (the outline file's rd: tags, a note left for later);
+// every other piece of HTML stays text. A comment inside code stays as written: code is matched before this rule.
+md.inline.ruler.before('autolink', 'html_comment', (state) => {
+  if (!state.src.startsWith('<!--', state.pos)) return false;
+  const end = state.src.indexOf('-->', state.pos + 4);
+  if (end < 0) return false;
+  state.pos = end + 3;
+  return true;
+});
 
 /** The project document being shown: its relative links and pictures name files beside it. */
 export interface DocBase { project: string; path: string }
@@ -93,7 +102,7 @@ export function renderMarkdown(src: string, base?: DocBase): string {
     .replace(/(^|[^\\$])\$([^\s$](?:[^$\n]*?[^\s$])?)\$(?!\d)/g, (_, pre, t) => pre + keep(renderMath(t, false)));
   text = text.replace(/(\d+)/g, (_, i) => codes[Number(i)]);
   const env: Env = { base };
-  const html = md.render(text, env);
+  const html = md.render(text, env).replace(/<p>\s*<\/p>\n?/g, '');   // a paragraph that held only comments
   return html.replace(/(\d+)/g, (_, i) => store[Number(i)]);
 }
 
