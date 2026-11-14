@@ -27,7 +27,7 @@ export default function TaskBar() {
   return (
     <div className="ol-bar" role="region" aria-label={t('ol.bar.label')}>
       <span className="ol-hint">{t('ol.bar.label')}</span>
-      <span className={`ol-tk ${task.type} ${task.status}`} style={{ cursor: 'default' }}><b>{t(`ol.type.${task.type}`)}</b>{task.title}<i>· {status}</i></span>
+      <span className={`ol-tk ${task.type} ${task.status}`} style={{ cursor: 'default' }}><b>{t(`ol.type.${task.type}`)}</b><span className="ol-chip-t">{task.title}</span><i>· {status}</i></span>
       {items.length > 0 && <span className="ol-hint">{t('ol.task.serves')}</span>}
       {items.map(i => <button key={i.id} type="button" className="chip mono" title={i.text} onClick={() => navigate('outline', `@item/${i.id}`)}>{i.num}</button>)}
       <span className="grow" />

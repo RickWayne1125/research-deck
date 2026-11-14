@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { get, p, subscribeEvents } from '../api/client';
 import { applyMode } from './appearance';
+import { PHONE_QUERY } from './layout';
 import type { AgentCatalog, Health, ProjectDetail, ProjectEvent, ProjectSummary, ViewId } from '../types';
 
 export type Theme = 'auto' | 'light' | 'dark';
@@ -62,6 +63,11 @@ function readLocal<T extends string>(key: string, fallback: T): T {
   try { return (localStorage.getItem(key) as T) || fallback; } catch { return fallback; }
 }
 
+/** On a phone the conversation covers the page: there it starts closed, and opening or closing it is not remembered. */
+function onPhone(): boolean {
+  return typeof window !== 'undefined' && !!window.matchMedia?.(PHONE_QUERY).matches;
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [route, setRoute] = useState<Route>(parseHash);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
@@ -72,7 +78,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [health, setHealth] = useState<Health | null>(null);
   const [online, setOnline] = useState(true);
   const [catalog, setCatalog] = useState<AgentCatalog | null>(null);
-  const [dockOpen, setDockOpenState] = useState(() => readLocal('rd.dock', 'open') === 'open');
+  const [dockOpen, setDockOpenState] = useState(() => !onPhone() && readLocal('rd.dock', 'open') === 'open');
   const [pendingAsk, setPendingAsk] = useState<AppValue['pendingAsk']>(null);
   const [dockFocus, setDockFocus] = useState(0);
   const listeners = useRef(new Map<string, Set<(e: ProjectEvent) => void>>());
@@ -163,6 +169,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const setDockOpen = useCallback((v: boolean) => {
     setDockOpenState(v);
+    if (onPhone()) return;
     try { localStorage.setItem('rd.dock', v ? 'open' : 'closed'); } catch { /* ignore */ }
   }, []);
 

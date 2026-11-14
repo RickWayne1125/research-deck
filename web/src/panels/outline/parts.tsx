@@ -62,7 +62,7 @@ export function TaskChip({ task }: { task: Task }) {
   return (
     <button type="button" className={`ol-tk ${task.type} ${task.status}`} title={task.title}
       onClick={(e) => { e.stopPropagation(); openDialog({ kind: 'task', task: task.id }); }}>
-      <b>{t(`ol.type.${task.type}`)}</b>{task.title}<i>· {status(task)}</i>
+      <b>{t(`ol.type.${task.type}`)}</b><span className="ol-chip-t">{task.title}</span><i>· {status(task)}</i>
     </button>
   );
 }
@@ -75,7 +75,7 @@ export function EvidenceChip({ e }: { e: Evidence }) {
   return (
     <button type="button" className={`chip ol-chip ol-ev ${tone}`} title={`${e.id} · ${e.rel}${e.level ? ` · ${e.level}` : ''}`}
       onClick={(ev) => { ev.stopPropagation(); navigate('dag', e.id); }}>
-      {e.title || e.id}
+      <span className="ol-chip-t">{e.title || e.id}</span>
     </button>
   );
 }

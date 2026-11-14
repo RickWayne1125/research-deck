@@ -10,7 +10,7 @@
 // The outline file (notes/outline.md, outline/doc.py) is the outline itself: before it is saved, its new lines get their
 // rd: tags; the save changes the outline, and the file comes back with its numbers up to date (taken in when nothing was
 // typed meanwhile). Clicking an item in another file opens the outline file at that item.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import './i18n';
 import './writing.css';
 import { useApp } from '../../state/app';
@@ -83,9 +83,12 @@ export function WritingView() {
   // Below this width the documents list floats over the text instead of taking a column.
   const bodyRef = useRef<HTMLDivElement>(null);
   const [bodyWidth, setBodyWidth] = useState(1400);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = bodyRef.current;
     if (!el) return;
+    // the content width now, before the first paint, so a phone never shows the wide layout for a frame
+    const cs = getComputedStyle(el);
+    setBodyWidth(el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight));
     const ro = new ResizeObserver(([entry]) => setBodyWidth(entry.contentRect.width));
     ro.observe(el);
     return () => ro.disconnect();

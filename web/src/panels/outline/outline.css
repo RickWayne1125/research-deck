@@ -135,8 +135,10 @@ button.ol-chip:hover { filter: brightness(.97); }
 /* a task chip */
 .ol-tk { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; font-size: var(--fs-sm); line-height: 20px; padding: 0 8px; border-radius: max(var(--radius-1), var(--radius-full)); border: 0; box-shadow: inset 0 0 0 1px var(--gray-a7); background: transparent; color: var(--gray-12); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; font-family: var(--sans); }
 /* a task chip: a Radix Badge, outline; its type in the type's color, its state as the outline's color */
-.ol-tk b { font-weight: 500; }
-.ol-tk i { font-style: normal; color: var(--gray-a11); }
+.ol-tk b { flex: none; font-weight: 500; }
+.ol-tk i { flex: none; font-style: normal; color: var(--gray-a11); }
+/* a chip's long title gives way, with an ellipsis (a task chip keeps its state in view) */
+.ol-chip-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .ol-tk.lit b { color: var(--type-lit); } .ol-tk.code b { color: var(--type-code); } .ol-tk.fig b { color: var(--type-fig); } .ol-tk.exp b { color: var(--type-exp); }
 .ol-tk:hover { box-shadow: inset 0 0 0 1px var(--gray-a8); }
 .ol-tk.done { box-shadow: inset 0 0 0 1px var(--green-a7); }
@@ -158,6 +160,7 @@ button.ol-chip:hover { filter: brightness(.97); }
 .ol-dir + .ol-dir { border-top: var(--line) solid var(--gray-a5); }
 .ol-dir.sel { box-shadow: none; background: var(--accent-a3); margin: 0 -14px; padding: 10px 14px; }
 .ol-dir.hid { flex-direction: row; align-items: center; gap: 10px; color: var(--gray-a11); font-size: var(--fs-sm); }
+.ol-dir.hid .ol-link { flex: none; white-space: nowrap; }
 .ol-dir.gone .ol-t { color: var(--gray-a10); text-decoration: line-through; text-decoration-color: var(--gray-a8); }
 .ol-dl { flex: none; font: 500 var(--fs-sm)/20px var(--sans); color: var(--gray-a11); padding: 0; border: 0; background: none; cursor: pointer; }
 .ol-dl:hover { color: var(--gray-12); }
