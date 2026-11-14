@@ -54,7 +54,9 @@ research-deck/
                                <html>, cached for the first paint), today.tsx (what needs a decision, the outline,
                                the task being worked on), stages.ts, views.ts
     styles/                    tokens.css (the app's names over the Radix Themes tokens in vendor/), base.css (the
-                               shared classes, drawn as Radix components), shell.css, backdrop.css (the art behind)
+                               shared classes, drawn as Radix components), shell.css, backdrop.css (the art behind),
+                               responsive.css (phones: app bar, tab bar, sheets; the views by the main column's
+                               width, html[data-main] from state/layout.ts; touch)
     agent/                     AgentDock (the project conversation), useAgentRun (core hook), parts
     start/                     the new-project dialog, the survey card (on the outline page), Settings → New projects
     pools/                     Settings → Resource pools, the add/edit wizard, price and cost formatting

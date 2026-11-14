@@ -156,7 +156,7 @@ export function ItemRow({ it, par, depth }: { it: Item; par: boolean; depth: num
   };
   return (
     <div className={cx('ol-nr', tone)} id={`ol-i-${it.id}`} data-ol-item={it.id}>
-      <button type="button" className="ol-nb" onClick={() => select(it.id)} title={it.id}>{it.num}</button>
+      <button type="button" className="ol-nb" onClick={(e) => { e.stopPropagation(); select(it.id); }} title={it.id}>{it.num}</button>
       <div className={cx('ol-nt', par && 'par', it.state === 'proposed' && 'prop', sel === it.id && 'sel')}
         onClick={(e) => { e.stopPropagation(); select(it.id); }}>
         <div className="ol-nt-top">

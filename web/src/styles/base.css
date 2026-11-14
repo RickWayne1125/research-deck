@@ -249,12 +249,12 @@ input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 1px 
 /* dialogs and popovers (Radix Dialog and DropdownMenu, soft items) */
 .scrim { position: fixed; inset: 0; background: var(--color-overlay); z-index: 60; display: grid; place-items: center; padding: 24px; animation: rd-fade-in .16s var(--ease); }
 .dialog {
-  width: min(640px, 100%); max-height: calc(100vh - 48px); display: flex; flex-direction: column; background: var(--color-panel-solid);
+  width: min(640px, 100%); min-width: 0; max-height: calc(100vh - 48px); display: flex; flex-direction: column; background: var(--color-panel-solid);
   border-radius: var(--radius-5); box-shadow: var(--shadow-6); border: 0; outline: none; animation: rd-dialog-in .2s var(--ease);
 }
 .dialog-head { display: flex; align-items: center; gap: 8px; padding: 18px 20px 8px; }
 .dialog-head .h2 { font-size: var(--font-size-4); line-height: var(--line-height-4); font-weight: 700; letter-spacing: var(--letter-spacing-4); }
-.dialog-body { padding: 8px 20px 16px; overflow: auto; }
+.dialog-body { padding: 8px 20px 16px; overflow: auto; min-width: 0; }
 .dialog-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px 18px; }
 .popover {
   position: absolute; z-index: 50; background: var(--color-panel-solid); border: 0; border-radius: var(--radius-4); box-shadow: var(--shadow-5);

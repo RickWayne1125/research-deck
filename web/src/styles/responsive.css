@@ -1,0 +1,221 @@
+/* Phones and tablets. Three layers:
+   1. the window (media queries): on a phone (≤ 640 px wide) the navigation and the folded conversation give way to an
+      app bar at the top and a tab bar at the bottom (App.tsx PhoneTop / PhoneTabs), the conversation opens as a
+      full-screen sheet, dialogs rise from the bottom; the bars keep clear of the notch and the home indicator;
+   2. the main column (html[data-main], set by App.tsx from the column's own width: phone < 560, narrow < 900,
+      medium < 1200, wide): the views stack their columns and turn their side panels into sheets when the column is
+      narrow, whatever the window is (a tablet, or a laptop with the conversation open);
+   3. touch (pointer: coarse): bigger targets, no tap flash.
+   Selectors start at html so they win over the views' own CSS (loaded later with each view). */
+
+/* ------------------------------------------------------------------ 1. the window */
+
+html .phone-top, html .phone-tabs { display: none; }
+html .shell { height: 100vh; height: 100dvh; }
+/* a window that reaches under the notch or the home indicator (viewport-fit=cover): keep the shell inside it */
+@supports (padding: env(safe-area-inset-top)) {
+  html .shell { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+}
+
+@media (max-width: 640px) {
+  :root { --view-pad: 12px; --view-gap: 12px; }
+  html .shell, html .shell.dock-open {
+    grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: "top" "main" "tabs";
+    padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  }
+  html .sidenav, html .nav-handle, html .dock-rail { display: none; }
+
+  /* the app bar: the mark, the project, jump and the conversation */
+  html .phone-top {
+    grid-area: top; z-index: 20; display: flex; align-items: center; gap: 6px; min-width: 0;
+    padding: calc(env(safe-area-inset-top) + 8px) 10px 8px 12px; border-bottom: var(--line) solid var(--gray-a4);
+    background: var(--glass); -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter);
+  }
+  html .phone-top .brand-mark { width: 30px; height: 30px; }
+  html .phone-top .brand-mark svg { width: 20px; height: 20px; }
+  html .project-btn.compact {
+    width: auto; max-width: 60vw; margin: 0; padding: 4px 10px 4px 4px; gap: 8px; border-radius: max(var(--radius-3), var(--radius-full));
+    background: var(--gray-a3); box-shadow: none;
+  }
+  html .project-btn.compact .project-initial { width: 28px; height: 28px; font-size: var(--fs-sm); }
+  html .project-btn.compact .project-text { display: flex; }
+  html .project-btn.compact > svg { display: block; }
+  html .project-btn.compact .project-sub { display: none; }
+  html .phone-top .icon-btn { width: 36px; height: 36px; }
+  html .phone-chat {
+    position: relative; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 50%;
+    background: var(--accent-9); color: var(--accent-contrast); cursor: pointer;
+  }
+  html .phone-chat:disabled { opacity: .5; }
+  html .phone-chat .dot { position: absolute; top: 1px; right: 1px; box-shadow: 0 0 0 2px var(--color-background); background: var(--amber-9); }
+
+  /* the tab bar: the views, as on iOS */
+  html .phone-tabs {
+    grid-area: tabs; z-index: 20; display: flex; justify-content: space-around; padding: 6px 4px calc(env(safe-area-inset-bottom) + 4px);
+    border-top: var(--line) solid var(--gray-a4);
+    background: var(--glass); -webkit-backdrop-filter: var(--glass-filter); backdrop-filter: var(--glass-filter);
+  }
+  html .phone-tabs button {
+    flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 2px 2px 0; border: 0; background: none;
+    color: var(--gray-a11); font: 500 10.5px/1.2 var(--sans); cursor: pointer;
+  }
+  html .phone-tabs button.active { color: var(--accent-11); }
+  html .phone-tabs button:disabled { opacity: .45; }
+  html .phone-tab-icon { position: relative; display: grid; place-items: center; width: 48px; height: 30px; border-radius: 15px; transition: background-color .15s; }
+  html .phone-tabs button.active .phone-tab-icon { background: var(--accent-a3); }
+  html .phone-tab-badge {
+    position: absolute; top: -3px; right: 4px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
+    background: var(--accent-9); color: var(--accent-contrast); font: 600 10px/16px var(--sans); text-align: center;
+  }
+  html .phone-tab-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* the conversation: a full-screen sheet; the agent pill sits above the tab bar */
+  html .dock {
+    position: fixed; inset: 0; z-index: 50; width: auto; margin: 0; border-radius: 0;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background: var(--color-panel-solid); box-shadow: none;
+  }
+  html .dock > .rs-handle { display: none; }
+  html .agent-pill { left: 10px; right: 10px; bottom: 10px; transform: none; max-width: none; gap: 8px; animation: none; }
+  html .agent-pill-sub { display: none; }
+
+  /* dialogs rise from the bottom; ⌘K drops from the top */
+  html .scrim { padding: 0; place-items: end stretch; }
+  html .dialog {
+    width: 100% !important; max-height: 92dvh; border-radius: var(--radius-5) var(--radius-5) 0 0;
+    padding-bottom: env(safe-area-inset-bottom); animation-name: rd-sheet-in;
+  }
+  html .palette-scrim { padding: env(safe-area-inset-top) 0 0; place-items: start stretch; }
+  html .palette { width: 100%; max-height: 80dvh; border-radius: 0 0 var(--radius-5) var(--radius-5); }
+
+  /* text fields at 16 px, so Safari does not zoom in when one takes focus */
+  html .input, html .select, html .textarea, html .ag-input, html .ol-edit { font-size: 16px; }
+}
+@keyframes rd-sheet-in { from { transform: translateY(24px); opacity: 0; } }
+
+/* ------------------------------------------------------------------ 2. the main column */
+
+/* a view's head: the title over its controls, which scroll sideways when they do not fit */
+html[data-main="phone"] .panel-head { flex-wrap: wrap; gap: 8px; padding: 14px var(--view-pad) 10px; min-height: 0; }
+html[data-main="phone"] .panel-head > .grow { display: none; }
+html[data-main="phone"] .panel-head > .col { flex: 1 1 100%; }
+html[data-main="phone"] .panel-head .h1, html[data-main="phone"] .ol-head h1 { font-size: var(--font-size-6); line-height: var(--line-height-6); }
+html[data-main="phone"] .panel-head.doc .h1 { font-size: var(--font-size-4); line-height: var(--line-height-4); }
+html[data-main="phone"] .panel-head-tools {
+  flex: 1 1 100%; flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scrollbar-width: none;
+  margin: 0 calc(-1 * var(--view-pad)); padding: 2px var(--view-pad);
+}
+html[data-main="phone"] .panel-head-tools::-webkit-scrollbar { display: none; }
+html[data-main="phone"] .panel-head-tools > * { flex: none; }
+html[data-main="phone"] .panel > .tabs { margin-left: var(--view-pad); margin-right: var(--view-pad); }
+html .tabs { overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }   /* scrolling sideways must not let a column squeeze it */
+html .tabs::-webkit-scrollbar { display: none; }
+html .tabs > .tab { flex: none; }
+
+/* the outline: one column; its phases and tasks above the sections (two side by side) on a tablet, after them on a
+   phone; the inspector a sheet from the bottom */
+html[data-main="narrow"] .ol-main, html[data-main="phone"] .ol-main { grid-template-columns: minmax(0, 1fr); }
+html[data-main="narrow"] .ol-side, html[data-main="phone"] .ol-side { position: static; max-height: none; overflow: visible; padding: 0; }
+html[data-main="narrow"] .ol-side { order: -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+html[data-main="narrow"] .ol-side > .ol-gatebox { grid-column: 1 / -1; order: 1; }
+html[data-main="phone"] .ol-side { order: 1; }
+html[data-main="narrow"] .ol-ins.idle, html[data-main="phone"] .ol-ins.idle { display: none; }
+html[data-main="narrow"] .card.ol-ins:not(.idle), html[data-main="phone"] .card.ol-ins:not(.idle) {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; max-height: 64dvh; overflow: auto;
+  border-radius: var(--radius-5) var(--radius-5) 0 0; background: var(--color-panel-solid); box-shadow: var(--shadow-6);
+  padding-bottom: env(safe-area-inset-bottom); animation: rd-sheet-in .2s var(--ease);
+}
+html .ol-ins-close { display: none; }
+html[data-main="narrow"] .ol-ins:not(.idle) .ol-ins-close, html[data-main="phone"] .ol-ins:not(.idle) .ol-ins-close {
+  display: grid; position: sticky; top: 8px; align-self: flex-end; flex: none; margin: 8px 8px -44px 0; z-index: 2; background: var(--gray-a3);
+}
+html[data-main="narrow"] .ol-ins:not(.idle) .ol-ins-head, html[data-main="phone"] .ol-ins:not(.idle) .ol-ins-head { padding-right: 56px; }
+html[data-main="phone"] .ol-head { gap: 10px; }
+html[data-main="phone"] .ol-tools { width: 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+html[data-main="phone"] .ol-tools::-webkit-scrollbar { display: none; }
+html[data-main="phone"] .ol-tools > * { flex: none; }
+html[data-main="phone"] .ol-sec { padding: 16px 14px 14px; }
+html[data-main="phone"] .ol-nc { --pill: 38px; }
+html[data-main="phone"] .ol-nr, html[data-main="phone"] .ol-foot { gap: 8px; }
+html[data-main="phone"] .ol-t { font-size: var(--fs-md); }
+html[data-main="phone"] .ol-rows { grid-template-columns: minmax(0, 1fr); }
+html[data-main="phone"] .ol-rows > .k { margin-top: 2px; }
+html[data-main="phone"] .ol-fork { padding: 2px 10px; }
+html[data-main="phone"] .ol-kgrid { grid-template-columns: minmax(0, 1fr); }
+
+/* experiments: the open record rises as a sheet; the pools one under another on a phone */
+html[data-main="narrow"] .ex-split, html[data-main="phone"] .ex-split { display: block; }
+html[data-main="narrow"] .ex-drawer, html[data-main="phone"] .ex-drawer {
+  position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 45; width: auto !important; max-height: 86dvh; min-height: 0;
+  border-radius: var(--radius-5) var(--radius-5) 0 0; background: var(--color-panel-solid); box-shadow: var(--shadow-6);
+  padding-bottom: env(safe-area-inset-bottom); animation: rd-sheet-in .2s var(--ease);
+}
+html[data-main="narrow"] .ex-drawer-resize, html[data-main="phone"] .ex-drawer-resize { display: none; }
+html[data-main="phone"] .ex-pools { grid-template-columns: minmax(0, 1fr); }
+html[data-main="phone"] .ex-toolbar .ex-search, html[data-main="phone"] .ex-toolbar .ex-search .input { width: 100%; }
+html[data-main="phone"] .ex-toolbar .ex-filter { flex: 1 1 140px; }
+@media (max-width: 640px) { html .ex-grid4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* the records: each row a small card (title; status, freshness, when; node; machine; metrics) */
+html[data-main="phone"] .ex-table, html[data-main="phone"] .ex-table tbody { display: block; width: 100%; }
+html[data-main="phone"] .ex-table thead { display: none; }
+html[data-main="phone"] .ex-table tr.ex-row {
+  display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; align-items: center; gap: 6px 10px; padding: 12px 14px;
+  grid-template-areas: "title title title title" "status fresh . started" "node node node node" "target target target target" "metrics metrics metrics metrics";
+  border-bottom: var(--line) solid var(--gray-a5); cursor: pointer;
+}
+html[data-main="phone"] .ex-table tr.ex-row:last-child { border-bottom: 0; }
+html[data-main="phone"] .ex-table tr.ex-row > td { display: block; padding: 0; border: 0; background: none; min-width: 0; }
+html[data-main="phone"] .ex-table tr.ex-row.active { background: var(--accent-a3); }
+html[data-main="phone"] .ex-table .ex-col-title { grid-area: title; }
+html[data-main="phone"] .ex-table .ex-col-title .ex-title { white-space: normal; font-weight: 500; }
+html[data-main="phone"] .ex-table .ex-col-status { grid-area: status; }
+html[data-main="phone"] .ex-table .ex-col-fresh { grid-area: fresh; }
+html[data-main="phone"] .ex-table .ex-col-started { grid-area: started; color: var(--gray-a11); font-size: var(--fs-sm); }
+html[data-main="phone"] .ex-table .ex-col-duration { display: none !important; }
+html[data-main="phone"] .ex-table .ex-col-node { grid-area: node; }
+html[data-main="phone"] .ex-table .ex-col-target { grid-area: target; font-size: var(--fs-sm); color: var(--gray-a11); }
+html[data-main="phone"] .ex-table .ex-col-metrics { grid-area: metrics; display: flex !important; flex-wrap: wrap; gap: 2px 12px; font-size: var(--fs-sm); }
+
+/* the paper: the outline (or documents) floats over the text */
+html[data-main="phone"] .wr-docs.floating { width: min(var(--wr-docs-w, 272px), calc(100% - 2 * var(--view-pad))); }
+html[data-main="phone"] .wr-page { padding: 0; }
+
+/* code: the commits over the diff */
+html[data-main="narrow"] .split, html[data-main="phone"] .split { flex-direction: column; }
+html[data-main="narrow"] .split-a, html[data-main="phone"] .split-a { width: auto; height: 38%; flex: none; }
+html[data-main="narrow"] .split-a > .rs-handle, html[data-main="phone"] .split-a > .rs-handle { display: none; }
+
+/* the map: the inspector rises as a sheet */
+html[data-main="narrow"] .dg-side, html[data-main="phone"] .dg-side {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; width: auto !important; max-width: none; height: 70dvh;
+  border-radius: var(--radius-5) var(--radius-5) 0 0; background: var(--color-panel-solid); box-shadow: var(--shadow-6);
+  padding-bottom: env(safe-area-inset-bottom); animation: rd-sheet-in .2s var(--ease);
+}
+html[data-main="narrow"] .dg-side > .rs-handle, html[data-main="phone"] .dg-side > .rs-handle { display: none; }
+html[data-main="phone"] .dg-toolbar { flex-wrap: wrap; gap: 8px; }
+
+/* settings: one column; a key over its value */
+html[data-main="phone"] .st-main { grid-template-columns: minmax(0, 1fr); }
+html[data-main="phone"] .st-sec { padding: 18px 16px 20px; }
+html[data-main="phone"] .kv, html[data-main="phone"] .st-kv { grid-template-columns: minmax(0, 1fr); gap: 4px 0; }
+html[data-main="phone"] .kv dt:not(:first-child) { margin-top: 12px; }
+html[data-main="phone"] .st-look-themes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+html[data-main="phone"] .st-look-bgs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+html[data-main="phone"] .st-look-row { align-items: flex-start; flex-direction: column; }
+
+/* ------------------------------------------------------------------ 3. touch */
+
+html { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+@media (pointer: coarse) {
+  html .btn { min-height: 38px; }
+  html .btn.sm { min-height: 32px; }
+  html .icon-btn { width: 36px; height: 36px; }
+  html .seg { height: 38px; }
+  html .seg.sm { height: 30px; }
+  html .input, html .select { min-height: 40px; }
+  html .nav-item { min-height: 44px; }
+  html .menu-item { min-height: 44px; }
+  html .tab { padding-top: 13px; padding-bottom: 12px; }
+  html input[type="checkbox"]:not(.switch), html input[type="radio"] { width: 20px; height: 20px; }
+  html .ol-nb { height: 28px; }
+}

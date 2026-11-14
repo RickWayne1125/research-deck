@@ -2,9 +2,18 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Research Deck</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- on a phone or tablet: the browser's bars in the page's color; added to the home screen it opens as an app -->
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#111113" media="(prefers-color-scheme: dark)" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Research Deck" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <script>
       // The theme before the first paint: the Radix theme root on <html> from the last appearance (state/appearance.ts
       // caches it) and light or dark (state/app.tsx), so a reload never flashes the default.

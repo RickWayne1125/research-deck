@@ -87,12 +87,12 @@ export function RunsView({ records, loading, error, onRetry, onOpen, onNew, sele
                   <tr key={r.id} className={`ex-row ${selected === r.id ? 'active' : ''}`} onClick={() => onOpen(r.id)}
                     onKeyDown={e => { if (e.key === 'Enter' && e.target === e.currentTarget) onOpen(r.id); }} tabIndex={0} aria-selected={selected === r.id}>
                     <td className="ex-col-status"><StatusCell status={r.status} progress={r.progress} t={t} /></td>
-                    <td><FreshBadge level={r.freshness} title={reasons || t(`ex.freshExplain.${r.freshness}`)} /></td>
+                    <td className="ex-col-fresh"><FreshBadge level={r.freshness} title={reasons || t(`ex.freshExplain.${r.freshness}`)} /></td>
                     <td className="ex-col-title">
                       <div className="ellipsis ex-title" title={r.title}>{r.title}</div>
                       <div className="faint mono ex-small ellipsis">{r.id}</div>
                     </td>
-                    <td>
+                    <td className="ex-col-node">
                       {r.node_id ? (
                         <button type="button" className="ex-link mono" title={r.cell ?? r.dag_cell ?? undefined}
                           onClick={e => { e.stopPropagation(); navigate('dag', r.node_id!); }}>{r.node_id}</button>
@@ -109,8 +109,8 @@ export function RunsView({ records, loading, error, onRetry, onOpen, onNew, sele
                       )) : <span className="faint">—</span>}
                       {metrics.length > SHOWN_METRICS && <div className="faint ex-small">{t('ex.moreMetrics', { n: metrics.length - SHOWN_METRICS })}</div>}
                     </td>
-                    <td className="ex-nowrap" title={r.started_at ?? undefined}>{r.started_at ? rel(r.started_at) : '—'}</td>
-                    <td className="ex-nowrap num">{formatDuration(r.finished_at || r.status === 'running' || r.status === 'unknown' ? runDuration(r.started_at, r.finished_at, now) : null, t)}</td>
+                    <td className="ex-nowrap ex-col-started" title={r.started_at ?? undefined}>{r.started_at ? rel(r.started_at) : '—'}</td>
+                    <td className="ex-nowrap num ex-col-duration">{formatDuration(r.finished_at || r.status === 'running' || r.status === 'unknown' ? runDuration(r.started_at, r.finished_at, now) : null, t)}</td>
                   </tr>
                 );
               })}

@@ -14,8 +14,8 @@ export function Button({ icon, children, variant, size, active, ...rest }: {
   return <button type="button" {...rest} className={cls}>{icon && <Icon name={icon} />}{children}</button>;
 }
 
-export function IconButton({ icon, label, ...rest }: { icon: IconName | string; label: string } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return <button type="button" className="icon-btn" aria-label={label} title={label} {...rest}><Icon name={icon} /></button>;
+export function IconButton({ icon, label, className, ...rest }: { icon: IconName | string; label: string } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  return <button type="button" aria-label={label} title={label} {...rest} className={className ? `icon-btn ${className}` : 'icon-btn'}><Icon name={icon} /></button>;
 }
 
 /** A Radix segmented control (styles/base.css .seg); sm is Radix size 1. */
@@ -69,7 +69,7 @@ export function PanelHead({ title, subtitle, badge, size, children }: {
         {subtitle && <div className="muted ellipsis" style={{ fontSize: 'var(--fs-sm)' }}>{subtitle}</div>}
       </div>
       <div className="grow" />
-      <div className="row wrap" style={{ justifyContent: 'flex-end' }}>{children}</div>
+      <div className="row wrap panel-head-tools">{children}</div>
     </div>
   );
 }

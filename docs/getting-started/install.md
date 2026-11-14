@@ -63,6 +63,17 @@ With [Tailscale](https://tailscale.com), publish it to your tailnet only (never 
 
 Requests that come through Serve are accepted only from the listed owners.
 
+### On an iPhone or iPad
+
+Open `https://<machine>.<tailnet>.ts.net:8765` in Safari. To open it like an app, without Safari's bars: **Share →
+Add to Home Screen**.
+
+- **iPhone**: an app bar at the top (the project, jump, the conversation) and a tab bar at the bottom (the views). The
+  conversation, dialogs, a record's details and the outline's inspector open as sheets over the page.
+- **iPad**: the navigation is an icon rail in portrait and the conversation floats over the view. A view lays out by
+  the room it has, so with the conversation open in landscape it switches to its narrower layout.
+- **Settings → Appearance → Interface size** makes everything larger or denser on that device only.
+
 ## Update
 
 ```bash

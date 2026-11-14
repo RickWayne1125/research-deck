@@ -140,7 +140,8 @@
 .ex-bad { color: var(--accent-text); }
 .ex-fieldset { border: var(--line) solid var(--rule); border-radius: var(--r-md); padding: 8px 12px 12px; margin: 0; min-width: 0; }
 .ex-fieldset > legend { padding: 0 4px; }
-.ex-grid4 { display: grid; grid-template-columns: 1.3fr 1.3fr .6fr 1.3fr; gap: 8px; }
+.ex-grid4 { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.3fr) minmax(0, .6fr) minmax(0, 1.3fr); gap: 8px; }
+.ex-grid4 .input { width: 100%; }
 @media (max-width: 640px) { .ex-grid4 { grid-template-columns: 1fr 1fr; } }
 .ex-estimate { gap: 14px; align-items: flex-end; margin-top: 8px; }
 

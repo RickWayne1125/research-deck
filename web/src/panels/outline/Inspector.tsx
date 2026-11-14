@@ -2,7 +2,7 @@
 // can be done to it), a fork (its directions side by side, choose or abandon one), or a section (title, role, phase,
 // order). With nothing selected: the outliner keys and the results no item uses yet.
 import { useEffect, useState } from 'react';
-import { Button } from '../../components/ui';
+import { Button, IconButton } from '../../components/ui';
 import { useApp } from '../../state/app';
 import { useRelTime, useT } from '../../i18n';
 import { dagApi } from '../../dag/api';
@@ -12,11 +12,14 @@ import { bi, outlineText, pathTo } from './model';
 import { EvidenceChip, StateChip, TaskChip, usePhaseLabel } from './parts';
 
 export function Inspector() {
-  const { sel, items, o } = useOl();
+  const t = useT();
+  const { sel, items, o, select } = useOl();
   const it = sel ? items.get(sel) : undefined;
   const sec = sel ? o.sections.find(s => s.id === sel) : undefined;
   return (
-    <aside className="card ol-ins" aria-label={it ? it.num : sec ? `§${sec.num}` : undefined}>
+    <aside className={`card ol-ins${it || sec ? '' : ' idle'}`} aria-label={it ? it.num : sec ? `§${sec.num}` : undefined}>
+      {/* shown where the inspector is a sheet over the page (a narrow window: outline.css) */}
+      {(it || sec) && <IconButton icon="close" label={t('common.close')} className="ol-ins-close" onClick={() => select(null)} />}
       {it ? <ItemPane key={it.id} it={it} /> : sec ? <SectionPane key={sec.id} s={sec} /> : <Idle />}
     </aside>
   );

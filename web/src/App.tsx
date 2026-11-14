@@ -7,6 +7,7 @@ import { useApp } from './state/app';
 import { useToday } from './state/today';
 import { stepOfStage } from './state/stages';
 import { allowedViews, fallbackView, isResearch, visibleViews } from './state/views';
+import { PHONE_QUERY, mainClass, useMedia } from './state/layout';
 import { useI18n, useT } from './i18n';
 import { Icon } from './components/icons';
 import { Button, Dialog, IconButton, Menu, Segmented, Spinner } from './components/ui';
@@ -21,6 +22,7 @@ import './start/i18n';
 import { ProviderMark, useRunningPanels, useSessions } from './agent/parts';
 import type { ProjectKind, ProjectSummary, ViewId } from './types';
 import './styles/shell.css';
+import './styles/responsive.css';
 
 const VIEW_ICON: Record<ViewId, string> = {
   outline: 'outline', overview: 'overview', dag: 'dag', experiments: 'experiments', writing: 'writing', coding: 'coding', settings: 'settings',
@@ -136,6 +138,11 @@ export default function App() {
   }, [projectId, dockOpen, setDockOpen, focusDock]);
 
   const main = views.filter(v => v !== 'settings');
+  const mainRef = useRef<HTMLElement>(null);
+  useMainWidth(mainRef);
+  // a phone gets the app bar and the tab bar instead of the navigation and the folded conversation's rail (drawn only
+  // where they show: each polls the agent's runs)
+  const phone = useMedia(PHONE_QUERY);
   return (
     <div ref={shell} className={`shell${dockOpen && projectId ? ' dock-open' : ''}${collapsed ? ' nav-collapsed' : ''}`} style={{ ...nav.style, ...dock.style }}>
       <Backdrop />
@@ -162,7 +169,8 @@ export default function App() {
       </nav>
       <ResizeHandle pane={nav} edge="right" label={t('nav.resize')} controls="rd-nav" onToggle={toggleNav} className="nav-handle" />
 
-      <main className="main" aria-live="polite">
+      {phone && <PhoneTop current={known} onJump={() => setPalette(true)} onChat={focusDock} />}
+      <main ref={mainRef} className="main" aria-live="polite">
         {!projectId ? <NoProject hasProjects={projects.length > 0} /> : (
           <div className="main-col">
             <div>{today.activeTask && TASK_VIEWS.includes(view) && current && isResearch(current) && <Suspense fallback={null}><TaskBar /></Suspense>}</div>
@@ -181,10 +189,69 @@ export default function App() {
           <ResizeHandle pane={dock} edge="left" label={t('agent.resize')} controls="rd-dock" />
           <AgentDock />
         </aside>
-      ) : <DockRail pid={projectId} onOpen={focusDock} />)}
+      ) : !phone && <DockRail pid={projectId} onOpen={focusDock} />)}
 
+      {phone && <PhoneTabs views={views} />}
       {palette && projectId && <Palette onClose={() => setPalette(false)} />}
     </div>
+  );
+}
+
+/** The main column's width as a class of layout on <html> (data-main; state/layout.ts), for the views' CSS. Container
+ *  queries would do this in CSS, but a container is the containing block of everything fixed inside it, and the
+ *  dialogs and sheets inside a view must cover the whole window. */
+function useMainWidth(ref: React.RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const set = (w: number) => {
+      const v = mainClass(w);
+      if (document.documentElement.dataset.main !== v) document.documentElement.dataset.main = v;
+    };
+    set(el.clientWidth);
+    const ro = new ResizeObserver(entries => set(entries[0].contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ref]);
+}
+
+/** On a phone (styles/shell.css): the app bar at the top (the project, jump, the conversation) instead of the
+ *  navigation… */
+function PhoneTop({ current, onJump, onChat }: { current: ProjectSummary | null; onJump: () => void; onChat: () => void }) {
+  const t = useT();
+  const { projectId } = useApp();
+  const running = useRunningPanels(projectId);
+  return (
+    <header className="phone-top">
+      <span className="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><circle cx="10" cy="10.5" r="3.2" fill="currentColor" /><circle cx="22" cy="10.5" r="3.2" fill="currentColor" /><circle cx="16" cy="22" r="3.6" fill="currentColor" /><path d="M10 10.5 16 22 22 10.5" fill="none" stroke="currentColor" strokeWidth="1.8" /></svg></span>
+      <ProjectSwitcher current={current} compact />
+      <span className="grow" />
+      <IconButton icon="search" label={t('nav.jump')} onClick={onJump} disabled={!projectId} />
+      <button type="button" className="phone-chat" onClick={onChat} disabled={!projectId} aria-label={t('agent.dock')} title={t('agent.dock')}>
+        <Icon name="robot" size={18} />{running.size > 0 && <span className="dot accent" />}
+      </button>
+    </header>
+  );
+}
+
+/** …and the views as a tab bar at the bottom. */
+function PhoneTabs({ views }: { views: ViewId[] }) {
+  const t = useT();
+  const { view, navigate, projectId } = useApp();
+  const today = useToday();
+  return (
+    <nav className="phone-tabs" aria-label={t('app.name')}>
+      {views.map(id => {
+        const badge = (id === 'overview' || id === 'outline') ? today.count : 0;
+        return (
+          <button key={id} type="button" className={view === id ? 'active' : ''} aria-current={view === id ? 'page' : undefined}
+            disabled={!projectId} onClick={() => navigate(id)}>
+            <span className="phone-tab-icon"><Icon name={VIEW_ICON[id]} size={20} />{badge > 0 && <span className="phone-tab-badge num">{badge}</span>}</span>
+            <span className="phone-tab-label">{t(`nav.${id}`)}</span>
+          </button>
+        );
+      })}
+    </nav>
   );
 }
 
@@ -238,7 +305,7 @@ function DockRail({ pid, onOpen }: { pid: string; onOpen: () => void }) {
   );
 }
 
-function ProjectSwitcher({ current }: { current: ProjectSummary | null }) {
+function ProjectSwitcher({ current, compact = false }: { current: ProjectSummary | null; compact?: boolean }) {
   const { projects, navigate, view } = useApp();
   const t = useT();
   const [adding, setAdding] = useState<'idea' | 'folder' | null>(null);
@@ -248,7 +315,7 @@ function ProjectSwitcher({ current }: { current: ProjectSummary | null }) {
     <>
       {/* the navigation scrolls and clips: the project list is drawn above the page */}
       <Menu align="left" portal button={(open, toggle) => (
-        <button type="button" className="project-btn" aria-expanded={open} onClick={toggle} title={current?.name ?? t('nav.projects')}>
+        <button type="button" className={compact ? 'project-btn compact' : 'project-btn'} aria-expanded={open} onClick={toggle} title={current?.name ?? t('nav.projects')}>
           <span className="project-initial" aria-hidden="true">{(current?.name ?? '?').slice(0, 1).toUpperCase()}</span>
           <span className="project-text">
             <span className="ellipsis project-name">{current?.name ?? t('nav.projects')}</span>
